@@ -39,6 +39,7 @@ let isRunning = false;
 let messageQueue: MessageItem[] = [];
 let claudeProcess: ChildProcess | null = null;
 let resumeTimer: NodeJS.Timeout | null = null;
+let countdownInterval: NodeJS.Timeout | null = null;
 let healthCheckTimer: NodeJS.Timeout | null = null;
 
 // Session state management
@@ -68,7 +69,6 @@ const ANSI_CLEAR_SCREEN_PATTERNS = [
 
 // Configuration constants
 const TIMEOUT_MS = 60 * 60 * 60 * 1000; // 1 hour
-const SILENCE_THRESHOLD_MS = 3000; // 3 seconds of silence means Claude is ready
 const HEALTH_CHECK_INTERVAL_MS = 30000; // Check Claude process health every 30 seconds
 
 export function activate(context: vscode.ExtensionContext) {
@@ -95,9 +95,16 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function startClaudeLoop(context: vscode.ExtensionContext): void {
-    if (isRunning) {
-        vscode.window.showInformationMessage('ClaudeLoop is already running');
+    if (isRunning && claudePanel) {
+        // If already running with a valid panel, just reveal it
+        claudePanel.reveal(vscode.ViewColumn.Two);
+        vscode.window.showInformationMessage('ClaudeLoop is already running - showing existing panel');
         return;
+    }
+    
+    // If isRunning is true but claudePanel is null, reset the state
+    if (isRunning && !claudePanel) {
+        isRunning = false;
     }
 
     // Create webview panel
@@ -115,6 +122,9 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
 
     // Load any pending messages from previous session
     loadPendingQueue();
+    
+    // Check for and recover any waiting messages with timers
+    recoverWaitingMessages();
 
     // Handle messages from webview
     claudePanel.webview.onDidReceiveMessage(
@@ -166,6 +176,15 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
     claudePanel.onDidDispose(() => {
         stopClaudeLoop();
         claudePanel = null;
+        // Clear any running timers when panel is disposed
+        if (resumeTimer) {
+            clearTimeout(resumeTimer);
+            resumeTimer = null;
+        }
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
     }, null, []);
 
     isRunning = true;
@@ -1208,46 +1227,93 @@ function handleUsageLimit(output: string, message: MessageItem): void {
 
 
 function startCountdownTimer(message: MessageItem, waitSeconds: number): void {
-    // Clear any existing timer
+    // Clear any existing timers
     if (resumeTimer) {
         clearTimeout(resumeTimer);
         resumeTimer = null;
     }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
     
     let remainingSeconds = waitSeconds;
     
-    const countdownInterval = setInterval(() => {
+    // Update the waitUntil timestamp based on remaining seconds
+    message.waitUntil = Date.now() + (remainingSeconds * 1000);
+    
+    countdownInterval = setInterval(() => {
         remainingSeconds--;
         message.waitSeconds = remainingSeconds;
+        
+        // Double-check against absolute time to handle system sleep/wake
+        const timeLeft = Math.max(0, Math.floor((message.waitUntil! - Date.now()) / 1000));
+        if (timeLeft !== remainingSeconds) {
+            remainingSeconds = timeLeft;
+            message.waitSeconds = remainingSeconds;
+        }
+        
         updateWebviewContent();
 
         if (remainingSeconds <= 0) {
-            clearInterval(countdownInterval);
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
             
             // Resume processing automatically
-            message.status = 'pending';
-            message.error = undefined;
-            message.waitSeconds = undefined;
-            message.waitUntil = undefined;
-            updateWebviewContent();
-            saveWorkspaceHistory(); // Save the updated queue state
-            
-            vscode.window.showInformationMessage('Usage limit has reset. Resuming processing with "continue" message...');
-            
-            // Resume processing if we were processing before
-            if (!processingQueue) {
-                processingQueue = true;
-                updateSessionState();
-                setTimeout(() => {
-                    processNextMessage();
-                }, 2000); // 2 second delay before resuming
-            }
+            resumeProcessingFromWait(message);
         }
     }, 1000);
 
     resumeTimer = setTimeout(() => {
-        clearInterval(countdownInterval);
-    }, waitSeconds * 1000);
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+        }
+        resumeProcessingFromWait(message);
+    }, remainingSeconds * 1000);
+}
+
+function resumeProcessingFromWait(message: MessageItem): void {
+    message.status = 'pending';
+    message.error = undefined;
+    message.waitSeconds = undefined;
+    message.waitUntil = undefined;
+    updateWebviewContent();
+    saveWorkspaceHistory(); // Save the updated queue state
+    
+    vscode.window.showInformationMessage('Usage limit has reset. Resuming processing with "continue" message...');
+    
+    // Resume processing if we were processing before
+    if (!processingQueue) {
+        processingQueue = true;
+        updateSessionState();
+        setTimeout(() => {
+            processNextMessage();
+        }, 2000); // 2 second delay before resuming
+    }
+}
+
+function recoverWaitingMessages(): void {
+    const now = Date.now();
+    
+    messageQueue.forEach(message => {
+        if (message.status === 'waiting' && message.waitUntil) {
+            const timeLeft = Math.max(0, Math.floor((message.waitUntil - now) / 1000));
+            
+            if (timeLeft <= 0) {
+                // Time has already passed - resume immediately
+                debugLog(`⏰ Timer expired for message ${message.id} - resuming immediately`);
+                resumeProcessingFromWait(message);
+            } else {
+                // Still time left - restart the countdown
+                debugLog(`⏰ Recovering timer for message ${message.id} - ${timeLeft} seconds remaining`);
+                message.waitSeconds = timeLeft;
+                startCountdownTimer(message, timeLeft);
+            }
+        }
+    });
 }
 
 
