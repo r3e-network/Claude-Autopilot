@@ -165,32 +165,7 @@ npm run watch
 # Package extension (requires vsce)
 npm install -g vsce
 vsce package
-
-# Publish to marketplace (requires publisher account)
-vsce publish
 ```
-
-### Publishing to VS Code Marketplace
-
-1. Install `vsce` (Visual Studio Code Extension manager):
-   ```bash
-   npm install -g vsce
-   ```
-
-2. Create a publisher account at https://marketplace.visualstudio.com/manage
-
-3. Get a Personal Access Token from Azure DevOps
-
-4. Login with vsce:
-   ```bash
-   vsce login <publisher-name>
-   ```
-
-5. Package and publish:
-   ```bash
-   vsce package
-   vsce publish
-   ```
 
 ### Project Structure
 
