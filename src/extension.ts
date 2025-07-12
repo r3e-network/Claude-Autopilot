@@ -39,6 +39,7 @@ let isRunning = false;
 let messageQueue: MessageItem[] = [];
 let claudeProcess: ChildProcess | null = null;
 let resumeTimer: NodeJS.Timeout | null = null;
+let healthCheckTimer: NodeJS.Timeout | null = null;
 
 // Session state management
 let sessionReady = false;
@@ -54,6 +55,7 @@ let queueSortConfig: QueueSortConfig = { field: 'timestamp', direction: 'asc' };
 // Configuration constants
 const TIMEOUT_MS = 60 * 60 * 60 * 1000; // 1 hour
 const SILENCE_THRESHOLD_MS = 3000; // 3 seconds of silence means Claude is ready
+const HEALTH_CHECK_INTERVAL_MS = 30000; // Check Claude process health every 30 seconds
 
 export function activate(context: vscode.ExtensionContext) {
     extensionContext = context;
@@ -168,11 +170,13 @@ function stopClaudeLoop(): void {
         sessionReady = false;
     }
 
-    // Clear resume timer
+    // Clear timers
     if (resumeTimer) {
         clearTimeout(resumeTimer);
         resumeTimer = null;
     }
+    
+    stopHealthCheck();
 
     // Reset state
     currentMessage = null;
@@ -736,25 +740,77 @@ async function processNextMessage(): Promise<void> {
     }
 }
 
-async function sendMessageToClaudeProcess(message: MessageItem): Promise<void> {
+async function sendMessageToClaudeProcess(message: MessageItem, retryCount: number = 0): Promise<void> {
+    const maxRetries = 3;
+    
     if (!claudeProcess || !claudeProcess.stdin) {
-        throw new Error('Claude process not available');
+        if (retryCount < maxRetries) {
+            debugLog(`❌ Claude process not available, attempting to restart (retry ${retryCount + 1}/${maxRetries})`);
+            
+            // Try to restart Claude session
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            startClaudeSession(true);
+            
+            // Wait for session to be ready
+            await new Promise((resolve, reject) => {
+                const checkInterval = setInterval(() => {
+                    if (sessionReady && claudeProcess) {
+                        clearInterval(checkInterval);
+                        resolve(void 0);
+                    }
+                }, 1000);
+                
+                // Timeout after 30 seconds
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    reject(new Error('Claude session restart timeout'));
+                }, 30000);
+            });
+            
+            // Retry sending the message
+            return sendMessageToClaudeProcess(message, retryCount + 1);
+        } else {
+            throw new Error(`Claude process not available after ${maxRetries} retries`);
+        }
     }
 
-    debugLog(`📝 Sending message to Claude process: "${message.text}"`);
-    
-    // Send the message text
-    claudeProcess.stdin.write(message.text);
-    
-    // Small delay before sending carriage return
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    debugLog(`📝 Sending carriage return to submit message...`);
-    // ★★★ THIS IS THE CRITICAL FIX ★★★
-    // We are now sending a Carriage Return to simulate pressing the Enter key.
-    claudeProcess.stdin.write('\r');
-    
-    debugLog(`✓ Message sent to Claude process successfully`);
+    try {
+        debugLog(`📝 Sending message to Claude process: "${message.text}"`);
+        
+        // Check if stdin is writable
+        if (claudeProcess.stdin.destroyed || !claudeProcess.stdin.writable) {
+            throw new Error('Claude process stdin is not writable');
+        }
+        
+        // Send the message text
+        claudeProcess.stdin.write(message.text);
+        
+        // Small delay before sending carriage return
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        debugLog(`📝 Sending carriage return to submit message...`);
+        
+        // Check again before sending carriage return
+        if (claudeProcess.stdin.destroyed || !claudeProcess.stdin.writable) {
+            throw new Error('Claude process stdin became unavailable');
+        }
+        
+        // Send carriage return to submit the message
+        claudeProcess.stdin.write('\r');
+        
+        debugLog(`✓ Message sent to Claude process successfully`);
+        
+    } catch (error) {
+        debugLog(`❌ Error sending message to Claude: ${error}`);
+        
+        if (retryCount < maxRetries) {
+            debugLog(`🔄 Retrying message send (attempt ${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            return sendMessageToClaudeProcess(message, retryCount + 1);
+        } else {
+            throw new Error(`Failed to send message after ${maxRetries} retries: ${error}`);
+        }
+    }
 }
 
 function startClaudeSession(skipPermissions: boolean = true): void {
@@ -858,6 +914,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         if (hasPermissionPrompt && !sessionReady) {
             debugLog('🔐 Permission prompt detected during startup - session ready for user interaction');
             sessionReady = true;
+            startHealthCheck(); // Start monitoring Claude process health
             updateSessionState();
             if (debugMode) {
                 console.log('Claude session is ready (permission prompt)');
@@ -866,6 +923,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         } else if (output.includes('? for shortcuts') && !sessionReady) {
             debugLog('✅ Claude ready prompt detected during startup');
             sessionReady = true;
+            startHealthCheck(); // Start monitoring Claude process health
             updateSessionState();
             if (debugMode) {
                 console.log('Claude session is ready');
@@ -895,20 +953,35 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         }
         debugLog(`🔚 PROCESS CLOSED with code: ${code}`);
         sessionReady = false;
-        claudeProcess = null;
+        stopHealthCheck(); // Stop health monitoring
+        
+        const wasProcessing = processingQueue;
+        processingQueue = false; // Stop processing queue immediately
         
         const closeMessage = formatTerminalOutput(`Claude process closed with code: ${code}`, 'info');
         sendToWebviewTerminal(closeMessage);
         
+        // Handle current message if processing
         if (currentMessage && currentMessage.status === 'processing') {
             debugLog(`❌ Current message #${currentMessage.id} marked as error due to process closure`);
             currentMessage.status = 'error';
             currentMessage.error = `Claude process closed unexpectedly (code: ${code})`;
-            updateWebviewContent();
             currentMessage = null;
         }
         
-        vscode.window.showInformationMessage('Claude session ended');
+        // Clear the process reference
+        claudeProcess = null;
+        
+        // Update UI state
+        updateWebviewContent();
+        updateSessionState();
+        
+        // Notify user based on context
+        if (wasProcessing) {
+            vscode.window.showWarningMessage('Claude process closed unexpectedly while processing. You can restart the session.');
+        } else {
+            vscode.window.showInformationMessage('Claude session ended');
+        }
         debugLog('=== CLAUDE SESSION ENDED ===');
     });
 
@@ -920,20 +993,34 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         debugLog(`💥 PROCESS ERROR: ${error.message}`);
         
         sessionReady = false;
-        claudeProcess = null;
+        stopHealthCheck(); // Stop health monitoring
+        const wasProcessing = processingQueue;
+        processingQueue = false; // Stop processing immediately
         
         const errorMessage = formatTerminalOutput(`Claude process error: ${error.message}`, 'error');
         sendToWebviewTerminal(errorMessage);
         
+        // Handle current message if processing
         if (currentMessage && currentMessage.status === 'processing') {
             debugLog(`❌ Current message #${currentMessage.id} marked as error due to process error`);
             currentMessage.status = 'error';
             currentMessage.error = `Claude process error: ${error.message}`;
-            updateWebviewContent();
             currentMessage = null;
         }
         
-        vscode.window.showErrorMessage(`Claude process error: ${error.message}`);
+        // Clear the process reference
+        claudeProcess = null;
+        
+        // Update UI state
+        updateWebviewContent();
+        updateSessionState();
+        
+        // Show appropriate error message
+        if (wasProcessing) {
+            vscode.window.showErrorMessage(`Claude process error while processing: ${error.message}`);
+        } else {
+            vscode.window.showErrorMessage(`Claude process error: ${error.message}`);
+        }
         debugLog('=== CLAUDE SESSION ENDED WITH ERROR ===');
     });
 }
@@ -1185,6 +1272,78 @@ function getWebviewContent(context: vscode.ExtensionContext): string {
             </body>
             </html>
         `;
+    }
+}
+
+// Health Check Functions
+function isClaudeProcessHealthy(): boolean {
+    if (!claudeProcess) {
+        return false;
+    }
+    
+    // Check if process exists and is running
+    if (claudeProcess.killed || claudeProcess.exitCode !== null) {
+        debugLog('❌ Claude process is killed or exited');
+        return false;
+    }
+    
+    // Check if stdin is writable
+    if (!claudeProcess.stdin || claudeProcess.stdin.destroyed || !claudeProcess.stdin.writable) {
+        debugLog('❌ Claude process stdin is not writable');
+        return false;
+    }
+    
+    return true;
+}
+
+function startHealthCheck(): void {
+    // Clear any existing health check
+    if (healthCheckTimer) {
+        clearTimeout(healthCheckTimer);
+    }
+    
+    healthCheckTimer = setInterval(() => {
+        if (sessionReady && !isClaudeProcessHealthy()) {
+            debugLog('🩺 Health check failed - Claude process is unhealthy');
+            
+            // Reset session state
+            sessionReady = false;
+            claudeProcess = null;
+            
+            // Stop processing if active
+            if (processingQueue) {
+                processingQueue = false;
+                
+                // Mark current message as error
+                if (currentMessage && currentMessage.status === 'processing') {
+                    currentMessage.status = 'error';
+                    currentMessage.error = 'Claude process became unhealthy';
+                    currentMessage = null;
+                }
+            }
+            
+            // Update UI
+            updateWebviewContent();
+            updateSessionState();
+            
+            // Clear health check since process is dead
+            if (healthCheckTimer) {
+                clearTimeout(healthCheckTimer);
+                healthCheckTimer = null;
+            }
+            
+            vscode.window.showWarningMessage('Claude process became unhealthy. Please restart the session.');
+        }
+    }, HEALTH_CHECK_INTERVAL_MS);
+    
+    debugLog('🩺 Started health monitoring for Claude process');
+}
+
+function stopHealthCheck(): void {
+    if (healthCheckTimer) {
+        clearTimeout(healthCheckTimer);
+        healthCheckTimer = null;
+        debugLog('🩺 Stopped health monitoring');
     }
 }
 
