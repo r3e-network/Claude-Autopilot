@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaudeLoop</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ClaudeLoop</h1>
+            <p>Queue messages for automated Claude CLI processing with intelligent session management</p>
+        </div>
+
+        <div class="input-section">
+            <h3>Add Message to Queue</h3>
+            <textarea id="messageInput" placeholder="Enter your message for Claude..."></textarea>
+            <div class="controls">
+                <button onclick="addMessage()" class="btn-primary">
+                    <span class="btn-icon">➕</span>Add Message
+                </button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" onclick="startProcessing()" class="btn-success" disabled>
+                <span class="btn-icon">▶️</span>Start Processing
+            </button>
+            <button id="stopBtn" onclick="stopProcessing()" class="btn-danger" disabled>
+                <span class="btn-icon">⏹️</span>Stop Processing
+            </button>
+            <button id="resetBtn" onclick="resetSession()" class="btn-warning">
+                <span class="btn-icon">🔄</span>Reset Session
+            </button>
+            <label
+                style="display: flex; align-items: center; gap: 8px; margin-left: 20px; color: var(--vscode-foreground); font-size: 14px;">
+                <input type="checkbox" id="skipPermissions" checked style="transform: scale(1.2);">
+                Skip permissions check
+            </label>
+        </div>
+
+
+
+        <div class="claude-output-section">
+            <div class="claude-header">
+                <h3 class="claude-title">🤖 Claude Live Output</h3>
+                <button onclick="clearClaudeOutput()" class="clear-button">Clear</button>
+            </div>
+            <div id="claudeOutputContainer">
+                <div class="claude-live-output" tabindex="0">
+                    <div class="claude-ready-message">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="pulse-dot"></div>
+                            <span>Ready to receive Claude output...</span>
+                        </div>
+                        <br><br>
+                        <small style="opacity: 0.6;">Click here and use arrow keys + Enter to navigate Claude
+                            interface</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-section">
+            <div class="terminal-header">
+                <h3 class="terminal-title">📋 Terminal Output</h3>
+            </div>
+            <div id="terminalContainer">
+                <div class="terminal-output">
+                    <div class="terminal-ready-message">
+                        <div class="pulse-dot-green"></div>
+                        <span>Ready to start processing messages</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="queue-section">
+            <div class="queue-header">
+                <h3>Message Queue</h3>
+                <div class="queue-controls">
+                    <select id="sortField" onchange="sortQueue()">
+                        <option value="timestamp">Sort by Time</option>
+                        <option value="status">Sort by Status</option>
+                        <option value="text">Sort by Text</option>
+                    </select>
+                    <select id="sortDirection" onchange="sortQueue()">
+                        <option value="asc">Ascending</option>
+                        <option value="desc">Descending</option>
+                    </select>
+                    <button id="clearBtn" onclick="clearQueue()" class="btn-secondary btn-small">
+                        <span class="btn-icon">🗑️</span>Clear Queue
+                    </button>
+                </div>
+            </div>
+            <div id="queueContainer">
+                <div class="empty-queue">
+                    No messages in queue
+                </div>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-header">
+                <h3>History</h3>
+                <div class="history-controls">
+                    <select id="historyFilter" onchange="filterHistory()">
+                        <option value="all">All Runs</option>
+                        <option value="waiting">With Waiting Messages</option>
+                        <option value="completed">Completed Runs</option>
+                        <option value="errors">With Errors</option>
+                        <option value="recent">Recent (10)</option>
+                    </select>
+                </div>
+            </div>
+            <div id="historyContainer">
+                <div class="empty-history">
+                    Loading history...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

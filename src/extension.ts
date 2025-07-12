@@ -15,6 +15,23 @@ interface MessageItem {
     waitSeconds?: number;
 }
 
+interface HistoryRun {
+    id: string;
+    startTime: string;
+    endTime?: string;
+    workspacePath: string;
+    messages: MessageItem[];
+    totalMessages: number;
+    completedMessages: number;
+    errorMessages: number;
+    waitingMessages: number;
+}
+
+interface QueueSortConfig {
+    field: 'timestamp' | 'status' | 'text';
+    direction: 'asc' | 'desc';
+}
+
 
 
 let claudePanel: vscode.WebviewPanel | null = null;
@@ -29,11 +46,18 @@ let currentMessage: MessageItem | null = null;
 let processingQueue = false;
 let debugMode = false; // Enable debug logging (set to true for development)
 
+// History and workspace management
+let currentRun: HistoryRun | null = null;
+let extensionContext: vscode.ExtensionContext;
+let queueSortConfig: QueueSortConfig = { field: 'timestamp', direction: 'asc' };
+
 // Configuration constants
 const TIMEOUT_MS = 60 * 60 * 60 * 1000; // 1 hour
 const SILENCE_THRESHOLD_MS = 3000; // 3 seconds of silence means Claude is ready
 
 export function activate(context: vscode.ExtensionContext) {
+    extensionContext = context;
+    
     if (debugMode) {
         console.log('ClaudeLoop extension is now active!');
     }
@@ -73,6 +97,9 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
 
     claudePanel.webview.html = getWebviewContent(context);
 
+    // Load any pending messages from previous session
+    loadPendingQueue();
+
     // Handle messages from webview
     claudePanel.webview.onDidReceiveMessage(
         (message: any) => {
@@ -89,11 +116,29 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
                 case 'clearQueue':
                     clearMessageQueue();
                     break;
+                case 'resetSession':
+                    resetClaudeSession();
+                    break;
                 case 'startClaudeSession':
                     startClaudeSession(message.skipPermissions);
                     break;
                 case 'claudeKeypress':
                     handleClaudeKeypress(message.key);
+                    break;
+                case 'removeMessage':
+                    removeMessageFromQueue(message.messageId);
+                    break;
+                case 'reorderQueue':
+                    reorderQueue(message.fromIndex, message.toIndex);
+                    break;
+                case 'sortQueue':
+                    sortQueue(message.field, message.direction);
+                    break;
+                case 'loadHistory':
+                    loadWorkspaceHistory();
+                    break;
+                case 'filterHistory':
+                    filterHistory(message.filter);
                     break;
             }
         },
@@ -163,42 +208,63 @@ function addMessageToQueueFromWebview(message: string): void {
     };
 
     messageQueue.push(messageItem);
+    
+    // Start new history run if this is the first message
+    if (!currentRun) {
+        startNewHistoryRun();
+    }
+    
     updateWebviewContent();
-    vscode.window.showInformationMessage(`Message added to queue: ${message.substring(0, 50)}...`);
+    saveWorkspaceHistory();
+    
+    // Auto-start processing if session is ready and not currently processing
+    if (sessionReady && !processingQueue) {
+        vscode.window.showInformationMessage(`Message added and auto-processing started: ${message.substring(0, 50)}...`);
+        processingQueue = true;
+        updateSessionState();
+        processNextMessage();
+    } else {
+        vscode.window.showInformationMessage(`Message added to queue: ${message.substring(0, 50)}...`);
+    }
 }
 
 function startProcessingQueue(skipPermissions: boolean = true): void {
-    if (messageQueue.length === 0) {
-        vscode.window.showWarningMessage('No messages in queue to process');
-        return;
-    }
-
-    // Auto-start Claude session if not already running
+    // If no Claude session, start one
     if (!claudeProcess) {
         vscode.window.showInformationMessage('Starting Claude session...');
         startClaudeSession(skipPermissions);
         
-        // Wait for session to be ready then start processing
-        const checkReadyInterval = setInterval(() => {
-            if (sessionReady) {
+        // If we have messages, wait for session to be ready then start processing
+        if (messageQueue.length > 0) {
+            const checkReadyInterval = setInterval(() => {
+                if (sessionReady) {
+                    clearInterval(checkReadyInterval);
+                    processingQueue = true;
+                    updateSessionState();
+                    processNextMessage();
+                }
+            }, 1000);
+            
+            // Timeout after 30 seconds
+            setTimeout(() => {
                 clearInterval(checkReadyInterval);
-                processingQueue = true;
-                processNextMessage();
-            }
-        }, 1000);
-        
-        // Timeout after 30 seconds
-        setTimeout(() => {
-            clearInterval(checkReadyInterval);
-            if (!sessionReady) {
-                vscode.window.showErrorMessage('Claude session failed to start. Please check your Claude CLI installation.');
-            }
-        }, 30000);
+                if (!sessionReady) {
+                    vscode.window.showErrorMessage('Claude session failed to start. Please check your Claude CLI installation.');
+                }
+            }, 30000);
+        }
         
         return;
     }
 
+    // Session exists - start processing if we have messages
+    if (messageQueue.length === 0) {
+        vscode.window.showInformationMessage('Claude session is ready. Add messages to start processing.');
+        return;
+    }
+
     processingQueue = true;
+    updateSessionState();
     processNextMessage();
 }
 
@@ -206,21 +272,268 @@ function stopProcessingQueue(): void {
     processingQueue = false;
     currentMessage = null;
     
-    // Stop Claude session when stopping processing
-    if (claudeProcess) {
-        claudeProcess.kill();
-        claudeProcess = null;
-        sessionReady = false;
-        vscode.window.showInformationMessage('Claude session stopped');
+    // Send ESC to Claude to cancel any current operation
+    if (claudeProcess && claudeProcess.stdin) {
+        debugLog('⌨️ Sending ESC to Claude to cancel current operation');
+        claudeProcess.stdin.write('\x1b'); // ESC key
     }
     
+    // End current history run
+    endCurrentHistoryRun();
+    
+    // Don't stop Claude session - just stop processing
+    // Session should remain active for future processing
     updateWebviewContent();
+    updateSessionState();
+    vscode.window.showInformationMessage('Processing stopped. Claude session remains active.');
 }
 
 function clearMessageQueue(): void {
     messageQueue = [];
+    clearPendingQueue();
     updateWebviewContent();
     vscode.window.showInformationMessage('Message queue cleared');
+}
+
+function resetClaudeSession(): void {
+    // Stop Claude process if running
+    if (claudeProcess) {
+        claudeProcess.kill();
+        claudeProcess = null;
+        sessionReady = false;
+    }
+
+    // Clear resume timer
+    if (resumeTimer) {
+        clearTimeout(resumeTimer);
+        resumeTimer = null;
+    }
+
+    // Reset state
+    currentMessage = null;
+    processingQueue = false;
+    
+    // Reset any waiting messages back to pending
+    messageQueue.forEach(msg => {
+        if (msg.status === 'waiting' || msg.status === 'processing') {
+            msg.status = 'pending';
+            msg.error = undefined;
+            msg.waitSeconds = undefined;
+        }
+    });
+
+    updateWebviewContent();
+    updateSessionState();
+    vscode.window.showInformationMessage('Claude session reset. You can now start a new session.');
+}
+
+// History Management Functions
+function getWorkspacePath(): string {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    return workspaceFolder?.uri.fsPath || 'global';
+}
+
+function getHistoryStorageKey(): string {
+    return `claudeloop_history_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
+}
+
+function getPendingQueueStorageKey(): string {
+    return `claudeloop_pending_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
+}
+
+function saveWorkspaceHistory(): void {
+    if (!extensionContext || !currentRun) return;
+    
+    const storageKey = getHistoryStorageKey();
+    const existingHistory = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
+    
+    // Update current run with latest data
+    currentRun.messages = [...messageQueue];
+    currentRun.totalMessages = messageQueue.length;
+    currentRun.completedMessages = messageQueue.filter(m => m.status === 'completed').length;
+    currentRun.errorMessages = messageQueue.filter(m => m.status === 'error').length;
+    currentRun.waitingMessages = messageQueue.filter(m => m.status === 'waiting').length;
+    
+    // Find existing run or add new one
+    const existingIndex = existingHistory.findIndex(run => run.id === currentRun!.id);
+    if (existingIndex >= 0) {
+        existingHistory[existingIndex] = currentRun;
+    } else {
+        existingHistory.push(currentRun);
+    }
+    
+    // Keep only last 50 runs per workspace
+    const recentHistory = existingHistory.slice(-50);
+    extensionContext.globalState.update(storageKey, recentHistory);
+    
+    // Also save current pending messages
+    savePendingQueue();
+}
+
+function loadWorkspaceHistory(): void {
+    if (!extensionContext) return;
+    
+    const storageKey = getHistoryStorageKey();
+    const history = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
+    
+    if (claudePanel) {
+        claudePanel.webview.postMessage({
+            command: 'historyLoaded',
+            history: history.reverse() // Most recent first
+        });
+    }
+}
+
+function filterHistory(filter: string): void {
+    if (!extensionContext) return;
+    
+    const storageKey = getHistoryStorageKey();
+    const allHistory = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
+    
+    let filteredHistory = allHistory;
+    
+    switch (filter) {
+        case 'waiting':
+            filteredHistory = allHistory.filter(run => run.waitingMessages > 0);
+            break;
+        case 'completed':
+            filteredHistory = allHistory.filter(run => run.completedMessages === run.totalMessages && run.totalMessages > 0);
+            break;
+        case 'errors':
+            filteredHistory = allHistory.filter(run => run.errorMessages > 0);
+            break;
+        case 'recent':
+            filteredHistory = allHistory.slice(-10);
+            break;
+        default:
+            filteredHistory = allHistory;
+    }
+    
+    if (claudePanel) {
+        claudePanel.webview.postMessage({
+            command: 'historyFiltered',
+            history: filteredHistory.reverse(),
+            filter: filter
+        });
+    }
+}
+
+function startNewHistoryRun(): void {
+    currentRun = {
+        id: `run_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+        startTime: new Date().toISOString(),
+        workspacePath: getWorkspacePath(),
+        messages: [],
+        totalMessages: 0,
+        completedMessages: 0,
+        errorMessages: 0,
+        waitingMessages: 0
+    };
+}
+
+function endCurrentHistoryRun(): void {
+    if (currentRun) {
+        currentRun.endTime = new Date().toISOString();
+        saveWorkspaceHistory();
+    }
+}
+
+// Queue Management Functions
+function removeMessageFromQueue(messageId: number): void {
+    const index = messageQueue.findIndex(msg => msg.id === messageId);
+    if (index >= 0) {
+        messageQueue.splice(index, 1);
+        updateWebviewContent();
+        saveWorkspaceHistory();
+        savePendingQueue();
+        vscode.window.showInformationMessage('Message removed from queue');
+    }
+}
+
+function reorderQueue(fromIndex: number, toIndex: number): void {
+    if (fromIndex < 0 || fromIndex >= messageQueue.length || toIndex < 0 || toIndex >= messageQueue.length) {
+        return;
+    }
+    
+    const [movedItem] = messageQueue.splice(fromIndex, 1);
+    messageQueue.splice(toIndex, 0, movedItem);
+    
+    updateWebviewContent();
+    saveWorkspaceHistory();
+    savePendingQueue();
+}
+
+function sortQueue(field: 'timestamp' | 'status' | 'text', direction: 'asc' | 'desc'): void {
+    queueSortConfig = { field, direction };
+    
+    messageQueue.sort((a, b) => {
+        let comparison = 0;
+        
+        switch (field) {
+            case 'timestamp':
+                comparison = new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+                break;
+            case 'status':
+                const statusOrder = { 'pending': 0, 'processing': 1, 'waiting': 2, 'completed': 3, 'error': 4 };
+                comparison = statusOrder[a.status] - statusOrder[b.status];
+                break;
+            case 'text':
+                comparison = a.text.localeCompare(b.text);
+                break;
+        }
+        
+        return direction === 'desc' ? -comparison : comparison;
+    });
+    
+    updateWebviewContent();
+    saveWorkspaceHistory();
+    savePendingQueue();
+    
+    if (claudePanel) {
+        claudePanel.webview.postMessage({
+            command: 'queueSorted',
+            sortConfig: queueSortConfig
+        });
+    }
+}
+
+// Pending Queue Persistence Functions
+function savePendingQueue(): void {
+    if (!extensionContext) return;
+    
+    // Only save pending and waiting messages
+    const pendingMessages = messageQueue.filter(msg => 
+        msg.status === 'pending' || msg.status === 'waiting'
+    );
+    
+    const storageKey = getPendingQueueStorageKey();
+    extensionContext.globalState.update(storageKey, pendingMessages);
+}
+
+function loadPendingQueue(): void {
+    if (!extensionContext) return;
+    
+    const storageKey = getPendingQueueStorageKey();
+    const pendingMessages = extensionContext.globalState.get<MessageItem[]>(storageKey, []);
+    
+    if (pendingMessages.length > 0) {
+        messageQueue = [...pendingMessages];
+        updateWebviewContent();
+        vscode.window.showInformationMessage(`Restored ${pendingMessages.length} pending messages from previous session`);
+        
+        // Start new history run with restored messages
+        if (!currentRun) {
+            startNewHistoryRun();
+            saveWorkspaceHistory();
+        }
+    }
+}
+
+function clearPendingQueue(): void {
+    if (!extensionContext) return;
+    
+    const storageKey = getPendingQueueStorageKey();
+    extensionContext.globalState.update(storageKey, []);
 }
 
 
@@ -240,8 +553,8 @@ function waitForPrompt(): Promise<void> {
         let promptCursorDetected = false;
         const SILENCE_THRESHOLD_MS = 3000; // 3 seconds of silence means Claude finished processing
 
-        // Regex to detect Claude's prompt cursor ANSI sequence
-        const promptCursorRegex = /\\u001b\[2m\\u001b\[38;5;244m│\\u001b\[39m\\u001b\[22m\s>/;
+        // Regex to detect Claude's prompt cursor ANSI sequence or shortcuts prompt
+        const promptCursorRegex = /\\u001b\[2m\\u001b\[38;5;244m│\\u001b\[39m\\u001b\[22m\s>|\? for shortcuts/;
 
         const timeout = setTimeout(() => {
             if (debugMode) {
@@ -291,9 +604,9 @@ function waitForPrompt(): Promise<void> {
             const jsonOutput = JSON.stringify(output);
             debugLog(`📤 Claude output (${data.length} bytes): ${jsonOutput}`);
             
-            // Check for Claude's prompt cursor in the JSON-stringified output
+            // Check for Claude's prompt cursor or shortcuts prompt in the JSON-stringified output
             if (promptCursorRegex.test(jsonOutput)) {
-                debugLog(`🎯 PROMPT CURSOR DETECTED: Claude is ready for input`);
+                debugLog(`🎯 PROMPT READY DETECTED: Claude is ready for input (cursor or shortcuts prompt)`);
                 promptCursorDetected = true;
             }
             
@@ -351,8 +664,9 @@ async function processNextMessage(): Promise<void> {
         debugLog('No processing needed - queue empty or processing stopped');
         processingQueue = false;
         updateWebviewContent();
+        updateSessionState();
         if (messageQueue.length === 0) {
-            vscode.window.showInformationMessage('All messages processed');
+            vscode.window.showInformationMessage('All messages processed. Claude session remains active.');
             debugLog('✓ All messages processed');
         }
         return;
@@ -363,6 +677,7 @@ async function processNextMessage(): Promise<void> {
         debugLog('No pending messages found');
         processingQueue = false;
         updateWebviewContent();
+        updateSessionState();
         vscode.window.showInformationMessage('No pending messages to process');
         return;
     }
@@ -543,6 +858,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         if (hasPermissionPrompt && !sessionReady) {
             debugLog('🔐 Permission prompt detected during startup - session ready for user interaction');
             sessionReady = true;
+            updateSessionState();
             if (debugMode) {
                 console.log('Claude session is ready (permission prompt)');
             }
@@ -550,6 +866,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         } else if (output.includes('? for shortcuts') && !sessionReady) {
             debugLog('✅ Claude ready prompt detected during startup');
             sessionReady = true;
+            updateSessionState();
             if (debugMode) {
                 console.log('Claude session is ready');
             }
@@ -730,6 +1047,16 @@ function updateWebviewContent(): void {
     }
 }
 
+function updateSessionState(): void {
+    if (claudePanel) {
+        claudePanel.webview.postMessage({
+            command: 'sessionStateChanged',
+            isSessionRunning: sessionReady,
+            isProcessing: processingQueue
+        });
+    }
+}
+
 function sendToWebviewTerminal(output: string): void {
     if (claudePanel) {
         claudePanel.webview.postMessage({
@@ -814,10 +1141,22 @@ function debugLog(message: string): void {
 
 
 function getWebviewContent(context: vscode.ExtensionContext): string {
-    const htmlPath = path.join(context.extensionPath, 'src', 'webview.html');
+    const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'index.html');
+    const cssPath = path.join(context.extensionPath, 'src', 'webview', 'styles.css');
+    const jsPath = path.join(context.extensionPath, 'src', 'webview', 'script.js');
     
     try {
-        return fs.readFileSync(htmlPath, 'utf8');
+        let html = fs.readFileSync(htmlPath, 'utf8');
+        
+        // Get URIs for CSS and JS files that are accessible by the webview
+        const cssUri = claudePanel?.webview.asWebviewUri(vscode.Uri.file(cssPath));
+        const jsUri = claudePanel?.webview.asWebviewUri(vscode.Uri.file(jsPath));
+        
+        // Replace relative paths with webview URIs
+        html = html.replace('href="styles.css"', `href="${cssUri}"`);
+        html = html.replace('src="script.js"', `src="${jsUri}"`);
+        
+        return html;
     } catch (error) {
         if (debugMode) {
             console.error('Error reading webview HTML file:', error);
@@ -850,5 +1189,7 @@ function getWebviewContent(context: vscode.ExtensionContext): string {
 }
 
 export function deactivate(): void {
+    // Save pending messages before closing
+    savePendingQueue();
     stopClaudeLoop();
 } 
