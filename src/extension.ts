@@ -45,12 +45,26 @@ let healthCheckTimer: NodeJS.Timeout | null = null;
 let sessionReady = false;
 let currentMessage: MessageItem | null = null;
 let processingQueue = false;
-let debugMode = false; // Enable debug logging (set to true for development)
+let debugMode = true; // Enable debug logging (set to true for development)
 
 // History and workspace management
 let currentRun: HistoryRun | null = null;
 let extensionContext: vscode.ExtensionContext;
 let queueSortConfig: QueueSortConfig = { field: 'timestamp', direction: 'asc' };
+
+// Output management for Claude stdout - show current screen content at controlled rate
+let claudeOutputBuffer: string = '';
+let claudeCurrentScreen: string = '';
+let claudeOutputTimer: NodeJS.Timeout | null = null;
+let lastClaudeOutputTime: number = 0;
+const CLAUDE_OUTPUT_THROTTLE_MS = 500; // 500ms = 2 times per second max (matches screen analysis)
+const ANSI_CLEAR_SCREEN_PATTERNS = [
+    '\x1b[2J',           // Clear entire screen
+    '\x1b[H\x1b[2J',     // Move cursor to home + clear screen
+    '\x1b[2J\x1b[H',     // Clear screen + move cursor to home
+    '\x1b[1;1H\x1b[2J',  // Move cursor to 1,1 + clear screen
+    '\x1b[2J\x1b[1;1H'   // Clear screen + move cursor to 1,1
+];
 
 // Configuration constants
 const TIMEOUT_MS = 60 * 60 * 60 * 1000; // 1 hour
@@ -175,6 +189,17 @@ function stopClaudeLoop(): void {
         clearTimeout(resumeTimer);
         resumeTimer = null;
     }
+    
+    // Clear Claude output timer and flush any remaining output
+    if (claudeOutputTimer) {
+        clearTimeout(claudeOutputTimer);
+        claudeOutputTimer = null;
+    }
+    flushClaudeOutput();
+    
+    // Clear buffers
+    claudeOutputBuffer = '';
+    claudeCurrentScreen = '';
     
     stopHealthCheck();
 
@@ -552,112 +577,129 @@ function waitForPrompt(): Promise<void> {
 
         let dataListener: ((data: Buffer) => void) | null = null;
         let lastOutputTime = Date.now();
-        let silenceTimer: NodeJS.Timeout | null = null;
+        let screenAnalysisTimer: NodeJS.Timeout | null = null;
         let waitingForPermission = false;
-        let promptCursorDetected = false;
-        const SILENCE_THRESHOLD_MS = 3000; // 3 seconds of silence means Claude finished processing
+        let currentScreenBuffer = '';
+        const SCREEN_ANALYSIS_INTERVAL_MS = 500; // Analyze screen every 500ms
+        const DEBOUNCE_THRESHOLD_MS = 1000; // Wait 1 second of stability before resolving
 
-        // Regex to detect Claude's prompt cursor ANSI sequence or shortcuts prompt
-        const promptCursorRegex = /\\u001b\[2m\\u001b\[38;5;244m│\\u001b\[39m\\u001b\[22m\s>|\? for shortcuts/;
+        // Patterns to detect Claude readiness
+        const readyPatterns = [
+            /\? for shortcuts/,                           // Main ready indicator
+            /\\u001b\[2m\\u001b\[38;5;244m│\\u001b\[39m\\u001b\[22m\s>/,  // Cursor pattern
+            />\s*$/,                                      // Simple prompt at end
+        ];
+
+        const permissionPrompts = [
+            'Do you want to make this edit to',
+            'Do you want to create',
+            'Do you want to delete',
+            'Do you want to read',
+            'Would you like to',
+            'Proceed with',
+            'Continue?'
+        ];
 
         const timeout = setTimeout(() => {
-            if (debugMode) {
-                console.error(`\n\nERROR: Timed out after ${TIMEOUT_MS / 1000}s waiting for Claude to finish processing.`);
-            }
-            if (dataListener && claudeProcess?.stdout) {
-                claudeProcess.stdout.removeListener('data', dataListener);
-            }
-            if (silenceTimer) {
-                clearTimeout(silenceTimer);
-            }
+            debugLog(`❌ Timeout after ${TIMEOUT_MS / 1000}s waiting for Claude to be ready`);
+            cleanup();
             reject(new Error('Timeout waiting for Claude to finish processing'));
         }, TIMEOUT_MS);
 
-        const checkForSilence = () => {
+        const cleanup = () => {
+            if (dataListener && claudeProcess?.stdout) {
+                claudeProcess.stdout.removeListener('data', dataListener);
+            }
+            if (screenAnalysisTimer) {
+                clearTimeout(screenAnalysisTimer);
+            }
+            clearTimeout(timeout);
+        };
+
+        const analyzeCurrentScreen = () => {
             const timeSinceLastOutput = Date.now() - lastOutputTime;
-            debugLog(`⏱️  Checking silence: ${timeSinceLastOutput}ms since last output (waiting for permission: ${waitingForPermission}, prompt cursor: ${promptCursorDetected})`);
+            debugLog(`🔍 Analyzing screen (${currentScreenBuffer.length} chars, ${timeSinceLastOutput}ms since last output)`);
             
             if (waitingForPermission) {
-                // When waiting for permission, don't resolve on silence - wait for user interaction
-                debugLog(`🔐 Still waiting for permission prompt response from user`);
-                silenceTimer = setTimeout(checkForSilence, 1000); // Check less frequently
+                // Check if permission was resolved
+                if (currentScreenBuffer.includes('? for shortcuts')) {
+                    debugLog(`✅ Permission resolved - back to normal processing`);
+                    waitingForPermission = false;
+                } else {
+                    debugLog(`🔐 Still waiting for permission response`);
+                    screenAnalysisTimer = setTimeout(analyzeCurrentScreen, SCREEN_ANALYSIS_INTERVAL_MS);
+                    return;
+                }
+            }
+            
+            // Check for permission prompts
+            const hasPermissionPrompt = permissionPrompts.some(prompt => 
+                currentScreenBuffer.includes(prompt)
+            );
+            
+            if (hasPermissionPrompt && !waitingForPermission) {
+                debugLog(`🔐 Permission prompt detected in screen analysis`);
+                waitingForPermission = true;
+                vscode.window.showInformationMessage('Claude is asking for permission. Use the Claude output area to navigate and select your choice.');
+                screenAnalysisTimer = setTimeout(analyzeCurrentScreen, SCREEN_ANALYSIS_INTERVAL_MS);
                 return;
             }
             
-            if (timeSinceLastOutput >= SILENCE_THRESHOLD_MS && promptCursorDetected) {
-                debugLog(`✅ Claude finished processing! No output for ${timeSinceLastOutput}ms + prompt cursor detected`);
-                clearTimeout(timeout);
-                if (dataListener && claudeProcess?.stdout) {
-                    claudeProcess.stdout.removeListener('data', dataListener);
-                }
-                if (silenceTimer) {
-                    clearTimeout(silenceTimer);
-                }
+            // Check for readiness patterns
+            const isReady = readyPatterns.some(pattern => {
+                const jsonScreen = JSON.stringify(currentScreenBuffer);
+                return pattern.test(jsonScreen) || pattern.test(currentScreenBuffer);
+            });
+            
+            if (isReady && timeSinceLastOutput >= DEBOUNCE_THRESHOLD_MS) {
+                debugLog(`✅ Claude is ready! Pattern detected and ${timeSinceLastOutput}ms of stability`);
+                cleanup();
                 resolve();
-            } else if (timeSinceLastOutput >= SILENCE_THRESHOLD_MS) {
-                debugLog(`⏱️  Silence detected but no prompt cursor yet - continuing to wait`);
-                silenceTimer = setTimeout(checkForSilence, 500);
+            } else if (isReady) {
+                debugLog(`⏳ Ready pattern detected but waiting for stability (${timeSinceLastOutput}ms < ${DEBOUNCE_THRESHOLD_MS}ms)`);
+                screenAnalysisTimer = setTimeout(analyzeCurrentScreen, SCREEN_ANALYSIS_INTERVAL_MS);
             } else {
-                // Not enough silence yet, check again in 500ms
-                silenceTimer = setTimeout(checkForSilence, 500);
+                debugLog(`⏱️  No ready pattern detected, continuing analysis`);
+                screenAnalysisTimer = setTimeout(analyzeCurrentScreen, SCREEN_ANALYSIS_INTERVAL_MS);
             }
         };
 
         dataListener = (data: Buffer) => {
             const output = data.toString();
-            const jsonOutput = JSON.stringify(output);
-            debugLog(`📤 Claude output (${data.length} bytes): ${jsonOutput}`);
+            debugLog(`📤 Claude output (${data.length} bytes)`);
             
-            // Check for Claude's prompt cursor or shortcuts prompt in the JSON-stringified output
-            if (promptCursorRegex.test(jsonOutput)) {
-                debugLog(`🎯 PROMPT READY DETECTED: Claude is ready for input (cursor or shortcuts prompt)`);
-                promptCursorDetected = true;
+            // Check for clear screen sequences and handle them properly
+            let foundClearScreen = false;
+            for (const pattern of ANSI_CLEAR_SCREEN_PATTERNS) {
+                if (output.includes(pattern)) {
+                    foundClearScreen = true;
+                    break;
+                }
             }
             
-            // Check for permission prompts during message processing
-            const permissionPrompts = [
-                'Do you want to make this edit to',
-                'Do you want to create',
-                'Do you want to delete',
-                'Do you want to read',
-                'Would you like to',
-                'Proceed with',
-                'Continue?'
-            ];
-            
-            const hasPermissionPrompt = permissionPrompts.some(prompt => output.includes(prompt));
-            
-            if (hasPermissionPrompt && !waitingForPermission) {
-                debugLog(`🔐 PERMISSION PROMPT DETECTED during message processing: User interaction required`);
-                waitingForPermission = true;
-                promptCursorDetected = false; // Reset cursor detection for permission flow
-                vscode.window.showInformationMessage('Claude is asking for permission. Use the Claude output area to navigate and select your choice.');
-            }
-            
-            // If we were waiting for permission and now see "? for shortcuts", permission was handled
-            if (waitingForPermission && output.includes('? for shortcuts')) {
-                debugLog(`✅ Permission prompt resolved - back to normal processing`);
-                waitingForPermission = false;
-                promptCursorDetected = false; // Reset cursor detection after permission
-                // Continue with normal silence detection
+            if (foundClearScreen) {
+                // Clear screen detected - reset buffer and start fresh
+                currentScreenBuffer = output;
+                debugLog(`🖥️  Clear screen detected - reset screen buffer`);
+            } else {
+                // Append to current screen buffer
+                currentScreenBuffer += output;
+                
+                // Keep only recent screen content (last 50KB to avoid memory issues)
+                if (currentScreenBuffer.length > 50000) {
+                    currentScreenBuffer = currentScreenBuffer.slice(-40000);
+                    debugLog(`📋 Screen buffer trimmed to prevent memory issues`);
+                }
             }
             
             // Update last output time
             lastOutputTime = Date.now();
-            
-            // Clear any existing silence timer since we got new output
-            if (silenceTimer) {
-                clearTimeout(silenceTimer);
-            }
-            
-            // Start checking for silence after a small delay
-            silenceTimer = setTimeout(checkForSilence, 500);
         };
 
         claudeProcess.stdout.on('data', dataListener);
         
-        // Start the initial silence check
-        silenceTimer = setTimeout(checkForSilence, 500);
+        // Start the screen analysis
+        screenAnalysisTimer = setTimeout(analyzeCurrentScreen, SCREEN_ANALYSIS_INTERVAL_MS);
     });
 }
 
@@ -955,6 +997,17 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         sessionReady = false;
         stopHealthCheck(); // Stop health monitoring
         
+        // Flush any remaining Claude output
+        if (claudeOutputTimer) {
+            clearTimeout(claudeOutputTimer);
+            claudeOutputTimer = null;
+        }
+        flushClaudeOutput();
+        
+        // Clear buffers
+        claudeOutputBuffer = '';
+        claudeCurrentScreen = '';
+        
         const wasProcessing = processingQueue;
         processingQueue = false; // Stop processing queue immediately
         
@@ -994,6 +1047,18 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         
         sessionReady = false;
         stopHealthCheck(); // Stop health monitoring
+        
+        // Flush any remaining Claude output
+        if (claudeOutputTimer) {
+            clearTimeout(claudeOutputTimer);
+            claudeOutputTimer = null;
+        }
+        flushClaudeOutput();
+        
+        // Clear buffers
+        claudeOutputBuffer = '';
+        claudeCurrentScreen = '';
+        
         const wasProcessing = processingQueue;
         processingQueue = false; // Stop processing immediately
         
@@ -1173,6 +1238,73 @@ function formatTerminalOutput(text: string, type: 'claude' | 'debug' | 'error' |
 }
 
 function sendClaudeOutput(output: string): void {
+    // Add output to buffer
+    claudeOutputBuffer += output;
+    
+    // Check if buffer contains ANSI clear screen sequence
+    let foundClearScreen = false;
+    let lastClearScreenIndex = -1;
+    
+    for (const pattern of ANSI_CLEAR_SCREEN_PATTERNS) {
+        const index = claudeOutputBuffer.lastIndexOf(pattern);
+        if (index > lastClearScreenIndex) {
+            lastClearScreenIndex = index;
+            foundClearScreen = true;
+        }
+    }
+    
+    if (foundClearScreen) {
+        // Update current screen to content from last clear screen to end
+        const newScreen = claudeOutputBuffer.substring(lastClearScreenIndex);
+        
+        // Check if this is actually a new screen (different from current)
+        if (newScreen !== claudeCurrentScreen) {
+            claudeCurrentScreen = newScreen;
+            debugLog(`📺 NEW SCREEN detected - sending immediately (${claudeCurrentScreen.length} chars)`);
+        }
+        
+        // Keep only the current screen content in buffer for future appends
+        claudeOutputBuffer = claudeCurrentScreen;
+    } else {
+        // No clear screen yet, current screen is the entire buffer
+        claudeCurrentScreen = claudeOutputBuffer;
+    }
+    
+    // Send immediately for important changes or throttle for rapid updates
+    const now = Date.now();
+    const timeSinceLastOutput = now - lastClaudeOutputTime;
+    
+    if (timeSinceLastOutput >= CLAUDE_OUTPUT_THROTTLE_MS) {
+        // Send immediately for new screens or when enough time has passed
+        flushClaudeOutput();
+    } else {
+        // Schedule a delayed flush for incremental changes
+        if (!claudeOutputTimer) {
+            const delay = CLAUDE_OUTPUT_THROTTLE_MS - timeSinceLastOutput;
+            claudeOutputTimer = setTimeout(() => {
+                flushClaudeOutput();
+            }, delay);
+        }
+    }
+}
+
+function flushClaudeOutput(): void {
+    if (claudeCurrentScreen.length === 0) {
+        return;
+    }
+    
+    const output = claudeCurrentScreen;
+    lastClaudeOutputTime = Date.now();
+    
+    // Clear the timer
+    if (claudeOutputTimer) {
+        clearTimeout(claudeOutputTimer);
+        claudeOutputTimer = null;
+    }
+    
+    debugLog(`📤 Sending Claude current screen (${output.length} chars)`);
+    
+    // Send to webview
     if (claudePanel) {
         claudePanel.webview.postMessage({
             command: 'claudeOutput',
@@ -1350,5 +1482,17 @@ function stopHealthCheck(): void {
 export function deactivate(): void {
     // Save pending messages before closing
     savePendingQueue();
+    
+    // Clear Claude output timer and flush any remaining output
+    if (claudeOutputTimer) {
+        clearTimeout(claudeOutputTimer);
+        claudeOutputTimer = null;
+    }
+    flushClaudeOutput();
+    
+    // Clear buffers
+    claudeOutputBuffer = '';
+    claudeCurrentScreen = '';
+    
     stopClaudeLoop();
 } 

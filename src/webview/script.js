@@ -54,6 +54,14 @@ function stopProcessing() {
     });
 }
 
+function interruptClaude() {
+    console.log('Frontend: User clicked Interrupt (ESC)');
+    vscode.postMessage({
+        command: 'claudeKeypress',
+        key: 'escape'
+    });
+}
+
 function clearQueue() {
     vscode.postMessage({
         command: 'clearQueue'
@@ -80,6 +88,21 @@ function clearClaudeOutput() {
                 <span>Output cleared - ready for new Claude output...</span>
             </div>
         `;
+        // Reset content tracking
+        claudeContent = '';
+        lastRenderedContent = '';
+        
+        // Reset parsing cache
+        lastParsedContent = '';
+        lastParsedHtml = '';
+        
+        // Reset throttling state
+        pendingClaudeOutput = null;
+        if (claudeRenderTimer) {
+            clearTimeout(claudeRenderTimer);
+            claudeRenderTimer = null;
+        }
+        lastClaudeRenderTime = 0;
     }
 }
 
@@ -549,8 +572,62 @@ function processAnsiInText(text) {
 
 // Store Claude output content 
 let claudeContent = '';
+let lastRenderedContent = '';
+let pendingClaudeOutput = null;
+let claudeRenderTimer = null;
+let lastClaudeRenderTime = 0;
+let lastParsedContent = '';
+let lastParsedHtml = '';
+const CLAUDE_RENDER_THROTTLE_MS = 500; // 500ms = 2 times per second max (matches backend analysis)
 
 function appendToClaudeOutput(output) {
+    // Store the latest output
+    pendingClaudeOutput = output;
+    
+    // Check if we need to throttle
+    const now = Date.now();
+    const timeSinceLastRender = now - lastClaudeRenderTime;
+    
+    if (timeSinceLastRender >= CLAUDE_RENDER_THROTTLE_MS) {
+        // Enough time has passed, render immediately
+        console.log('🎨 Rendering Claude output immediately');
+        renderClaudeOutput();
+    } else {
+        // Schedule a delayed render if not already scheduled
+        if (!claudeRenderTimer) {
+            const delay = CLAUDE_RENDER_THROTTLE_MS - timeSinceLastRender;
+            console.log(`⏰ Throttling Claude render for ${delay}ms`);
+            claudeRenderTimer = setTimeout(() => {
+                renderClaudeOutput();
+            }, delay);
+        } else {
+            console.log('🔄 Claude render already scheduled, updating pending output');
+        }
+    }
+}
+
+function renderClaudeOutput() {
+    if (!pendingClaudeOutput) {
+        return;
+    }
+    
+    const output = pendingClaudeOutput;
+    pendingClaudeOutput = null;
+    lastClaudeRenderTime = Date.now();
+    
+    // Clear the timer
+    if (claudeRenderTimer) {
+        clearTimeout(claudeRenderTimer);
+        claudeRenderTimer = null;
+    }
+    
+    console.log(`🎨 Rendering Claude output (${output.length} chars)`);
+    
+    // Now perform the actual rendering
+    performClaudeRender(output);
+}
+
+function performClaudeRender(output) {
     const claudeContainer = document.getElementById('claudeOutputContainer');
     let claudeOutput = claudeContainer.querySelector('.claude-live-output');
 
@@ -565,27 +642,64 @@ function appendToClaudeOutput(output) {
     if (readyMessage) {
         claudeOutput.innerHTML = '';
         claudeContent = '';
+        lastRenderedContent = '';
+        
+        // Reset parsing cache
+        lastParsedContent = '';
+        lastParsedHtml = '';
     }
 
     // Check if this output contains screen clearing commands
     if (output.includes('\x1b[2J') || output.includes('\x1b[3J') || output.includes('\x1b[H')) {
-        // Only clear when we receive actual clear screen ANSI codes
-        claudeContent = '';
+        // Clear screen - replace entire content
+        claudeContent = output;
+        lastRenderedContent = output;
         claudeOutput.innerHTML = '';
+        
+        // Reset cache since this is a new screen
+        lastParsedContent = '';
+        lastParsedHtml = '';
+        
+        // Parse and render the new content
+        const htmlOutput = parseAnsiToHtml(claudeContent);
+        lastParsedContent = output;
+        lastParsedHtml = htmlOutput;
+        
+        const outputElement = document.createElement('div');
+        outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
+        outputElement.innerHTML = htmlOutput;
+        claudeOutput.appendChild(outputElement);
+    } else {
+        // No clear screen - this is the complete current screen content from backend
+        // Only update if content has actually changed
+        if (output !== lastRenderedContent) {
+            claudeContent = output;
+            lastRenderedContent = output;
+            
+            // Use cached parsing if content hasn't changed significantly
+            let htmlOutput;
+            if (output === lastParsedContent && lastParsedHtml) {
+                htmlOutput = lastParsedHtml;
+                console.log('📋 Using cached ANSI parsing result');
+            } else {
+                // Parse and cache the result
+                htmlOutput = parseAnsiToHtml(claudeContent);
+                lastParsedContent = output;
+                lastParsedHtml = htmlOutput;
+                console.log('🔄 Parsing ANSI content');
+            }
+            
+            // Replace the content efficiently
+            claudeOutput.innerHTML = '';
+            const outputElement = document.createElement('div');
+            outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
+            outputElement.innerHTML = htmlOutput;
+            claudeOutput.appendChild(outputElement);
+        } else {
+            // Content hasn't changed, skip rendering
+            return;
+        }
     }
-
-    // Add new output to Claude content
-    claudeContent += output;
-
-    // Parse ANSI escape codes and convert to HTML
-    const htmlOutput = parseAnsiToHtml(claudeContent);
-
-    // Replace the content with the accumulated output
-    claudeOutput.innerHTML = '';
-    const outputElement = document.createElement('div');
-    outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
-    outputElement.innerHTML = htmlOutput;
-    claudeOutput.appendChild(outputElement);
 
     // Auto-scroll to bottom
     claudeOutput.scrollTop = claudeOutput.scrollHeight;
@@ -680,4 +794,20 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize button states and load history
     updateButtonStates();
     loadHistory();
+});
+
+// Cleanup function to flush any pending Claude output before page closes
+window.addEventListener('beforeunload', function() {
+    if (claudeRenderTimer) {
+        clearTimeout(claudeRenderTimer);
+        claudeRenderTimer = null;
+    }
+    if (pendingClaudeOutput) {
+        performClaudeRender(pendingClaudeOutput);
+        pendingClaudeOutput = null;
+    }
+    
+    // Reset parsing cache
+    lastParsedContent = '';
+    lastParsedHtml = '';
 });
