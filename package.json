@@ -1,0 +1,83 @@
+{
+  "name": "claude-loop",
+  "displayName": "ClaudeLoop",
+  "description": "Automatically resume Claude CLI tasks when usage limits are reached",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "claude-loop.start",
+        "title": "Start ClaudeLoop",
+        "category": "Claude"
+      },
+      {
+        "command": "claude-loop.stop",
+        "title": "Stop ClaudeLoop",
+        "category": "Claude"
+      },
+      {
+        "command": "claude-loop.addMessage",
+        "title": "Add Message to Queue",
+        "category": "Claude"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "claude-loop.start",
+          "when": "true"
+        },
+        {
+          "command": "claude-loop.stop",
+          "when": "true"
+        },
+        {
+          "command": "claude-loop.addMessage",
+          "when": "true"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && cp src/claude_pty_wrapper.py out/",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "16.x",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^4.9.4"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "automation",
+    "cli",
+    "productivity",
+    "development"
+  ],
+  "author": "Ben Basha",
+  "license": "MIT",
+  "publisher": "benbasha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benbasha/claude-code-loop"
+  },
+  "homepage": "https://github.com/benbasha/claude-code-loop#readme",
+  "bugs": {
+    "url": "https://github.com/benbasha/claude-code-loop/issues"
+  },
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  }
+}
