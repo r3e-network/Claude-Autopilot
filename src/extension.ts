@@ -246,14 +246,19 @@ function addMessageToQueueFromWebview(message: string): void {
     updateWebviewContent();
     saveWorkspaceHistory();
     
-    // Auto-start processing if session is ready and not currently processing
-    if (sessionReady && !processingQueue) {
+    // Auto-start processing if session is ready and not currently processing AND no waiting messages
+    const hasWaitingMessages = messageQueue.some(msg => msg.status === 'waiting');
+    if (sessionReady && !processingQueue && !hasWaitingMessages) {
         vscode.window.showInformationMessage(`Message added and auto-processing started: ${message.substring(0, 50)}...`);
         processingQueue = true;
         updateSessionState();
         processNextMessage();
     } else {
-        vscode.window.showInformationMessage(`Message added to queue: ${message.substring(0, 50)}...`);
+        if (hasWaitingMessages) {
+            vscode.window.showInformationMessage(`Message added to queue (waiting for usage limit to reset): ${message.substring(0, 50)}...`);
+        } else {
+            vscode.window.showInformationMessage(`Message added to queue: ${message.substring(0, 50)}...`);
+        }
     }
 }
 
@@ -915,9 +920,10 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         // Send Claude output to webview
         sendClaudeOutput(output);
         
-        // Check for usage limit
-        if (output.includes('Claude usage limit reached')) {
+        // Check for usage limit - be more specific about the pattern
+        if (output.includes('Claude usage limit reached') || output.includes('usage limit reached')) {
             debugLog('⚠️ USAGE LIMIT DETECTED');
+            debugLog(`📋 Usage limit output: ${output}`);
             if (currentMessage) {
                 handleUsageLimit(output, currentMessage);
             }
@@ -1097,19 +1103,34 @@ function calculateWaitTime(resetTime: string): number {
     }
     
     try {
-        // Parse the reset time (e.g., "2:30 PM" or "14:30")
+        // Parse the reset time (e.g., "2:30 PM", "14:30", "9pm (Asia/Jerusalem)")
         const now = new Date();
-        const [timePart, ampm] = resetTime.split(' ');
-        const [hours, minutes] = timePart.split(':').map(Number);
+        
+        // Clean up the time string - remove timezone info and normalize
+        const cleanTime = resetTime.replace(/\s*\([^)]+\)/, '').trim();
+        const [timePart, ampm] = cleanTime.split(' ');
+        
+        // Handle cases like "9pm" vs "9:00 PM"
+        let hours: number, minutes: number;
+        if (timePart.includes(':')) {
+            [hours, minutes] = timePart.split(':').map(Number);
+        } else {
+            // Handle "9pm" format
+            hours = parseInt(timePart.replace(/[^\d]/g, ''));
+            minutes = 0;
+        }
         
         const resetDate = new Date(now);
         let resetHours = hours;
         
-        // Handle AM/PM format
-        if (ampm) {
-            if (ampm.toUpperCase() === 'PM' && hours !== 12) {
+        // Handle AM/PM format (case insensitive)
+        if (ampm || /[ap]m/i.test(timePart)) {
+            const isPM = /pm/i.test(ampm || timePart);
+            const isAM = /am/i.test(ampm || timePart);
+            
+            if (isPM && hours !== 12) {
                 resetHours = hours + 12;
-            } else if (ampm.toUpperCase() === 'AM' && hours === 12) {
+            } else if (isAM && hours === 12) {
                 resetHours = 0;
             }
         }
@@ -1132,29 +1153,67 @@ function calculateWaitTime(resetTime: string): number {
 }
 
 function handleUsageLimit(output: string, message: MessageItem): void {
-    // Extract reset time from Claude's usage limit message
-    const resetTimeMatch = output.match(/resets at (\d{1,2}:\d{2}(?:\s*[APM]{2})?)/i);
+    // Extract reset time from Claude's usage limit message - handle timezone format
+    const resetTimeMatch = output.match(/reset at (\d{1,2}[:\d]*(?:\s*[APM]{2})?(?:\s*\([^)]+\))?)/i);
     const resetTime = resetTimeMatch ? resetTimeMatch[1] : 'unknown time';
     
     // Stop current processing
     processingQueue = false;
-    message.status = 'waiting';
-    message.error = `Usage limit reached - will resume at ${resetTime}`;
+    
+    // Mark current message as completed (Claude did work on it before hitting limit)
+    message.status = 'completed';
+    message.completedAt = new Date().toISOString();
+    message.output = 'Completed but hit usage limit';
+    
+    // Check if we already have a continue message waiting - don't add duplicates
+    const existingContinue = messageQueue.find(msg => msg.text === 'continue' && msg.status === 'waiting');
+    if (existingContinue) {
+        debugLog('⚠️ Continue message already exists - not adding duplicate');
+        return;
+    }
+    
+    // Find the index of the current completed message
+    const currentMessageIndex = messageQueue.findIndex(msg => msg.id === message.id);
+    
+    // Create a "continue" message to resume the conversation
+    const continueMessage: MessageItem = {
+        id: Date.now() + 1, // Ensure unique ID
+        text: 'continue',
+        timestamp: new Date().toISOString(),
+        status: 'waiting',
+        error: `Usage limit reached - will resume at ${resetTime}`,
+        waitUntil: Date.now() + (calculateWaitTime(resetTime) * 60 * 1000)
+    };
+    
+    // Add continue message right after the completed message
+    if (currentMessageIndex >= 0) {
+        messageQueue.splice(currentMessageIndex + 1, 0, continueMessage);
+    } else {
+        // Fallback: add to end if we can't find current message
+        messageQueue.push(continueMessage);
+    }
+    
     updateWebviewContent();
     
     // Calculate wait time until reset (default to 1 hour if can't parse)
     const waitMinutes = calculateWaitTime(resetTime);
     const waitSeconds = waitMinutes * 60;
     
-    vscode.window.showWarningMessage(`Claude usage limit reached. Will automatically resume processing at ${resetTime} (${waitMinutes} minutes)`);
+    vscode.window.showWarningMessage(`Claude usage limit reached. Added "continue" message to queue. Will automatically resume processing at ${resetTime} (${waitMinutes} minutes)`);
     
-    // Start countdown timer
-    startCountdownTimer(message, waitSeconds);
+    // Start countdown timer for the continue message
+    startCountdownTimer(continueMessage, waitSeconds);
 }
 
 
 
 function startCountdownTimer(message: MessageItem, waitSeconds: number): void {
+    // Clear any existing timer
+    if (resumeTimer) {
+        clearTimeout(resumeTimer);
+        resumeTimer = null;
+    }
+    
     let remainingSeconds = waitSeconds;
     
     const countdownInterval = setInterval(() => {
@@ -1169,13 +1228,16 @@ function startCountdownTimer(message: MessageItem, waitSeconds: number): void {
             message.status = 'pending';
             message.error = undefined;
             message.waitSeconds = undefined;
+            message.waitUntil = undefined;
             updateWebviewContent();
+            saveWorkspaceHistory(); // Save the updated queue state
             
-            vscode.window.showInformationMessage('Usage limit has reset. Resuming processing...');
+            vscode.window.showInformationMessage('Usage limit has reset. Resuming processing with "continue" message...');
             
             // Resume processing if we were processing before
             if (!processingQueue) {
                 processingQueue = true;
+                updateSessionState();
                 setTimeout(() => {
                     processNextMessage();
                 }, 2000); // 2 second delay before resuming
