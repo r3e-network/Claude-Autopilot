@@ -342,6 +342,9 @@ window.addEventListener('message', event => {
         case 'claudeOutput':
             appendToClaudeOutput(message.output);
             break;
+        case 'setSleepPreventionSetting':
+            document.getElementById('preventSleep').checked = message.enabled;
+            break;
         case 'sessionStateChanged':
             console.log('Backend state update:', {
                 backendSessionRunning: message.isSessionRunning,
@@ -810,4 +813,23 @@ window.addEventListener('beforeunload', function() {
     // Reset parsing cache
     lastParsedContent = '';
     lastParsedHtml = '';
+});
+
+function toggleSleepPrevention() {
+    const checkbox = document.getElementById('preventSleep');
+    const isEnabled = checkbox.checked;
+    
+    vscode.postMessage({
+        command: 'toggleSleepPrevention',
+        enabled: isEnabled
+    });
+    
+    console.log('Sleep prevention toggled:', isEnabled);
+}
+
+// Initialize sleep prevention checkbox from VS Code settings
+window.addEventListener('DOMContentLoaded', function() {
+    vscode.postMessage({
+        command: 'getSleepPreventionSetting'
+    });
 });

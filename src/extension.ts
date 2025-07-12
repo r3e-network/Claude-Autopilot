@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 interface MessageItem {
     id: number;
@@ -40,6 +41,8 @@ let messageQueue: MessageItem[] = [];
 let claudeProcess: ChildProcess | null = null;
 let resumeTimer: NodeJS.Timeout | null = null;
 let countdownInterval: NodeJS.Timeout | null = null;
+let sleepPreventionProcess: ChildProcess | null = null;
+let sleepPreventionActive = false;
 let healthCheckTimer: NodeJS.Timeout | null = null;
 
 // Session state management
@@ -166,6 +169,12 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
                 case 'filterHistory':
                     filterHistory(message.filter);
                     break;
+                case 'toggleSleepPrevention':
+                    toggleSleepPreventionSetting(message.enabled);
+                    break;
+                case 'getSleepPreventionSetting':
+                    sendSleepPreventionSetting();
+                    break;
             }
         },
         undefined,
@@ -185,6 +194,8 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
             clearInterval(countdownInterval);
             countdownInterval = null;
         }
+        // Stop sleep prevention when panel is disposed
+        stopSleepPrevention();
     }, null, []);
 
     isRunning = true;
@@ -1222,6 +1233,9 @@ function handleUsageLimit(output: string, message: MessageItem): void {
     
     // Start countdown timer for the continue message
     startCountdownTimer(continueMessage, waitSeconds);
+    
+    // Start sleep prevention if enabled
+    startSleepPrevention();
 }
 
 
@@ -1283,6 +1297,9 @@ function resumeProcessingFromWait(message: MessageItem): void {
     updateWebviewContent();
     saveWorkspaceHistory(); // Save the updated queue state
     
+    // Stop sleep prevention when resuming
+    stopSleepPrevention();
+    
     vscode.window.showInformationMessage('Usage limit has reset. Resuming processing with "continue" message...');
     
     // Resume processing if we were processing before
@@ -1311,12 +1328,104 @@ function recoverWaitingMessages(): void {
                 debugLog(`⏰ Recovering timer for message ${message.id} - ${timeLeft} seconds remaining`);
                 message.waitSeconds = timeLeft;
                 startCountdownTimer(message, timeLeft);
+                // Start sleep prevention if we're recovering a waiting timer
+                startSleepPrevention();
             }
         }
     });
 }
 
+function startSleepPrevention(): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const preventSleep = config.get<boolean>('preventSleep', false);
+    
+    if (!preventSleep || sleepPreventionActive) {
+        return;
+    }
+    
+    try {
+        const platform = os.platform();
+        let command: string;
+        let args: string[];
+        
+        switch (platform) {
+            case 'darwin': // macOS
+                command = 'caffeinate';
+                args = ['-d']; // Prevent display sleep
+                break;
+            case 'win32': // Windows
+                command = 'powershell';
+                args = ['-Command', 'Add-Type -Assembly System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState("Hibernate", $false, $false)'];
+                break;
+            case 'linux': // Linux
+                command = 'systemd-inhibit';
+                args = ['--what=sleep', '--who=ClaudeLoop', '--why=Waiting for Claude usage limit reset', 'sleep', '999999'];
+                break;
+            default:
+                debugLog('❌ Sleep prevention not supported on this platform');
+                return;
+        }
+        
+        sleepPreventionProcess = spawn(command, args);
+        sleepPreventionActive = true;
+        
+        sleepPreventionProcess.on('error', (error) => {
+            debugLog(`❌ Sleep prevention failed: ${error.message}`);
+            sleepPreventionActive = false;
+            sleepPreventionProcess = null;
+        });
+        
+        sleepPreventionProcess.on('exit', () => {
+            debugLog('🛌 Sleep prevention ended');
+            sleepPreventionActive = false;
+            sleepPreventionProcess = null;
+        });
+        
+        debugLog('☕ Sleep prevention started');
+        vscode.window.showInformationMessage('Sleep prevention enabled while waiting for Claude usage limit reset');
+        
+    } catch (error) {
+        debugLog(`❌ Failed to start sleep prevention: ${error}`);
+    }
+}
 
+function stopSleepPrevention(): void {
+    if (!sleepPreventionActive || !sleepPreventionProcess) {
+        return;
+    }
+    
+    try {
+        sleepPreventionProcess.kill();
+        sleepPreventionProcess = null;
+        sleepPreventionActive = false;
+        debugLog('🛌 Sleep prevention stopped');
+    } catch (error) {
+        debugLog(`❌ Failed to stop sleep prevention: ${error}`);
+    }
+}
+
+function toggleSleepPreventionSetting(enabled: boolean): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    config.update('preventSleep', enabled, vscode.ConfigurationTarget.Global);
+    debugLog(`💤 Sleep prevention setting updated: ${enabled}`);
+    
+    // If disabling and currently active, stop sleep prevention
+    if (!enabled && sleepPreventionActive) {
+        stopSleepPrevention();
+    }
+}
+
+function sendSleepPreventionSetting(): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const preventSleep = config.get<boolean>('preventSleep', false);
+    
+    if (claudePanel) {
+        claudePanel.webview.postMessage({
+            command: 'setSleepPreventionSetting',
+            enabled: preventSleep
+        });
+    }
+}
 
 function updateWebviewContent(): void {
     if (claudePanel) {

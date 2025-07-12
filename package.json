@@ -44,6 +44,16 @@
           "when": "true"
         }
       ]
+    },
+    "configuration": {
+      "title": "ClaudeLoop",
+      "properties": {
+        "claudeLoop.preventSleep": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prevent computer from sleeping while waiting for usage limit reset"
+        }
+      }
     }
   },
   "scripts": {
