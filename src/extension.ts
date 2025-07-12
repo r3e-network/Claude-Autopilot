@@ -60,8 +60,11 @@ let queueSortConfig: QueueSortConfig = { field: 'timestamp', direction: 'asc' };
 let claudeOutputBuffer: string = '';
 let claudeCurrentScreen: string = '';
 let claudeOutputTimer: NodeJS.Timeout | null = null;
+let claudeAutoClearTimer: NodeJS.Timeout | null = null;
 let lastClaudeOutputTime: number = 0;
-const CLAUDE_OUTPUT_THROTTLE_MS = 500; // 500ms = 2 times per second max (matches screen analysis)
+const CLAUDE_OUTPUT_THROTTLE_MS = 1000; // 1000ms = 1 time per second max (prevent UI freezing)
+const CLAUDE_OUTPUT_AUTO_CLEAR_MS = 30000; // 30 seconds - auto clear output buffer
+const CLAUDE_OUTPUT_MAX_BUFFER_SIZE = 100000; // 100KB max buffer size
 const ANSI_CLEAR_SCREEN_PATTERNS = [
     '\x1b[2J',           // Clear entire screen
     '\x1b[H\x1b[2J',     // Move cursor to home + clear screen
@@ -193,6 +196,14 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
         if (countdownInterval) {
             clearInterval(countdownInterval);
             countdownInterval = null;
+        }
+        if (claudeOutputTimer) {
+            clearTimeout(claudeOutputTimer);
+            claudeOutputTimer = null;
+        }
+        if (claudeAutoClearTimer) {
+            clearTimeout(claudeAutoClearTimer);
+            claudeAutoClearTimer = null;
         }
         // Stop sleep prevention when panel is disposed
         stopSleepPrevention();
@@ -1456,7 +1467,9 @@ function sendToWebviewTerminal(output: string): void {
 }
 
 function formatTerminalOutput(text: string, type: 'claude' | 'debug' | 'error' | 'info' | 'success'): string {
-    const timestamp = new Date().toLocaleTimeString();
+    // Add milliseconds to the timestamp
+    const now = new Date();
+    const timestamp = `${now.toLocaleTimeString()}.${now.getMilliseconds().toString().padStart(3, '0')}`;
     
     switch (type) {
         case 'claude':
@@ -1478,6 +1491,12 @@ function sendClaudeOutput(output: string): void {
     // Add output to buffer
     claudeOutputBuffer += output;
     
+    // Check buffer size and truncate if too large
+    if (claudeOutputBuffer.length > CLAUDE_OUTPUT_MAX_BUFFER_SIZE) {
+        debugLog(`📦 Buffer too large (${claudeOutputBuffer.length} chars), truncating...`);
+        claudeOutputBuffer = claudeOutputBuffer.substring(claudeOutputBuffer.length - (CLAUDE_OUTPUT_MAX_BUFFER_SIZE * 0.75));
+    }
+    
     // Check if buffer contains ANSI clear screen sequence
     let foundClearScreen = false;
     let lastClearScreenIndex = -1;
@@ -1491,14 +1510,10 @@ function sendClaudeOutput(output: string): void {
     }
     
     if (foundClearScreen) {
+        debugLog(`🖥️  Clear screen detected - reset screen buffer`);
         // Update current screen to content from last clear screen to end
         const newScreen = claudeOutputBuffer.substring(lastClearScreenIndex);
-        
-        // Check if this is actually a new screen (different from current)
-        if (newScreen !== claudeCurrentScreen) {
-            claudeCurrentScreen = newScreen;
-            debugLog(`📺 NEW SCREEN detected - sending immediately (${claudeCurrentScreen.length} chars)`);
-        }
+        claudeCurrentScreen = newScreen;
         
         // Keep only the current screen content in buffer for future appends
         claudeOutputBuffer = claudeCurrentScreen;
@@ -1507,21 +1522,28 @@ function sendClaudeOutput(output: string): void {
         claudeCurrentScreen = claudeOutputBuffer;
     }
     
-    // Send immediately for important changes or throttle for rapid updates
+    // Always throttle updates - no immediate sending
     const now = Date.now();
     const timeSinceLastOutput = now - lastClaudeOutputTime;
     
     if (timeSinceLastOutput >= CLAUDE_OUTPUT_THROTTLE_MS) {
-        // Send immediately for new screens or when enough time has passed
+        // Send when enough time has passed
         flushClaudeOutput();
     } else {
-        // Schedule a delayed flush for incremental changes
+        // Schedule a delayed flush for rapid updates
         if (!claudeOutputTimer) {
             const delay = CLAUDE_OUTPUT_THROTTLE_MS - timeSinceLastOutput;
             claudeOutputTimer = setTimeout(() => {
                 flushClaudeOutput();
             }, delay);
         }
+    }
+    
+    // Set up auto-clear timer if not already set
+    if (!claudeAutoClearTimer) {
+        claudeAutoClearTimer = setTimeout(() => {
+            clearClaudeOutput();
+        }, CLAUDE_OUTPUT_AUTO_CLEAR_MS);
     }
 }
 
@@ -1552,6 +1574,33 @@ function flushClaudeOutput(): void {
     // Send to terminal with colored formatting
     const formattedOutput = formatTerminalOutput(output, 'claude');
     sendToWebviewTerminal(formattedOutput);
+}
+
+function clearClaudeOutput(): void {
+    debugLog(`🧹 Auto-clearing Claude output buffer (${claudeCurrentScreen.length} chars)`);
+    
+    // Clear buffers
+    claudeOutputBuffer = '';
+    claudeCurrentScreen = '';
+    
+    // Clear timers
+    if (claudeOutputTimer) {
+        clearTimeout(claudeOutputTimer);
+        claudeOutputTimer = null;
+    }
+    if (claudeAutoClearTimer) {
+        clearTimeout(claudeAutoClearTimer);
+        claudeAutoClearTimer = null;
+    }
+    
+    // Send clear command to webview
+    if (claudePanel) {
+        claudePanel.webview.postMessage({
+            command: 'clearClaudeOutput'
+        });
+    }
+    
+    debugLog(`✨ Claude output cleared and ready for new content`);
 }
 
 function handleClaudeKeypress(key: string): void {

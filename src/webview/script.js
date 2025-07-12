@@ -106,6 +106,12 @@ function clearClaudeOutput() {
     }
 }
 
+function clearClaudeOutputUI() {
+    // Same as clearClaudeOutput but called from backend
+    clearClaudeOutput();
+    console.log('Claude output auto-cleared by backend');
+}
+
 function updateQueue(queue) {
     messageQueue = queue;
     renderQueue();
@@ -344,6 +350,9 @@ window.addEventListener('message', event => {
             break;
         case 'setSleepPreventionSetting':
             document.getElementById('preventSleep').checked = message.enabled;
+            break;
+        case 'clearClaudeOutput':
+            clearClaudeOutputUI();
             break;
         case 'sessionStateChanged':
             console.log('Backend state update:', {
