@@ -6,7 +6,7 @@ import { updateWebviewContent } from '../../ui/webview';
 
 export function isCurrentUsageLimit(output: string): boolean {
     try {
-        const usageLimitPattern = /(Claude\s+)?usage\s+limit\s+reached[^.]*reset\s+at\s+(\d{1,2}[:\d]*(?:\s*[APM]{2})?(?:\s*\([^)]+\))?)/gi;
+        const usageLimitPattern = /(Claude\s+)?usage\s+limit\s+reached.*?reset\s+at\s+(\d{1,2}[:\d]*(?:\s*[APM]{2})?(?:\s*\([^)]+\))?)/gi;
         const matches = [];
         let match;
         

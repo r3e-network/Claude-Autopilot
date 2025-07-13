@@ -13,6 +13,43 @@ export function removeMessageFromQueue(messageId: number): void {
     }
 }
 
+export function duplicateMessageInQueue(messageId: number): void {
+    const message = messageQueue.find(msg => msg.id === messageId);
+    if (message) {
+        const duplicatedMessage: MessageItem = {
+            id: Date.now(),
+            text: message.text,
+            timestamp: new Date().toISOString(),
+            status: 'pending'
+        };
+        
+        const originalIndex = messageQueue.findIndex(msg => msg.id === messageId);
+        messageQueue.splice(originalIndex + 1, 0, duplicatedMessage);
+        
+        updateWebviewContent();
+        vscode.window.showInformationMessage(`Message duplicated: ${message.text.substring(0, 50)}...`);
+    }
+}
+
+export function editMessageInQueue(messageId: number, newText: string): void {
+    debugLog(`EditMessageInQueue called with messageId: ${messageId}, newText: ${newText}`);
+    const message = messageQueue.find(msg => msg.id === messageId);
+    debugLog(`Found message: ${message ? message.text : 'not found'}`);
+    
+    if (message) {
+        const oldText = message.text;
+        message.text = newText;
+        message.timestamp = new Date().toISOString(); // Update timestamp when edited
+        
+        debugLog(`Message edited from "${oldText}" to "${newText}"`);
+        updateWebviewContent();
+        vscode.window.showInformationMessage(`Message edited: ${oldText.substring(0, 30)}... → ${newText.substring(0, 30)}...`);
+    } else {
+        debugLog(`ERROR: Message with ID ${messageId} not found in queue`);
+        vscode.window.showErrorMessage(`Message with ID ${messageId} not found`);
+    }
+}
+
 export function reorderQueue(fromIndex: number, toIndex: number): void {
     if (fromIndex < 0 || fromIndex >= messageQueue.length || toIndex < 0 || toIndex >= messageQueue.length) {
         return;

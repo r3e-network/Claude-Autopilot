@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 import {
     claudeProcess, sessionReady, currentMessage, processingQueue,
     setClaudeProcess, setSessionReady, setCurrentMessage, setProcessingQueue
@@ -11,6 +12,7 @@ import { sendClaudeOutput } from '../../claude/output';
 import { handleUsageLimit, isCurrentUsageLimit } from '../../services/usage';
 import { startHealthCheck, stopHealthCheck } from '../../services/health';
 import { startSleepPrevention, stopSleepPrevention } from '../../services/sleep';
+import { runDependencyCheck, showDependencyStatus } from '../../services/dependency-check';
 
 export function startClaudeSession(skipPermissions: boolean = true): void {
     debugLog('=== STARTING CLAUDE SESSION ===');

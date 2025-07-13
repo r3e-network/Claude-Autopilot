@@ -58,7 +58,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && cp src/claude_pty_wrapper.py out/",
+    "compile": "tsc -p ./ && cp src/claude_pty_wrapper.py out/claude/session/",
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {

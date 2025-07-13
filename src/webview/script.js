@@ -9,100 +9,190 @@ let sessionState = {
 let historyData = [];
 let draggedIndex = -1;
 
-function addMessage() {
-    const input = document.getElementById('messageInput');
-    const message = input.value.trim();
+// Security utilities
+function sanitizeHtml(unsafe) {
+    if (typeof unsafe !== 'string') return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+        .replace(/\//g, "&#x2F;");
+}
 
-    if (!message) {
-        return;
+function validateMessage(text) {
+    if (typeof text !== 'string') return { valid: false, error: 'Message must be a string' };
+    if (text.length === 0) return { valid: false, error: 'Message cannot be empty' };
+    if (text.length > 50000) return { valid: false, error: 'Message too long (max 50,000 characters)' };
+    
+    const dangerousPatterns = [
+        /<script[^>]*>/i,
+        /javascript:/i,
+        /data:text\/html/i,
+        /vbscript:/i,
+        /on\w+\s*=/i,
+        /<iframe[^>]*>/i,
+        /<object[^>]*>/i,
+        /<embed[^>]*>/i
+    ];
+    
+    for (const pattern of dangerousPatterns) {
+        if (pattern.test(text)) {
+            return { valid: false, error: 'Message contains potentially dangerous content' };
+        }
     }
+    
+    return { valid: true };
+}
 
-    vscode.postMessage({
-        command: 'addMessage',
-        text: message
-    });
+function createSafeElement(tagName, textContent, className) {
+    const element = document.createElement(tagName);
+    element.textContent = textContent;
+    if (className) {
+        element.className = className.replace(/[^a-zA-Z0-9\-_\s]/g, '');
+    }
+    return element;
+}
 
-    input.value = '';
+function addMessage() {
+    try {
+        const input = document.getElementById('messageInput');
+        const message = input.value.trim();
+
+        if (!message) {
+            return;
+        }
+
+        const validation = validateMessage(message);
+        if (!validation.valid) {
+            showError(validation.error);
+            return;
+        }
+
+        vscode.postMessage({
+            command: 'addMessage',
+            text: message
+        });
+
+        input.value = '';
+    } catch (error) {
+        console.error('Error adding message:', error);
+        showError('Failed to add message');
+    }
 }
 
 function startProcessing() {
-    console.log('Frontend: User clicked Start Processing');
-    const skipPermissions = document.getElementById('skipPermissions').checked;
-    sessionState.isProcessing = true;
-    sessionState.wasStopped = false; // Reset stopped state when starting
-    
-    // Mark that we just started processing (to prevent backend override)
-    sessionState.justStarted = true;
-    setTimeout(() => {
-        sessionState.justStarted = false;
-    }, 2000); // Clear flag after 2 seconds
-    
-    updateButtonStates();
-    vscode.postMessage({
-        command: 'startProcessing',
-        skipPermissions: skipPermissions
-    });
+    try {
+        console.log('Frontend: User clicked Start Processing');
+        const skipPermissions = document.getElementById('skipPermissions').checked;
+        sessionState.isProcessing = true;
+        sessionState.wasStopped = false; // Reset stopped state when starting
+        
+        // Mark that we just started processing (to prevent backend override)
+        sessionState.justStarted = true;
+        setTimeout(() => {
+            sessionState.justStarted = false;
+        }, 2000); // Clear flag after 2 seconds
+        
+        updateButtonStates();
+        vscode.postMessage({
+            command: 'startProcessing',
+            skipPermissions: skipPermissions
+        });
+    } catch (error) {
+        console.error('Error starting processing:', error);
+        showError('Failed to start processing');
+    }
 }
 
 function stopProcessing() {
-    console.log('Frontend: User clicked Stop Processing');
-    sessionState.isProcessing = false;
-    sessionState.wasStopped = true; // Mark that user manually stopped
-    updateButtonStates();
-    vscode.postMessage({
-        command: 'stopProcessing'
-    });
+    try {
+        console.log('Frontend: User clicked Stop Processing');
+        sessionState.isProcessing = false;
+        sessionState.wasStopped = true; // Mark that user manually stopped
+        updateButtonStates();
+        vscode.postMessage({
+            command: 'stopProcessing'
+        });
+    } catch (error) {
+        console.error('Error stopping processing:', error);
+        showError('Failed to stop processing');
+    }
 }
 
 function interruptClaude() {
-    console.log('Frontend: User clicked Interrupt (ESC)');
-    vscode.postMessage({
-        command: 'claudeKeypress',
-        key: 'escape'
-    });
+    try {
+        console.log('Frontend: User clicked Interrupt (ESC)');
+        vscode.postMessage({
+            command: 'claudeKeypress',
+            key: 'escape'
+        });
+    } catch (error) {
+        console.error('Error interrupting Claude:', error);
+    }
 }
 
 function clearQueue() {
-    vscode.postMessage({
-        command: 'clearQueue'
-    });
+    try {
+        vscode.postMessage({
+            command: 'clearQueue'
+        });
+    } catch (error) {
+        console.error('Error clearing queue:', error);
+        showError('Failed to clear queue');
+    }
 }
 
 function resetSession() {
-    sessionState.isSessionRunning = false;
-    sessionState.isProcessing = false;
-    sessionState.wasStopped = false; // Reset stopped state on session reset
-    updateButtonStates();
-    vscode.postMessage({
-        command: 'resetSession'
-    });
+    try {
+        sessionState.isSessionRunning = false;
+        sessionState.isProcessing = false;
+        sessionState.wasStopped = false; // Reset stopped state on session reset
+        updateButtonStates();
+        vscode.postMessage({
+            command: 'resetSession'
+        });
+    } catch (error) {
+        console.error('Error resetting session:', error);
+        showError('Failed to reset session');
+    }
 }
 
 function clearClaudeOutput() {
-    const claudeContainer = document.getElementById('claudeOutputContainer');
-    let claudeOutput = claudeContainer.querySelector('.claude-live-output');
-    if (claudeOutput) {
-        claudeOutput.innerHTML = `
-            <div class="claude-ready-message">
-                <div class="pulse-dot"></div>
-                <span>Output cleared - ready for new Claude output...</span>
-            </div>
-        `;
-        // Reset content tracking
-        claudeContent = '';
-        lastRenderedContent = '';
-        
-        // Reset parsing cache
-        lastParsedContent = '';
-        lastParsedHtml = '';
-        
-        // Reset throttling state
-        pendingClaudeOutput = null;
-        if (claudeRenderTimer) {
-            clearTimeout(claudeRenderTimer);
-            claudeRenderTimer = null;
+    try {
+        const claudeContainer = document.getElementById('claudeOutputContainer');
+        let claudeOutput = claudeContainer.querySelector('.claude-live-output');
+        if (claudeOutput) {
+            claudeOutput.innerHTML = '';
+            const readyMessage = createSafeElement('div', '', 'claude-ready-message');
+            const pulseDiv = createSafeElement('div', '', 'pulse-dot');
+            const messageSpan = createSafeElement('span', 'Output cleared - ready for new Claude output...', '');
+            const contentDiv = document.createElement('div');
+            contentDiv.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+            contentDiv.appendChild(pulseDiv);
+            contentDiv.appendChild(messageSpan);
+            readyMessage.appendChild(contentDiv);
+            claudeOutput.appendChild(readyMessage);
+            
+            // Reset content tracking
+            claudeContent = '';
+            lastRenderedContent = '';
+            
+            // Reset parsing cache
+            lastParsedContent = '';
+            lastParsedHtml = '';
+            
+            // Reset throttling state
+            pendingClaudeOutput = null;
+            if (claudeRenderTimer) {
+                clearTimeout(claudeRenderTimer);
+                claudeRenderTimer = null;
+            }
+            lastClaudeRenderTime = 0;
         }
-        lastClaudeRenderTime = 0;
+    } catch (error) {
+        console.error('Error clearing Claude output:', error);
     }
 }
 
@@ -113,78 +203,134 @@ function clearClaudeOutputUI() {
 }
 
 function updateQueue(queue) {
-    messageQueue = queue;
-    renderQueue();
-    updateButtonStates();
+    try {
+        messageQueue = Array.isArray(queue) ? queue : [];
+        renderQueue();
+        updateButtonStates();
+    } catch (error) {
+        console.error('Error updating queue:', error);
+    }
 }
 
 function renderQueue() {
-    const container = document.getElementById('queueContainer');
+    try {
+        const container = document.getElementById('queueContainer');
 
-    if (messageQueue.length === 0) {
-        container.innerHTML = '<div class="empty-queue">No messages in queue</div>';
-        return;
+        if (messageQueue.length === 0) {
+            container.innerHTML = '';
+            const emptyMessage = createSafeElement('div', 'No messages in queue', 'empty-queue');
+            container.appendChild(emptyMessage);
+            return;
+        }
+
+        container.innerHTML = '';
+
+        messageQueue.forEach((item, index) => {
+            const queueItem = document.createElement('div');
+            queueItem.className = `queue-item ${sanitizeHtml(item.status)}`;
+            queueItem.setAttribute('data-index', index);
+            
+            let statusText = item.status;
+            let timeText = new Date(item.timestamp).toLocaleString();
+            let additionalContent = '';
+
+            if (item.status === 'waiting' && item.waitSeconds > 0) {
+                const hours = Math.floor(item.waitSeconds / 3600);
+                const minutes = Math.floor((item.waitSeconds % 3600) / 60);
+                const seconds = item.waitSeconds % 60;
+                statusText = `waiting - ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                const countdownDiv = createSafeElement('div', `Resuming in ${hours}h ${minutes}m ${seconds}s`, 'countdown');
+                additionalContent = countdownDiv;
+            }
+
+            if (item.status === 'completed' && item.output) {
+                const outputDiv = createSafeElement('div', item.output, 'queue-item-output');
+                additionalContent = outputDiv;
+            }
+
+            if (item.status === 'error' && item.error) {
+                const errorDiv = createSafeElement('div', `Error: ${item.error}`, 'queue-item-error');
+                additionalContent = errorDiv;
+            }
+
+            const isDraggable = item.status === 'pending';
+            
+            // Create actions
+            const actions = document.createElement('div');
+            actions.className = 'queue-item-actions';
+            
+            if (item.status === 'pending') {
+                const duplicateBtn = document.createElement('button');
+                duplicateBtn.textContent = '📋';
+                duplicateBtn.className = 'queue-item-action duplicate';
+                duplicateBtn.title = 'Duplicate message';
+                duplicateBtn.onclick = () => duplicateMessage(item.id);
+                actions.appendChild(duplicateBtn);
+                
+                const editBtn = document.createElement('button');
+                editBtn.textContent = '✏️';
+                editBtn.className = 'queue-item-action edit';
+                editBtn.title = 'Edit message';
+                editBtn.onclick = () => {
+                    console.log('Edit button clicked for message ID:', item.id);
+                    editMessage(item.id);
+                };
+                actions.appendChild(editBtn);
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '✕';
+                removeBtn.className = 'queue-item-action remove';
+                removeBtn.title = 'Remove message';
+                removeBtn.onclick = () => removeMessage(item.id);
+                actions.appendChild(removeBtn);
+            } else {
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '✕';
+                removeBtn.className = 'queue-item-action remove';
+                removeBtn.title = 'Remove message';
+                removeBtn.onclick = () => removeMessage(item.id);
+                actions.appendChild(removeBtn);
+            }
+
+            // Set drag properties
+            queueItem.draggable = isDraggable;
+            if (isDraggable) {
+                queueItem.addEventListener('dragstart', (e) => handleDragStart(e, index));
+                queueItem.addEventListener('dragover', handleDragOver);
+                queueItem.addEventListener('drop', (e) => handleDrop(e, index));
+            }
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'queue-item-header';
+            
+            const status = createSafeElement('span', statusText, 'queue-item-status');
+            const time = createSafeElement('span', timeText, 'queue-item-time');
+            
+            header.appendChild(status);
+            header.appendChild(time);
+            
+            // Create text content - SAFELY
+            const textDiv = createSafeElement('div', item.text, 'queue-item-text');
+            
+            queueItem.appendChild(actions);
+            queueItem.appendChild(header);
+            queueItem.appendChild(textDiv);
+            
+            if (additionalContent) {
+                queueItem.appendChild(additionalContent);
+            }
+            
+            container.appendChild(queueItem);
+        });
+    } catch (error) {
+        console.error('Error rendering queue:', error);
+        const container = document.getElementById('queueContainer');
+        container.innerHTML = '';
+        const errorMessage = createSafeElement('div', 'Error rendering queue', 'error-message');
+        container.appendChild(errorMessage);
     }
-
-    container.innerHTML = messageQueue.map((item, index) => {
-        let statusText = item.status;
-        let timeText = new Date(item.timestamp).toLocaleString();
-        let additionalContent = '';
-
-        if (item.status === 'waiting' && item.waitSeconds > 0) {
-            const hours = Math.floor(item.waitSeconds / 3600);
-            const minutes = Math.floor((item.waitSeconds % 3600) / 60);
-            const seconds = item.waitSeconds % 60;
-            statusText = `waiting - ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            additionalContent = `<div class="countdown">Resuming in ${hours}h ${minutes}m ${seconds}s</div>`;
-        }
-
-        if (item.status === 'completed' && item.output) {
-            additionalContent = `<div class="queue-item-output">${item.output}</div>`;
-        }
-
-        if (item.status === 'error' && item.error) {
-            additionalContent = `<div class="queue-item-error">Error: ${item.error}</div>`;
-        }
-
-        const isDraggable = item.status === 'pending';
-        const actionsHtml = item.status === 'pending' ? `
-            <div class="queue-item-actions">
-                <button class="queue-item-action duplicate" onclick="duplicateMessage(${item.id})" title="Duplicate message">
-                    📋
-                </button>
-                <button class="queue-item-action edit" onclick="editMessage(${item.id})" title="Edit message">
-                    ✏️
-                </button>
-                <button class="queue-item-action remove" onclick="removeMessage(${item.id})" title="Remove message">
-                    ✕
-                </button>
-            </div>
-        ` : `
-            <div class="queue-item-actions">
-                <button class="queue-item-action remove" onclick="removeMessage(${item.id})" title="Remove message">
-                    ✕
-                </button>
-            </div>
-        `;
-
-        return `
-            <div class="queue-item ${item.status}" 
-                 draggable="${isDraggable}" 
-                 ondragstart="handleDragStart(event, ${index})"
-                 ondragover="handleDragOver(event)"
-                 ondrop="handleDrop(event, ${index})"
-                 data-index="${index}">
-                ${actionsHtml}
-                <div class="queue-item-header">
-                    <span class="queue-item-status">${statusText}</span>
-                    <span class="queue-item-time">${timeText}</span>
-                </div>
-                <div class="queue-item-text">${item.text}</div>
-                ${additionalContent}
-            </div>
-        `;
-    }).join('');
 }
 
 function updateButtonStates() {
@@ -237,45 +383,223 @@ function updateButtonStates() {
 
 // Queue Management Functions
 function removeMessage(messageId) {
-    vscode.postMessage({
-        command: 'removeMessage',
-        messageId: messageId
-    });
+    try {
+        vscode.postMessage({
+            command: 'removeMessage',
+            messageId: messageId
+        });
+    } catch (error) {
+        console.error('Error removing message:', error);
+        showError('Failed to remove message');
+    }
 }
 
 function duplicateMessage(messageId) {
-    const message = messageQueue.find(item => item.id === messageId);
-    if (message) {
-        vscode.postMessage({
-            command: 'duplicateMessage',
-            messageId: messageId
-        });
+    try {
+        const message = messageQueue.find(item => item.id === messageId);
+        if (message) {
+            vscode.postMessage({
+                command: 'duplicateMessage',
+                messageId: messageId
+            });
+        }
+    } catch (error) {
+        console.error('Error duplicating message:', error);
+        showError('Failed to duplicate message');
     }
 }
 
 function editMessage(messageId) {
-    const message = messageQueue.find(item => item.id === messageId);
-    if (message) {
-        const newText = prompt('Edit message:', message.text);
-        if (newText !== null && newText.trim() !== '') {
-            vscode.postMessage({
-                command: 'editMessage',
-                messageId: messageId,
-                newText: newText.trim()
-            });
+    try {
+        console.log('EditMessage called with messageId:', messageId);
+        const message = messageQueue.find(item => item.id === messageId);
+        console.log('Found message:', message);
+        
+        if (message) {
+            // Create a custom input dialog instead of using prompt()
+            showEditDialog(message, messageId);
+        } else {
+            console.error('Message not found for ID:', messageId);
+            showError('Message not found');
         }
+    } catch (error) {
+        console.error('Error editing message:', error);
+        showError('Failed to edit message');
     }
 }
 
-function sortQueue() {
-    const field = document.getElementById('sortField').value;
-    const direction = document.getElementById('sortDirection').value;
-    
-    vscode.postMessage({
-        command: 'sortQueue',
-        field: field,
-        direction: direction
+function showEditDialog(message, messageId) {
+    // Remove any existing edit dialog
+    const existingDialog = document.getElementById('editDialog');
+    if (existingDialog) {
+        existingDialog.remove();
+    }
+
+    // Create dialog overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'editDialog';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    // Create dialog box
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 4px;
+        padding: 20px;
+        min-width: 400px;
+        max-width: 600px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    `;
+
+    // Create dialog content
+    const title = document.createElement('h3');
+    title.textContent = 'Edit Message';
+    title.style.cssText = `
+        margin: 0 0 15px 0;
+        color: var(--vscode-foreground);
+        font-size: 16px;
+    `;
+
+    const textarea = document.createElement('textarea');
+    textarea.value = message.text;
+    textarea.style.cssText = `
+        width: 100%;
+        height: 100px;
+        background: var(--vscode-input-background);
+        color: var(--vscode-input-foreground);
+        border: 1px solid var(--vscode-input-border);
+        border-radius: 3px;
+        padding: 8px;
+        font-family: var(--vscode-font-family);
+        font-size: 13px;
+        resize: vertical;
+        box-sizing: border-box;
+    `;
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 15px;
+    `;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+        padding: 6px 12px;
+        background: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: 1px solid var(--vscode-widget-border);
+        border-radius: 3px;
+        cursor: pointer;
+    `;
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.style.cssText = `
+        padding: 6px 12px;
+        background: var(--vscode-button-background);
+        color: var(--vscode-button-foreground);
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    `;
+
+    // Event handlers
+    cancelBtn.onclick = () => {
+        console.log('Edit cancelled by user');
+        overlay.remove();
+    };
+
+    saveBtn.onclick = () => {
+        const newText = textarea.value.trim();
+        console.log('User entered text:', newText);
+        
+        if (newText === '') {
+            showError('Message cannot be empty');
+            return;
+        }
+
+        const validation = validateMessage(newText);
+        console.log('Validation result:', validation);
+        
+        if (!validation.valid) {
+            showError(validation.error);
+            return;
+        }
+
+        console.log('Sending editMessage command to backend');
+        vscode.postMessage({
+            command: 'editMessage',
+            messageId: messageId,
+            newText: newText
+        });
+
+        overlay.remove();
+    };
+
+    // Handle Enter key to save
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            saveBtn.click();
+        }
+        if (e.key === 'Escape') {
+            cancelBtn.click();
+        }
     });
+
+    // Assemble dialog
+    buttonContainer.appendChild(cancelBtn);
+    buttonContainer.appendChild(saveBtn);
+    
+    dialog.appendChild(title);
+    dialog.appendChild(textarea);
+    dialog.appendChild(buttonContainer);
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // Focus the textarea and select all text
+    setTimeout(() => {
+        textarea.focus();
+        textarea.select();
+    }, 100);
+
+    // Close on overlay click
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            cancelBtn.click();
+        }
+    };
+}
+
+function sortQueue() {
+    try {
+        const field = document.getElementById('sortField').value;
+        const direction = document.getElementById('sortDirection').value;
+        
+        vscode.postMessage({
+            command: 'sortQueue',
+            field: field,
+            direction: direction
+        });
+    } catch (error) {
+        console.error('Error sorting queue:', error);
+        showError('Failed to sort queue');
+    }
 }
 
 // Drag and Drop Functions
@@ -343,90 +667,153 @@ function handleDrop(event, targetIndex) {
 
 // History Management Functions
 function loadHistory() {
-    vscode.postMessage({
-        command: 'loadHistory'
-    });
+    try {
+        vscode.postMessage({
+            command: 'loadHistory'
+        });
+    } catch (error) {
+        console.error('Error loading history:', error);
+        showError('Failed to load history');
+    }
 }
 
 function filterHistory() {
-    const filter = document.getElementById('historyFilter').value;
-    vscode.postMessage({
-        command: 'filterHistory',
-        filter: filter
-    });
+    try {
+        const filter = document.getElementById('historyFilter').value;
+        vscode.postMessage({
+            command: 'filterHistory',
+            filter: filter
+        });
+    } catch (error) {
+        console.error('Error filtering history:', error);
+        showError('Failed to filter history');
+    }
 }
 
 function deleteHistoryRun(runId) {
-    if (confirm('Are you sure you want to delete this history run?')) {
-        vscode.postMessage({
-            command: 'deleteHistoryRun',
-            runId: runId
-        });
+    try {
+        if (confirm('Are you sure you want to delete this history run?')) {
+            vscode.postMessage({
+                command: 'deleteHistoryRun',
+                runId: runId
+            });
+        }
+    } catch (error) {
+        console.error('Error deleting history run:', error);
+        showError('Failed to delete history run');
     }
 }
 
 function deleteAllHistory() {
-    if (confirm('Are you sure you want to delete ALL history? This action cannot be undone.')) {
-        vscode.postMessage({
-            command: 'deleteAllHistory'
-        });
+    try {
+        if (confirm('Are you sure you want to delete ALL history? This action cannot be undone.')) {
+            vscode.postMessage({
+                command: 'deleteAllHistory'
+            });
+        }
+    } catch (error) {
+        console.error('Error deleting all history:', error);
+        showError('Failed to delete all history');
     }
 }
 
 function renderHistory(history) {
-    const container = document.getElementById('historyContainer');
-    
-    if (!history || history.length === 0) {
-        container.innerHTML = '<div class="empty-history">No previous runs found for this workspace</div>';
-        return;
-    }
-    
-    container.innerHTML = history.map(run => {
-        const startTime = new Date(run.startTime).toLocaleString();
-        const endTime = run.endTime ? new Date(run.endTime).toLocaleString() : 'In Progress';
-        const duration = run.endTime ? 
-            Math.round((new Date(run.endTime) - new Date(run.startTime)) / 1000 / 60) + ' min' : 
-            'Ongoing';
+    try {
+        const container = document.getElementById('historyContainer');
         
-        return `
-            <div class="history-item">
-                <div class="history-item-header">
-                    <div class="history-item-title">Run ${run.id.split('_')[1]}</div>
-                    <div class="history-item-actions">
-                        <button class="history-item-action delete" onclick="deleteHistoryRun('${run.id}')" title="Delete this run">
-                            🗑️
-                        </button>
-                        <div class="history-item-time">${startTime} (${duration})</div>
-                    </div>
-                </div>
-                <div class="history-item-stats">
-                    <div class="history-stat history-stat-total">
-                        📊 Total: ${run.totalMessages}
-                    </div>
-                    <div class="history-stat history-stat-completed">
-                        ✅ Completed: ${run.completedMessages}
-                    </div>
-                    <div class="history-stat history-stat-errors">
-                        ❌ Errors: ${run.errorMessages}
-                    </div>
-                    <div class="history-stat history-stat-waiting">
-                        ⏳ Waiting: ${run.waitingMessages}
-                    </div>
-                </div>
-                <div class="history-item-messages">
-                    ${run.messages.map(msg => `
-                        <div class="history-message">
-                            <div class="history-message-text">${msg.text}</div>
-                            <div class="history-message-meta">
-                                <span class="status-${msg.status}">${msg.status.toUpperCase()}</span>
-                                <span>${new Date(msg.timestamp).toLocaleTimeString()}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }).join('');
+        if (!history || history.length === 0) {
+            container.innerHTML = '';
+            const emptyMessage = createSafeElement('div', 'No previous runs found for this workspace', 'empty-history');
+            container.appendChild(emptyMessage);
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        history.forEach(run => {
+            const startTime = new Date(run.startTime).toLocaleString();
+            const endTime = run.endTime ? new Date(run.endTime).toLocaleString() : 'In Progress';
+            const duration = run.endTime ? 
+                Math.round((new Date(run.endTime) - new Date(run.startTime)) / 1000 / 60) + ' min' : 
+                'Ongoing';
+            
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'history-item-header';
+            
+            const title = createSafeElement('div', `Run ${run.id.split('_')[1]}`, 'history-item-title');
+            
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'history-item-actions';
+            
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.className = 'history-item-action delete';
+            deleteBtn.title = 'Delete this run';
+            deleteBtn.onclick = () => deleteHistoryRun(run.id);
+            actionsDiv.appendChild(deleteBtn);
+            
+            const timeDiv = createSafeElement('div', `${startTime} (${duration})`, 'history-item-time');
+            actionsDiv.appendChild(timeDiv);
+            
+            header.appendChild(title);
+            header.appendChild(actionsDiv);
+            
+            // Create stats
+            const stats = document.createElement('div');
+            stats.className = 'history-item-stats';
+            
+            const totalStat = createSafeElement('div', `📊 Total: ${run.totalMessages}`, 'history-stat history-stat-total');
+            const completedStat = createSafeElement('div', `✅ Completed: ${run.completedMessages}`, 'history-stat history-stat-completed');
+            const errorStat = createSafeElement('div', `❌ Errors: ${run.errorMessages}`, 'history-stat history-stat-errors');
+            const waitingStat = createSafeElement('div', `⏳ Waiting: ${run.waitingMessages}`, 'history-stat history-stat-waiting');
+            
+            stats.appendChild(totalStat);
+            stats.appendChild(completedStat);
+            stats.appendChild(errorStat);
+            stats.appendChild(waitingStat);
+            
+            // Create messages
+            const messages = document.createElement('div');
+            messages.className = 'history-item-messages';
+            
+            run.messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'history-message';
+                
+                const textDiv = createSafeElement('div', msg.text, 'history-message-text');
+                
+                const metaDiv = document.createElement('div');
+                metaDiv.className = 'history-message-meta';
+                
+                const statusSpan = createSafeElement('span', msg.status.toUpperCase(), `status-${msg.status}`);
+                const timeSpan = createSafeElement('span', new Date(msg.timestamp).toLocaleTimeString(), '');
+                
+                metaDiv.appendChild(statusSpan);
+                metaDiv.appendChild(timeSpan);
+                
+                messageDiv.appendChild(textDiv);
+                messageDiv.appendChild(metaDiv);
+                
+                messages.appendChild(messageDiv);
+            });
+            
+            historyItem.appendChild(header);
+            historyItem.appendChild(stats);
+            historyItem.appendChild(messages);
+            
+            container.appendChild(historyItem);
+        });
+    } catch (error) {
+        console.error('Error rendering history:', error);
+        const container = document.getElementById('historyContainer');
+        container.innerHTML = '';
+        const errorMessage = createSafeElement('div', 'Error rendering history', 'error-message');
+        container.appendChild(errorMessage);
+    }
 }
 
 // Handle messages from extension
@@ -503,43 +890,47 @@ window.addEventListener('message', event => {
 let debugTerminalContent = '';
 
 function appendToTerminal(output) {
-    const terminalContainer = document.getElementById('terminalContainer');
-    let terminalOutput = terminalContainer.querySelector('.terminal-output');
+    try {
+        const terminalContainer = document.getElementById('terminalContainer');
+        let terminalOutput = terminalContainer.querySelector('.terminal-output');
 
-    if (!terminalOutput) {
-        terminalOutput = document.createElement('div');
-        terminalOutput.className = 'terminal-output';
-        terminalContainer.appendChild(terminalOutput);
-    }
+        if (!terminalOutput) {
+            terminalOutput = document.createElement('div');
+            terminalOutput.className = 'terminal-output';
+            terminalContainer.appendChild(terminalOutput);
+        }
 
-    // Clear the ready message on first output
-    const readyMessage = terminalOutput.querySelector('.terminal-ready-message');
-    if (readyMessage) {
+        // Clear the ready message on first output
+        const readyMessage = terminalOutput.querySelector('.terminal-ready-message');
+        if (readyMessage) {
+            terminalOutput.innerHTML = '';
+            debugTerminalContent = '';
+        }
+
+        // Filter out Claude output debug messages (🤖 [CLAUDE timestamp])
+        if (output.includes('🤖 [CLAUDE') && output.includes(']')) {
+            // Skip Claude output messages in terminal section
+            return;
+        }
+
+        // Add to debug terminal content (this is just debug info, so we append)
+        debugTerminalContent += output;
+
+        // Parse ANSI escape codes for terminal output
+        const htmlOutput = parseAnsiToHtml(debugTerminalContent);
+
+        // Replace the entire content safely
         terminalOutput.innerHTML = '';
-        debugTerminalContent = '';
+        const outputElement = document.createElement('div');
+        outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
+        outputElement.innerHTML = htmlOutput;
+        terminalOutput.appendChild(outputElement);
+
+        // Auto-scroll to bottom
+        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+    } catch (error) {
+        console.error('Error appending to terminal:', error);
     }
-
-    // Filter out Claude output debug messages (🤖 [CLAUDE timestamp])
-    if (output.includes('🤖 [CLAUDE') && output.includes(']')) {
-        // Skip Claude output messages in terminal section
-        return;
-    }
-
-    // Add to debug terminal content (this is just debug info, so we append)
-    debugTerminalContent += output;
-
-    // Parse ANSI escape codes for terminal output
-    const htmlOutput = parseAnsiToHtml(debugTerminalContent);
-
-    // Replace the entire content
-    terminalOutput.innerHTML = '';
-    const outputElement = document.createElement('div');
-    outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
-    outputElement.innerHTML = htmlOutput;
-    terminalOutput.appendChild(outputElement);
-
-    // Auto-scroll to bottom
-    terminalOutput.scrollTop = terminalOutput.scrollHeight;
 }
 
 // ANSI Color palette for 256-color mode
@@ -654,7 +1045,7 @@ function processAnsiInText(text) {
                 }
             }
         } else if (part.length > 0) {
-            // This is actual text content
+            // This is actual text content - sanitize it
             let style = '';
             if (currentStyles.color) style += `color: ${currentStyles.color};`;
             if (currentStyles.bold) style += 'font-weight: bold;';
@@ -662,8 +1053,8 @@ function processAnsiInText(text) {
             if (currentStyles.dim) style += 'opacity: 0.6;';
             if (currentStyles.reverse) style += 'background-color: #ffffff; color: #000000;';
 
-            // Escape HTML characters
-            const escapedText = part.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            // Sanitize HTML characters
+            const escapedText = sanitizeHtml(part);
 
             if (style) {
                 html += `<span style="${style}">${escapedText}</span>`;
@@ -687,28 +1078,32 @@ let lastParsedHtml = '';
 const CLAUDE_RENDER_THROTTLE_MS = 500; // 500ms = 2 times per second max (matches backend analysis)
 
 function appendToClaudeOutput(output) {
-    // Store the latest output
-    pendingClaudeOutput = output;
-    
-    // Check if we need to throttle
-    const now = Date.now();
-    const timeSinceLastRender = now - lastClaudeRenderTime;
-    
-    if (timeSinceLastRender >= CLAUDE_RENDER_THROTTLE_MS) {
-        // Enough time has passed, render immediately
-        console.log('🎨 Rendering Claude output immediately');
-        renderClaudeOutput();
-    } else {
-        // Schedule a delayed render if not already scheduled
-        if (!claudeRenderTimer) {
-            const delay = CLAUDE_RENDER_THROTTLE_MS - timeSinceLastRender;
-            console.log(`⏰ Throttling Claude render for ${delay}ms`);
-            claudeRenderTimer = setTimeout(() => {
-                renderClaudeOutput();
-            }, delay);
+    try {
+        // Store the latest output
+        pendingClaudeOutput = output;
+        
+        // Check if we need to throttle
+        const now = Date.now();
+        const timeSinceLastRender = now - lastClaudeRenderTime;
+        
+        if (timeSinceLastRender >= CLAUDE_RENDER_THROTTLE_MS) {
+            // Enough time has passed, render immediately
+            console.log('🎨 Rendering Claude output immediately');
+            renderClaudeOutput();
         } else {
-            console.log('🔄 Claude render already scheduled, updating pending output');
+            // Schedule a delayed render if not already scheduled
+            if (!claudeRenderTimer) {
+                const delay = CLAUDE_RENDER_THROTTLE_MS - timeSinceLastRender;
+                console.log(`⏰ Throttling Claude render for ${delay}ms`);
+                claudeRenderTimer = setTimeout(() => {
+                    renderClaudeOutput();
+                }, delay);
+            } else {
+                console.log('🔄 Claude render already scheduled, updating pending output');
+            }
         }
+    } catch (error) {
+        console.error('Error appending to Claude output:', error);
     }
 }
 
@@ -734,89 +1129,125 @@ function renderClaudeOutput() {
 }
 
 function performClaudeRender(output) {
-    const claudeContainer = document.getElementById('claudeOutputContainer');
-    let claudeOutput = claudeContainer.querySelector('.claude-live-output');
+    try {
+        const claudeContainer = document.getElementById('claudeOutputContainer');
+        let claudeOutput = claudeContainer.querySelector('.claude-live-output');
 
-    if (!claudeOutput) {
-        claudeOutput = document.createElement('div');
-        claudeOutput.className = 'claude-live-output';
-        claudeContainer.appendChild(claudeOutput);
-    }
+        if (!claudeOutput) {
+            claudeOutput = document.createElement('div');
+            claudeOutput.className = 'claude-live-output';
+            claudeContainer.appendChild(claudeOutput);
+        }
 
-    // Clear the ready message on first output
-    const readyMessage = claudeOutput.querySelector('.claude-ready-message');
-    if (readyMessage) {
-        claudeOutput.innerHTML = '';
-        claudeContent = '';
-        lastRenderedContent = '';
-        
-        // Reset parsing cache
-        lastParsedContent = '';
-        lastParsedHtml = '';
-    }
+        // Clear the ready message on first output
+        const readyMessage = claudeOutput.querySelector('.claude-ready-message');
+        if (readyMessage) {
+            claudeOutput.innerHTML = '';
+            claudeContent = '';
+            lastRenderedContent = '';
+            
+            // Reset parsing cache
+            lastParsedContent = '';
+            lastParsedHtml = '';
+        }
 
-    // Check if this output contains screen clearing commands
-    if (output.includes('\x1b[2J') || output.includes('\x1b[3J') || output.includes('\x1b[H')) {
-        // Clear screen - replace entire content
-        claudeContent = output;
-        lastRenderedContent = output;
-        claudeOutput.innerHTML = '';
-        
-        // Reset cache since this is a new screen
-        lastParsedContent = '';
-        lastParsedHtml = '';
-        
-        // Parse and render the new content
-        const htmlOutput = parseAnsiToHtml(claudeContent);
-        lastParsedContent = output;
-        lastParsedHtml = htmlOutput;
-        
-        const outputElement = document.createElement('div');
-        outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
-        outputElement.innerHTML = htmlOutput;
-        claudeOutput.appendChild(outputElement);
-    } else {
-        // No clear screen - this is the complete current screen content from backend
-        // Only update if content has actually changed
-        if (output !== lastRenderedContent) {
+        // Check if this output contains screen clearing commands
+        if (output.includes('\x1b[2J') || output.includes('\x1b[3J') || output.includes('\x1b[H')) {
+            // Clear screen - replace entire content
             claudeContent = output;
             lastRenderedContent = output;
-            
-            // Use cached parsing if content hasn't changed significantly
-            let htmlOutput;
-            if (output === lastParsedContent && lastParsedHtml) {
-                htmlOutput = lastParsedHtml;
-                console.log('📋 Using cached ANSI parsing result');
-            } else {
-                // Parse and cache the result
-                htmlOutput = parseAnsiToHtml(claudeContent);
-                lastParsedContent = output;
-                lastParsedHtml = htmlOutput;
-                console.log('🔄 Parsing ANSI content');
-            }
-            
-            // Replace the content efficiently
             claudeOutput.innerHTML = '';
+            
+            // Reset cache since this is a new screen
+            lastParsedContent = '';
+            lastParsedHtml = '';
+            
+            // Parse and render the new content
+            const htmlOutput = parseAnsiToHtml(claudeContent);
+            lastParsedContent = output;
+            lastParsedHtml = htmlOutput;
+            
             const outputElement = document.createElement('div');
             outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
             outputElement.innerHTML = htmlOutput;
             claudeOutput.appendChild(outputElement);
         } else {
-            // Content hasn't changed, skip rendering
-            return;
+            // No clear screen - this is the complete current screen content from backend
+            // Only update if content has actually changed
+            if (output !== lastRenderedContent) {
+                claudeContent = output;
+                lastRenderedContent = output;
+                
+                // Use cached parsing if content hasn't changed significantly
+                let htmlOutput;
+                if (output === lastParsedContent && lastParsedHtml) {
+                    htmlOutput = lastParsedHtml;
+                    console.log('📋 Using cached ANSI parsing result');
+                } else {
+                    // Parse and cache the result
+                    htmlOutput = parseAnsiToHtml(claudeContent);
+                    lastParsedContent = output;
+                    lastParsedHtml = htmlOutput;
+                    console.log('🔄 Parsing ANSI content');
+                }
+                
+                // Replace the content efficiently
+                claudeOutput.innerHTML = '';
+                const outputElement = document.createElement('div');
+                outputElement.style.cssText = 'white-space: pre; word-wrap: break-word; line-height: 1.4; font-family: inherit;';
+                outputElement.innerHTML = htmlOutput;
+                claudeOutput.appendChild(outputElement);
+            } else {
+                // Content hasn't changed, skip rendering
+                return;
+            }
         }
+
+        // Auto-scroll to bottom
+        claudeOutput.scrollTop = claudeOutput.scrollHeight;
+
+        // Highlight the Claude output section briefly with new colors
+        claudeOutput.style.borderColor = '#00ff88';
+        claudeOutput.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+        setTimeout(() => {
+            claudeOutput.style.borderColor = '#4a9eff';
+            claudeOutput.style.boxShadow = '0 0 20px rgba(74, 158, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+        }, 800);
+    } catch (error) {
+        console.error('Error performing Claude render:', error);
     }
+}
 
-    // Auto-scroll to bottom
-    claudeOutput.scrollTop = claudeOutput.scrollHeight;
-
-    // Highlight the Claude output section briefly with new colors
-    claudeOutput.style.borderColor = '#00ff88';
-    claudeOutput.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-    setTimeout(() => {
-        claudeOutput.style.borderColor = '#4a9eff';
-        claudeOutput.style.boxShadow = '0 0 20px rgba(74, 158, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
-    }, 800);
+function showError(message) {
+    try {
+        // Create error notification
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-notification';
+        errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4444;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        `;
+        errorDiv.textContent = message;
+        
+        document.body.appendChild(errorDiv);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 3000);
+    } catch (error) {
+        console.error('Error showing error message:', error);
+    }
 }
 
 // Handle Enter key in textarea
@@ -919,17 +1350,20 @@ window.addEventListener('beforeunload', function() {
 });
 
 function toggleSleepPrevention() {
-    const checkbox = document.getElementById('preventSleep');
-    const isEnabled = checkbox.checked;
-    
-    vscode.postMessage({
-        command: 'toggleSleepPrevention',
-        enabled: isEnabled
-    });
-    
-    console.log('Sleep prevention toggled:', isEnabled);
+    try {
+        const checkbox = document.getElementById('preventSleep');
+        const isEnabled = checkbox.checked;
+        
+        vscode.postMessage({
+            command: 'toggleSleepPrevention',
+            enabled: isEnabled
+        });
+        
+        console.log('Sleep prevention toggled:', isEnabled);
+    } catch (error) {
+        console.error('Error toggling sleep prevention:', error);
+    }
 }
-
 
 // Initialize sleep prevention checkbox from VS Code settings
 window.addEventListener('DOMContentLoaded', function() {

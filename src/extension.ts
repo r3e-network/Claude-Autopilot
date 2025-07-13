@@ -6,7 +6,7 @@ import {
 import { updateWebviewContent, updateSessionState, getWebviewContent } from './ui';
 import { startClaudeSession, resetClaudeSession, handleClaudeKeypress, startProcessingQueue, stopProcessingQueue, flushClaudeOutput, clearClaudeOutput } from './claude';
 import {
-    removeMessageFromQueue, reorderQueue, sortQueue, clearMessageQueue,
+    removeMessageFromQueue, duplicateMessageInQueue, editMessageInQueue, reorderQueue, sortQueue, clearMessageQueue,
     addMessageToQueueFromWebview, loadWorkspaceHistory, filterHistory, 
     loadPendingQueue, clearPendingQueue, saveWorkspaceHistory, endCurrentHistoryRun
 } from './queue';
@@ -95,6 +95,13 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
                     break;
                 case 'removeMessage':
                     removeMessageFromQueue(message.messageId);
+                    break;
+                case 'duplicateMessage':
+                    duplicateMessageInQueue(message.messageId);
+                    break;
+                case 'editMessage':
+                    console.log('Extension received editMessage command:', message);
+                    editMessageInQueue(message.messageId, message.newText);
                     break;
                 case 'reorderQueue':
                     reorderQueue(message.fromIndex, message.toIndex);
