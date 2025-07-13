@@ -1,7 +1,7 @@
 # ClaudeLoop - Automated Claude Code Task Management
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-loop)
-[![Version](https://img.shields.io/badge/version-0.0.1--alpha-blue)](https://github.com/benbasha/claudeloop/releases)
+[![Version](https://img.shields.io/badge/version-0.0.2-blue)](https://github.com/benbasha/claudeloop/releases/tag/v0.0.2)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **ClaudeLoop** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
@@ -259,7 +259,13 @@ If you find ClaudeLoop helpful, consider:
 
 ## 📈 Changelog
 
-### Version 0.0.1-alpha (Latest)
+### Version 0.0.2 (Latest)
+- 🎨 **NEW**: Beautiful icon representing automation while sleeping
+- ✨ Enhanced visual identity in VS Code marketplace
+- 📦 Optimized package size and performance
+- 🔍 Improved discoverability with professional branding
+
+### Version 0.0.1
 - 🎉 Initial alpha release with Claude Code automation
 - ✅ Complete architectural refactor from monolithic to modular design
 - ✅ Implemented robust dependency checking and validation
