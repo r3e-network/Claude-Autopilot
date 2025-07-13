@@ -55,23 +55,49 @@ export function isCurrentUsageLimit(output: string): boolean {
 
 function parseResetTime(resetTime: string, referenceTime: Date): Date | null {
     try {
+        // Remove timezone info like (EST) and clean up
         const cleanTime = resetTime.replace(/\s*\([^)]+\)/, '').trim();
-        const [timePart, ampm] = cleanTime.split(' ');
+        
+        // Extract AM/PM and time parts - handle both "4 am" and "4am" formats
+        const ampmMatch = cleanTime.match(/(am|pm)$/i);
+        const ampm = ampmMatch ? ampmMatch[0] : null;
+        const timePartOnly = cleanTime.replace(/(am|pm)$/i, '').trim();
         
         let hours: number, minutes: number;
-        if (timePart.includes(':')) {
-            [hours, minutes] = timePart.split(':').map(Number);
+        
+        if (timePartOnly.includes(':')) {
+            const [hoursStr, minutesStr] = timePartOnly.split(':');
+            hours = parseInt(hoursStr.replace(/[^\d]/g, ''));
+            minutes = parseInt(minutesStr.replace(/[^\d]/g, ''));
+            
+            // Validate parsed values
+            if (isNaN(hours) || isNaN(minutes)) {
+                debugLog(`❌ Invalid time format: "${resetTime}"`);
+                return null;
+            }
         } else {
-            hours = parseInt(timePart.replace(/[^\d]/g, ''));
+            hours = parseInt(timePartOnly.replace(/[^\d]/g, ''));
             minutes = 0;
+            
+            if (isNaN(hours)) {
+                debugLog(`❌ Invalid time format: "${resetTime}"`);
+                return null;
+            }
+        }
+        
+        // Validate hour and minute ranges
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+            debugLog(`❌ Invalid time values: hours=${hours}, minutes=${minutes}`);
+            return null;
         }
         
         const resetDate = new Date(referenceTime);
         let resetHours = hours;
         
-        if (ampm || /[ap]m/i.test(timePart)) {
-            const isPM = /pm/i.test(ampm || timePart);
-            const isAM = /am/i.test(ampm || timePart);
+        // Handle AM/PM conversion
+        if (ampm) {
+            const isPM = /pm/i.test(ampm);
+            const isAM = /am/i.test(ampm);
             
             if (isPM && hours !== 12) {
                 resetHours = hours + 12;
@@ -80,9 +106,12 @@ function parseResetTime(resetTime: string, referenceTime: Date): Date | null {
             }
         }
         
+        // Set the reset time
         resetDate.setHours(resetHours, minutes, 0, 0);
         
-        if (resetDate <= referenceTime) {
+        // If the reset time is not in the future, move it to tomorrow
+        // Use >= instead of <= to handle exact time matches (should always be next occurrence)
+        if (resetDate.getTime() <= referenceTime.getTime()) {
             resetDate.setDate(resetDate.getDate() + 1);
         }
         
