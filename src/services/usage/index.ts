@@ -3,6 +3,7 @@ import { MessageItem } from '../../core/types';
 import { messageQueue, processingQueue, resumeTimer, countdownInterval, setProcessingQueue, setResumeTimer, setCountdownInterval } from '../../core/state';
 import { debugLog } from '../../utils/logging';
 import { updateWebviewContent } from '../../ui/webview';
+import { processNextMessage } from '../../claude/communication';
 
 export function isCurrentUsageLimit(output: string): boolean {
     try {
@@ -249,7 +250,7 @@ function resumeProcessingFromWait(message: MessageItem): void {
     if (!processingQueue) {
         setProcessingQueue(true);
         setTimeout(() => {
-            // processNextMessage(); // This would need to be imported
+            processNextMessage();
         }, 2000);
     }
 }
