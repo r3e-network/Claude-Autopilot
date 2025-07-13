@@ -260,14 +260,18 @@ function renderQueue() {
             const actions = document.createElement('div');
             actions.className = 'queue-item-actions';
             
-            if (item.status === 'pending') {
+            // Show duplicate button for pending, completed, and processing messages
+            if (item.status === 'pending' || item.status === 'completed' || item.status === 'processing') {
                 const duplicateBtn = document.createElement('button');
                 duplicateBtn.textContent = '📋';
                 duplicateBtn.className = 'queue-item-action duplicate';
                 duplicateBtn.title = 'Duplicate message';
                 duplicateBtn.onclick = () => duplicateMessage(item.id);
                 actions.appendChild(duplicateBtn);
-                
+            }
+            
+            // Show edit button only for pending messages
+            if (item.status === 'pending') {
                 const editBtn = document.createElement('button');
                 editBtn.textContent = '✏️';
                 editBtn.className = 'queue-item-action edit';
@@ -832,6 +836,9 @@ window.addEventListener('message', event => {
         case 'setSleepPreventionSetting':
             document.getElementById('preventSleep').checked = message.enabled;
             break;
+        case 'setDevelopmentModeSetting':
+            updateDevelopmentModeUI(message.enabled);
+            break;
         case 'clearClaudeOutput':
             clearClaudeOutputUI();
             break;
@@ -1370,4 +1377,53 @@ window.addEventListener('DOMContentLoaded', function() {
     vscode.postMessage({
         command: 'getSleepPreventionSetting'
     });
+    
+    // Check if development mode is enabled
+    vscode.postMessage({
+        command: 'getDevelopmentModeSetting'
+    });
 });
+
+// Development mode state
+let isDevelopmentMode = false;
+
+// Debug functions
+function simulateUsageLimit() {
+    vscode.postMessage({
+        command: 'simulateUsageLimit'
+    });
+}
+
+function clearAllTimers() {
+    vscode.postMessage({
+        command: 'clearAllTimers'
+    });
+}
+
+function debugQueueState() {
+    vscode.postMessage({
+        command: 'debugQueueState'
+    });
+}
+
+function toggleDebugMode() {
+    vscode.postMessage({
+        command: 'toggleDebugLogging'
+    });
+}
+
+// Show/hide development mode sections
+function updateDevelopmentModeUI(enabled) {
+    isDevelopmentMode = enabled;
+    
+    const debugSection = document.getElementById('debugSection');
+    const terminalSection = document.querySelector('.terminal-section');
+    
+    if (debugSection) {
+        debugSection.style.display = enabled ? 'block' : 'none';
+    }
+    
+    if (terminalSection) {
+        terminalSection.style.display = enabled ? 'block' : 'none';
+    }
+}

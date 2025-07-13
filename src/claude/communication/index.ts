@@ -10,25 +10,28 @@ import { startClaudeSession } from '../../claude/session';
 export async function processNextMessage(): Promise<void> {
     debugLog('--- PROCESSING NEXT MESSAGE ---');
     
-    if (!processingQueue || messageQueue.length === 0) {
-        debugLog('No processing needed - queue empty or processing stopped');
-        setProcessingQueue(false);
+    if (!processingQueue) {
+        debugLog('Processing stopped by user');
         updateWebviewContent();
         updateSessionState();
-        if (messageQueue.length === 0) {
-            vscode.window.showInformationMessage('All messages processed. Claude session remains active.');
-            debugLog('✓ All messages processed');
-        }
+        return;
+    }
+    
+    if (messageQueue.length === 0) {
+        debugLog('Queue empty - waiting for new messages (processing remains active)');
+        updateWebviewContent();
+        updateSessionState();
+        vscode.window.showInformationMessage('All messages processed. Claude session remains active. Add messages to continue.');
+        debugLog('✓ All messages processed - ready for new messages');
         return;
     }
 
     const message = messageQueue.find(m => m.status === 'pending');
     if (!message) {
-        debugLog('No pending messages found');
-        setProcessingQueue(false);
+        debugLog('No pending messages found - processing remains active for new messages');
         updateWebviewContent();
         updateSessionState();
-        vscode.window.showInformationMessage('No pending messages to process');
+        vscode.window.showInformationMessage('No pending messages to process. Processing remains active.');
         return;
     }
 
@@ -275,6 +278,8 @@ function waitForPrompt(): Promise<void> {
 }
 
 export function startProcessingQueue(skipPermissions: boolean = true): void {
+    debugLog(`🚀 startProcessingQueue called with skipPermissions=${skipPermissions}`);
+    
     if (!claudeProcess) {
         vscode.window.showInformationMessage('Starting Claude session...');
         startClaudeSession(skipPermissions);
@@ -300,13 +305,16 @@ export function startProcessingQueue(skipPermissions: boolean = true): void {
         return;
     }
 
+    debugLog(`🔄 Setting processingQueue to true, current queue length: ${messageQueue.length}`);
+    setProcessingQueue(true);
+    updateSessionState();
+    
     if (messageQueue.length === 0) {
+        debugLog('📭 Queue is empty after starting processing - waiting for messages');
         vscode.window.showInformationMessage('Claude session is ready. Add messages to start processing.');
         return;
     }
 
-    setProcessingQueue(true);
-    updateSessionState();
     processNextMessage();
 }
 

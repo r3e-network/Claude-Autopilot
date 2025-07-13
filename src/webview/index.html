@@ -51,7 +51,26 @@
             </label>
         </div>
 
-
+        <div class="debug-section" id="debugSection" style="display: none;">
+            <div class="debug-header">
+                <h3>🧪 Development Debug Controls</h3>
+                <small style="opacity: 0.7;">These controls are only available in development mode</small>
+            </div>
+            <div class="debug-controls">
+                <button onclick="simulateUsageLimit()" class="btn-warning btn-small">
+                    <span class="btn-icon">⏱️</span>Simulate Usage Limit (10sec)
+                </button>
+                <button onclick="clearAllTimers()" class="btn-secondary btn-small">
+                    <span class="btn-icon">🔄</span>Clear All Timers
+                </button>
+                <button onclick="debugQueueState()" class="btn-secondary btn-small">
+                    <span class="btn-icon">🐛</span>Debug Queue State
+                </button>
+                <button onclick="toggleDebugMode()" class="btn-secondary btn-small">
+                    <span class="btn-icon">🔍</span>Toggle Debug Logging
+                </button>
+            </div>
+        </div>
 
         <div class="claude-output-section">
             <div class="claude-header">

@@ -52,6 +52,11 @@
           "type": "boolean",
           "default": false,
           "description": "Prevent computer from sleeping while waiting for usage limit reset"
+        },
+        "claudeLoop.developmentMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable development mode with debug controls and testing features"
         }
       }
     }

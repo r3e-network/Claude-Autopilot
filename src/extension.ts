@@ -10,7 +10,7 @@ import {
     addMessageToQueueFromWebview, loadWorkspaceHistory, filterHistory, 
     loadPendingQueue, clearPendingQueue, saveWorkspaceHistory, endCurrentHistoryRun
 } from './queue';
-import { recoverWaitingMessages, toggleSleepPreventionSetting, sendSleepPreventionSetting, stopSleepPrevention } from './services';
+import { recoverWaitingMessages, toggleSleepPreventionSetting, sendSleepPreventionSetting, stopSleepPrevention, simulateUsageLimit, clearAllTimers, debugQueueState } from './services';
 import { debugLog } from './utils';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -121,6 +121,21 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
                 case 'getSleepPreventionSetting':
                     sendSleepPreventionSetting();
                     break;
+                case 'getDevelopmentModeSetting':
+                    sendDevelopmentModeSetting();
+                    break;
+                case 'simulateUsageLimit':
+                    simulateUsageLimit();
+                    break;
+                case 'clearAllTimers':
+                    clearAllTimers();
+                    break;
+                case 'debugQueueState':
+                    debugQueueState();
+                    break;
+                case 'toggleDebugLogging':
+                    toggleDebugLogging();
+                    break;
             }
         },
         undefined,
@@ -170,6 +185,31 @@ function addMessageToQueue(): void {
             addMessageToQueueFromWebview(message);
         }
     });
+}
+
+function sendDevelopmentModeSetting(): void {
+    if (claudePanel) {
+        const config = vscode.workspace.getConfiguration('claudeLoop');
+        const isDevelopmentMode = config.get<boolean>('developmentMode', false);
+        
+        claudePanel.webview.postMessage({
+            command: 'setDevelopmentModeSetting',
+            enabled: isDevelopmentMode
+        });
+    }
+}
+
+function toggleDebugLogging(): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const isDevelopmentMode = config.get<boolean>('developmentMode', false);
+    
+    if (!isDevelopmentMode) {
+        vscode.window.showWarningMessage('Development mode must be enabled to use debug features');
+        return;
+    }
+    
+    // Toggle debug logging state (this would need to be implemented in core state)
+    vscode.window.showInformationMessage('DEBUG: Debug logging toggled');
 }
 
 export function deactivate(): void {

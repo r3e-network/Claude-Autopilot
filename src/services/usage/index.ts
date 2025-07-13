@@ -273,3 +273,111 @@ export function recoverWaitingMessages(): void {
         }
     });
 }
+
+export function simulateUsageLimit(): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const isDevelopmentMode = config.get<boolean>('developmentMode', false);
+    
+    if (!isDevelopmentMode) {
+        vscode.window.showWarningMessage('Development mode must be enabled to use debug features');
+        return;
+    }
+    
+    debugLog('🧪 Simulating usage limit with 1-minute wait');
+    
+    setProcessingQueue(false);
+    
+    const existingContinue = messageQueue.find(msg => msg.text === 'continue' && msg.status === 'waiting');
+    if (existingContinue) {
+        debugLog('⚠️ Continue message already exists - not adding duplicate');
+        return;
+    }
+    
+    // Find the currently processing message (if any) to insert after it
+    const currentProcessingIndex = messageQueue.findIndex(msg => msg.status === 'processing');
+    
+    const continueMessage: MessageItem = {
+        id: Date.now() + 1,
+        text: 'continue',
+        timestamp: new Date().toISOString(),
+        status: 'waiting',
+        error: 'DEBUG: Simulated usage limit - will resume in 10 seconds',
+        waitUntil: Date.now() + (10 * 1000) // 10 sec
+    };
+    
+    if (currentProcessingIndex >= 0) {
+        // Insert after the currently processing message
+        messageQueue.splice(currentProcessingIndex + 1, 0, continueMessage);
+        debugLog(`🧪 Inserted continue message after processing message at index ${currentProcessingIndex}`);
+    } else {
+        // If no message is processing, insert at the beginning
+        messageQueue.unshift(continueMessage);
+        debugLog('🧪 Inserted continue message at beginning of queue (no processing message found)');
+    }
+    
+    updateWebviewContent();
+    
+    vscode.window.showInformationMessage('DEBUG: Simulated usage limit. Added "continue" message with 1-minute countdown.');
+    
+    startCountdownTimer(continueMessage, 10);
+}
+
+export function clearAllTimers(): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const isDevelopmentMode = config.get<boolean>('developmentMode', false);
+    
+    if (!isDevelopmentMode) {
+        vscode.window.showWarningMessage('Development mode must be enabled to use debug features');
+        return;
+    }
+    
+    debugLog('🧪 Clearing all timers and waiting states');
+    
+    if (resumeTimer) {
+        clearTimeout(resumeTimer);
+        setResumeTimer(null);
+    }
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        setCountdownInterval(null);
+    }
+    
+    messageQueue.forEach(message => {
+        if (message.status === 'waiting') {
+            message.status = 'pending';
+            message.error = undefined;
+            message.waitSeconds = undefined;
+            message.waitUntil = undefined;
+        }
+    });
+    
+    updateWebviewContent();
+    vscode.window.showInformationMessage('DEBUG: Cleared all timers and reset waiting messages to pending.');
+}
+
+export function debugQueueState(): void {
+    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const isDevelopmentMode = config.get<boolean>('developmentMode', false);
+    
+    if (!isDevelopmentMode) {
+        vscode.window.showWarningMessage('Development mode must be enabled to use debug features');
+        return;
+    }
+    
+    const queueInfo = {
+        totalMessages: messageQueue.length,
+        pending: messageQueue.filter(m => m.status === 'pending').length,
+        processing: messageQueue.filter(m => m.status === 'processing').length,
+        waiting: messageQueue.filter(m => m.status === 'waiting').length,
+        completed: messageQueue.filter(m => m.status === 'completed').length,
+        failed: messageQueue.filter(m => m.status === 'error').length,
+        processingQueue: processingQueue,
+        hasResumeTimer: !!resumeTimer,
+        hasCountdownInterval: !!countdownInterval
+    };
+    
+    debugLog(`🧪 Queue State Debug: ${JSON.stringify(queueInfo, null, 2)}`);
+    
+    const message = `Queue: ${queueInfo.totalMessages} total, ${queueInfo.pending} pending, ${queueInfo.processing} processing, ${queueInfo.waiting} waiting, ${queueInfo.completed} completed, ${queueInfo.failed} failed. Processing: ${queueInfo.processingQueue}`;
+    vscode.window.showInformationMessage(`DEBUG: ${message}`);
+}

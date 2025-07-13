@@ -604,6 +604,7 @@ select:focus {
 
 .terminal-section {
     margin: 20px 0;
+    display: none; /* Hidden by default, shown only in development mode */
 }
 
 .terminal-header {
@@ -674,4 +675,36 @@ select:focus {
 
 .terminal-output::-webkit-scrollbar-thumb:hover {
     background: #777;
+}
+
+/* Debug Section */
+.debug-section {
+    margin: 20px 0;
+    border: 2px dashed var(--vscode-charts-orange);
+    border-radius: 8px;
+    background: rgba(255, 165, 0, 0.05);
+}
+
+.debug-header {
+    padding: 15px 20px 10px;
+    border-bottom: 1px solid rgba(255, 165, 0, 0.2);
+}
+
+.debug-header h3 {
+    margin: 0 0 5px 0;
+    color: var(--vscode-charts-orange);
+    font-size: 16px;
+}
+
+.debug-controls {
+    padding: 15px 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.debug-controls .btn-small {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 6px;
 }
