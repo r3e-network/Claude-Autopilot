@@ -77,8 +77,11 @@ export async function processNextMessage(): Promise<void> {
         
     } catch (error) {
         debugLog(`❌ Error processing message #${message.id}: ${error}`);
+        
+        const errorString = error instanceof Error ? error.message : String(error);
+        
         message.status = 'error';
-        message.error = `Processing failed: ${error}`;
+        message.error = `Processing failed: ${errorString}`;
         updateWebviewContent();
         saveWorkspaceHistory();
         
@@ -95,8 +98,11 @@ export async function sendMessageToClaudeProcess(message: MessageItem, retryCoun
         if (retryCount < maxRetries) {
             debugLog(`❌ Claude process not available, attempting to restart (retry ${retryCount + 1}/${maxRetries})`);
             
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            startClaudeSession(true);
+            // Apply progressive delay for retries
+            const retryDelay = 2000 * Math.pow(2, retryCount); // 2s, 4s, 8s
+            debugLog(`⏳ Waiting ${retryDelay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            await startClaudeSession(true);
             
             await new Promise((resolve, reject) => {
                 const checkInterval = setInterval(() => {
@@ -277,12 +283,12 @@ function waitForPrompt(): Promise<void> {
     });
 }
 
-export function startProcessingQueue(skipPermissions: boolean = true): void {
+export async function startProcessingQueue(skipPermissions: boolean = true): Promise<void> {
     debugLog(`🚀 startProcessingQueue called with skipPermissions=${skipPermissions}`);
     
     if (!claudeProcess) {
         vscode.window.showInformationMessage('Starting Claude session...');
-        startClaudeSession(skipPermissions);
+        await startClaudeSession(skipPermissions);
         
         if (messageQueue.length > 0) {
             const checkReadyInterval = setInterval(() => {

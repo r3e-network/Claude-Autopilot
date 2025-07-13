@@ -1,13 +1,15 @@
 {
   "name": "claude-loop",
   "displayName": "ClaudeLoop",
-  "description": "Automatically resume Claude CLI tasks when usage limits are reached",
-  "version": "1.0.0",
+  "description": "Automated Claude Code task management with queue processing and auto-resume functionality",
+  "version": "0.0.1",
   "engines": {
     "vscode": "^1.74.0"
   },
   "categories": [
     "Machine Learning",
+    "Automation",
+    "Productivity",
     "Other"
   ],
   "main": "./out/extension.js",
@@ -48,15 +50,94 @@
     "configuration": {
       "title": "ClaudeLoop",
       "properties": {
-        "claudeLoop.preventSleep": {
-          "type": "boolean",
-          "default": false,
-          "description": "Prevent computer from sleeping while waiting for usage limit reset"
-        },
         "claudeLoop.developmentMode": {
           "type": "boolean",
           "default": false,
           "description": "Enable development mode with debug controls and testing features"
+        },
+        "claudeLoop.queue.maxSize": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 10,
+          "maximum": 10000,
+          "description": "Maximum number of messages in queue before cleanup"
+        },
+        "claudeLoop.queue.maxMessageSize": {
+          "type": "number",
+          "default": 50000,
+          "minimum": 1000,
+          "maximum": 1000000,
+          "description": "Maximum size of individual message text (bytes)"
+        },
+        "claudeLoop.queue.maxOutputSize": {
+          "type": "number",
+          "default": 100000,
+          "minimum": 1000,
+          "maximum": 1000000,
+          "description": "Maximum size of message output (bytes)"
+        },
+        "claudeLoop.queue.retentionHours": {
+          "type": "number",
+          "default": 24,
+          "minimum": 1,
+          "maximum": 168,
+          "description": "Hours to keep completed messages before cleanup"
+        },
+        "claudeLoop.queue.autoMaintenance": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic queue maintenance and cleanup"
+        },
+        "claudeLoop.session.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start Claude session when extension activates"
+        },
+        "claudeLoop.session.skipPermissions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Skip Claude CLI permission prompts (use --dangerously-skip-permissions)"
+        },
+        "claudeLoop.session.healthCheckInterval": {
+          "type": "number",
+          "default": 30000,
+          "minimum": 5000,
+          "maximum": 300000,
+          "description": "Interval for Claude process health checks (milliseconds)"
+        },
+        "claudeLoop.sleepPrevention.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prevent computer from sleeping while processing queue"
+        },
+        "claudeLoop.sleepPrevention.method": {
+          "type": "string",
+          "enum": ["auto", "caffeinate", "powershell", "systemd-inhibit"],
+          "default": "auto",
+          "description": "Method to use for sleep prevention"
+        },
+        "claudeLoop.history.maxRuns": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of history runs to keep"
+        },
+        "claudeLoop.history.autoSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically save workspace history"
+        },
+        "claudeLoop.logging.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging"
+        },
+        "claudeLoop.logging.level": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug"],
+          "default": "info",
+          "description": "Logging level for debug output"
         }
       }
     }
@@ -64,7 +145,10 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./ && cp src/claude_pty_wrapper.py out/claude/session/",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package",
+    "publish": "vsce publish",
+    "prepackage": "npm run compile"
   },
   "devDependencies": {
     "@types/node": "16.x",
@@ -73,24 +157,29 @@
   },
   "keywords": [
     "claude",
+    "claude-code",
     "ai",
     "automation",
-    "cli",
+    "queue",
+    "task-management",
     "productivity",
-    "development"
+    "development",
+    "anthropic",
+    "machine-learning",
+    "batch-processing",
+    "workflow"
   ],
   "author": "Ben Basha",
   "license": "MIT",
   "publisher": "benbasha",
   "repository": {
     "type": "git",
-    "url": "https://github.com/benbasha/claude-code-loop"
+    "url": "https://github.com/benbasha/claudeloop"
   },
-  "homepage": "https://github.com/benbasha/claude-code-loop#readme",
+  "homepage": "https://github.com/benbasha/claudeloop#readme",
   "bugs": {
-    "url": "https://github.com/benbasha/claude-code-loop/issues"
+    "url": "https://github.com/benbasha/claudeloop/discussions"
   },
-  "icon": "icon.png",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"

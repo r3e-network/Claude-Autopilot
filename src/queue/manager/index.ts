@@ -4,6 +4,7 @@ import { messageQueue, queueSortConfig, claudePanel, setQueueSortConfig, process
 import { debugLog } from '../../utils/logging';
 import { updateWebviewContent } from '../../ui/webview';
 import { processNextMessage } from '../../claude/communication';
+import { enforceMessageSizeLimits, enforceQueueSizeLimit, performQueueMaintenance } from '../memory';
 
 export function removeMessageFromQueue(messageId: number): void {
     const index = messageQueue.findIndex(msg => msg.id === messageId);
@@ -112,7 +113,14 @@ export function addMessageToQueueFromWebview(message: string): void {
         status: 'pending'
     };
 
-    messageQueue.push(messageItem);
+    // Apply size limits to the new message
+    const sizeLimitedMessage = enforceMessageSizeLimits(messageItem);
+    
+    messageQueue.push(sizeLimitedMessage);
+    
+    // Check and enforce queue size limits
+    enforceQueueSizeLimit();
+    
     updateWebviewContent();
     
     const hasWaitingMessages = messageQueue.some(msg => msg.status === 'waiting');

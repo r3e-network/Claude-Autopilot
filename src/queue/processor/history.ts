@@ -3,6 +3,8 @@ import { HistoryRun, MessageItem } from '../../core/types';
 import { extensionContext, currentRun, messageQueue, setCurrentRun } from '../../core/state';
 import { claudePanel } from '../../core/state';
 import { debugLog, getHistoryStorageKey, getPendingQueueStorageKey, getWorkspacePath } from '../../utils/logging';
+import { getValidatedConfig } from '../../core/config';
+import { enforceMessageSizeLimits } from '../memory';
 
 export function saveWorkspaceHistory(): void {
     if (!extensionContext || !currentRun) return;
@@ -10,7 +12,10 @@ export function saveWorkspaceHistory(): void {
     const storageKey = getHistoryStorageKey();
     const existingHistory = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
     
-    currentRun.messages = [...messageQueue];
+    // Apply size limits to messages before saving to history
+    const sizeLimitedMessages = messageQueue.map(msg => enforceMessageSizeLimits(msg));
+    
+    currentRun.messages = [...sizeLimitedMessages];
     currentRun.totalMessages = messageQueue.length;
     currentRun.completedMessages = messageQueue.filter(m => m.status === 'completed').length;
     currentRun.errorMessages = messageQueue.filter(m => m.status === 'error').length;
@@ -23,7 +28,16 @@ export function saveWorkspaceHistory(): void {
         existingHistory.push(currentRun);
     }
     
-    const recentHistory = existingHistory.slice(-50);
+    // Use the configuration for history limit
+    const config = getValidatedConfig();
+    const recentHistory = existingHistory.slice(-config.history.maxRuns);
+    
+    // Log memory cleanup if history was trimmed
+    if (existingHistory.length > config.history.maxRuns) {
+        const trimmedCount = existingHistory.length - config.history.maxRuns;
+        debugLog(`🧹 Trimmed ${trimmedCount} old history runs to prevent memory bloat`);
+    }
+    
     extensionContext.globalState.update(storageKey, recentHistory);
     
     savePendingQueue();

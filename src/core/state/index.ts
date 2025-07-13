@@ -35,6 +35,10 @@ export function setIsRunning(running: boolean) {
     isRunning = running;
 }
 
+export function setMessageQueue(queue: MessageItem[]) {
+    messageQueue = queue;
+}
+
 export function setClaudeProcess(process: ChildProcess | null) {
     claudeProcess = process;
 }

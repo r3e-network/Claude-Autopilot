@@ -14,43 +14,99 @@ import { startHealthCheck, stopHealthCheck } from '../../services/health';
 import { startSleepPrevention, stopSleepPrevention } from '../../services/sleep';
 import { runDependencyCheck, showDependencyStatus } from '../../services/dependency-check';
 
-export function startClaudeSession(skipPermissions: boolean = true): void {
+export async function startClaudeSession(skipPermissions: boolean = true): Promise<void> {
     debugLog('=== STARTING CLAUDE SESSION ===');
     
-    if (claudeProcess) {
-        vscode.window.showInformationMessage('Claude session is already running');
-        debugLog('Claude session already running - aborting');
-        return;
-    }
-
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    const cwd = workspaceFolder?.uri.fsPath || process.cwd();
-    
-    debugLog(`Working directory: ${cwd}`);
-    debugLog('Spawning Claude process...');
-    
-    const wrapperPath = path.join(__dirname, 'claude_pty_wrapper.py');
-    const args = [wrapperPath];
-    if (skipPermissions) {
-        args.push('--skip-permissions');
-    }
-    
-    const spawnedProcess = spawn('python3', args, {
-        cwd: cwd,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: { 
-            ...process.env,
-            TERM: 'xterm-256color',
-            COLUMNS: '120',
-            LINES: '30'
+    try {
+        if (claudeProcess) {
+            vscode.window.showInformationMessage('Claude session is already running');
+            debugLog('Claude session already running - aborting');
+            return;
         }
-    });
 
-    if (!spawnedProcess) {
-        vscode.window.showErrorMessage('Failed to start Claude process');
-        debugLog('✗ Failed to start Claude process');
-        return;
-    }
+        // Check dependencies before starting
+        debugLog('🔍 Checking dependencies...');
+        let dependencyResults;
+        try {
+            dependencyResults = await runDependencyCheck();
+        } catch (error) {
+            debugLog(`❌ Failed to check dependencies: ${error}`);
+            vscode.window.showErrorMessage(`Failed to check dependencies: ${error instanceof Error ? error.message : String(error)}`);
+            return;
+        }
+        
+        if (!dependencyResults.allReady) {
+            debugLog('❌ Dependencies not satisfied, showing status');
+            showDependencyStatus(dependencyResults);
+            return;
+        }
+        
+        debugLog('✅ All dependencies satisfied, proceeding with session start');
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const cwd = workspaceFolder?.uri.fsPath || process.cwd();
+        
+        debugLog(`Working directory: ${cwd}`);
+        debugLog('Spawning Claude process...');
+        
+        // Use the detected Python path
+        const pythonPath = dependencyResults.python.path || 'python3';
+        
+        // Verify wrapper file exists
+        const wrapperPath = dependencyResults.wrapper.path;
+        if (!wrapperPath) {
+            const errorMsg = 'Claude PTY wrapper not found. Please reinstall the extension.';
+            vscode.window.showErrorMessage(errorMsg);
+            debugLog('❌ PTY wrapper file not found');
+            throw new Error(errorMsg);
+        }
+        
+        // Verify wrapper file is readable
+        try {
+            if (!fs.existsSync(wrapperPath)) {
+                throw new Error('Wrapper file does not exist');
+            }
+            fs.accessSync(wrapperPath, fs.constants.R_OK);
+        } catch (error) {
+            const errorMsg = `Cannot access PTY wrapper: ${error instanceof Error ? error.message : String(error)}`;
+            vscode.window.showErrorMessage(errorMsg);
+            debugLog(`❌ Cannot access wrapper file: ${error}`);
+            throw new Error(errorMsg);
+        }
+    
+        const args = [wrapperPath];
+        if (skipPermissions) {
+            args.push('--skip-permissions');
+        }
+        
+        debugLog(`Using Python: ${pythonPath}`);
+        debugLog(`Using wrapper: ${wrapperPath}`);
+        
+        let spawnedProcess;
+        try {
+            spawnedProcess = spawn(pythonPath, args, {
+                cwd: cwd,
+                stdio: ['pipe', 'pipe', 'pipe'],
+                env: { 
+                    ...process.env,
+                    TERM: 'xterm-256color',
+                    COLUMNS: '120',
+                    LINES: '30'
+                }
+            });
+        } catch (error) {
+            const errorMsg = `Failed to spawn Claude process: ${error instanceof Error ? error.message : String(error)}`;
+            vscode.window.showErrorMessage(errorMsg);
+            debugLog(`❌ Process spawn error: ${error}`);
+            throw new Error(errorMsg);
+        }
+
+        if (!spawnedProcess || !spawnedProcess.pid) {
+            const errorMsg = 'Failed to start Claude process - no process ID';
+            vscode.window.showErrorMessage(errorMsg);
+            debugLog('❌ Failed to start Claude process - no PID');
+            throw new Error(errorMsg);
+        }
 
     setClaudeProcess(spawnedProcess);
     debugLog(`✓ Claude process started successfully`);
@@ -196,6 +252,30 @@ export function startClaudeSession(skipPermissions: boolean = true): void {
         }
         debugLog('=== CLAUDE SESSION ENDED WITH ERROR ===');
     });
+
+    } catch (error) {
+        // Global catch block for any unexpected errors during session startup
+        const errorMsg = `Failed to start Claude session: ${error instanceof Error ? error.message : String(error)}`;
+        debugLog(`❌ Claude session startup failed: ${error}`);
+        vscode.window.showErrorMessage(errorMsg);
+        
+        // Clean up any partial state
+        if (claudeProcess) {
+            try {
+                claudeProcess.kill();
+            } catch (killError) {
+                debugLog(`❌ Error killing process during cleanup: ${killError}`);
+            }
+            setClaudeProcess(null);
+        }
+        
+        setSessionReady(false);
+        stopHealthCheck();
+        stopSleepPrevention();
+        updateSessionState();
+        
+        throw error; // Re-throw to allow callers to handle
+    }
 }
 
 export function resetClaudeSession(): void {
@@ -217,31 +297,40 @@ export function resetClaudeSession(): void {
 export function handleClaudeKeypress(key: string): void {
     if (!claudeProcess || !claudeProcess.stdin) {
         debugLog(`❌ Cannot send keypress: Claude process not available`);
+        vscode.window.showWarningMessage('Claude process not available for keypress input');
         return;
     }
 
     debugLog(`⌨️  Sending keypress: ${key}`);
     
-    switch (key) {
-        case 'up':
-            claudeProcess.stdin.write('\x1b[A');
-            break;
-        case 'down':
-            claudeProcess.stdin.write('\x1b[B');
-            break;
-        case 'left':
-            claudeProcess.stdin.write('\x1b[D');
-            break;
-        case 'right':
-            claudeProcess.stdin.write('\x1b[C');
-            break;
-        case 'enter':
-            claudeProcess.stdin.write('\r');
-            break;
-        case 'escape':
-            claudeProcess.stdin.write('\x1b');
-            break;
-        default:
-            debugLog(`❌ Unknown key: ${key}`);
+    try {
+        switch (key) {
+            case 'up':
+                claudeProcess.stdin.write('\x1b[A');
+                break;
+            case 'down':
+                claudeProcess.stdin.write('\x1b[B');
+                break;
+            case 'left':
+                claudeProcess.stdin.write('\x1b[D');
+                break;
+            case 'right':
+                claudeProcess.stdin.write('\x1b[C');
+                break;
+            case 'enter':
+                claudeProcess.stdin.write('\r');
+                break;
+            case 'escape':
+                claudeProcess.stdin.write('\x1b');
+                break;
+            default:
+                debugLog(`❌ Unknown key: ${key}`);
+                vscode.window.showWarningMessage(`Unknown key command: ${key}`);
+                return;
+        }
+    } catch (error) {
+        const errorMsg = `Failed to send keypress '${key}': ${error instanceof Error ? error.message : String(error)}`;
+        debugLog(`❌ Keypress error: ${error}`);
+        vscode.window.showErrorMessage(errorMsg);
     }
 }

@@ -4,6 +4,15 @@ export const CLAUDE_OUTPUT_THROTTLE_MS = 1000; // 1000ms = 1 time per second max
 export const CLAUDE_OUTPUT_AUTO_CLEAR_MS = 30000; // 30 seconds - auto clear output buffer
 export const CLAUDE_OUTPUT_MAX_BUFFER_SIZE = 100000; // 100KB max buffer size
 
+// Queue memory management constants
+export const MAX_QUEUE_SIZE = 1000; // Maximum number of messages in queue
+export const MAX_MESSAGE_SIZE = 50000; // 50KB max per message text
+export const MAX_OUTPUT_SIZE = 100000; // 100KB max per message output
+export const MAX_ERROR_SIZE = 10000; // 10KB max per error message
+export const QUEUE_CLEANUP_THRESHOLD = 500; // Start cleanup when queue exceeds this size
+export const COMPLETED_MESSAGE_RETENTION_HOURS = 24; // Keep completed messages for 24 hours
+export const MAX_HISTORY_RUNS = 20; // Reduced from 50 to prevent memory bloat
+
 export const ANSI_CLEAR_SCREEN_PATTERNS = [
     '\x1b[2J',           // Clear entire screen
     '\x1b[H\x1b[2J',     // Move cursor to home + clear screen

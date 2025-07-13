@@ -1,200 +1,222 @@
-# ClaudeLoop VS Code Extension
+# ClaudeLoop - Automated Claude Code Task Management
 
-Automatically resume Claude CLI tasks when usage limits are reached. This extension provides a user-friendly interface for managing Claude CLI command queues with intelligent auto-resume functionality.
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-loop)
+[![Version](https://img.shields.io/badge/version-0.0.1--alpha-blue)](https://github.com/benbasha/claudeloop/releases)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Features
+**ClaudeLoop** is a powerful VS Code extension that provides automated task management for Claude Code with intelligent queue processing and auto-resume functionality.
 
--   **Message Queue Management**: Add multiple messages to a queue for sequential processing
--   **Auto-Resume**: Automatically detects Claude usage limits and resumes tasks when limits are lifted
--   **Real-time Status Updates**: Live countdown timer showing when tasks will resume
--   **Flexible Output Display**: Choose to show outputs in VS Code terminal, webview interface, or both
--   **Network Connectivity Checks**: Ensures stable connection before processing
--   **Error Handling**: Comprehensive error handling with user-friendly messages
+## ✨ Features
 
-## Prerequisites
+### 🚀 **Automated Queue Processing**
+- **Smart Queue Management**: Process multiple Claude Code tasks automatically with intelligent queueing
+- **Auto-Resume**: Automatically resume processing when Claude usage limits reset
+- **Batch Processing**: Handle large workloads efficiently with batched message processing
+- **Queue Operations**: Add, remove, duplicate, edit, and reorder messages in the queue
 
--   VS Code 1.74.0 or higher
--   Claude CLI installed and configured
--   Node.js (for development)
+### 🔧 **Robust Process Management**
+- **Dependency Checking**: Automatic detection and validation of Claude Code and Python dependencies
+- **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
+- **Error Recovery**: Comprehensive error handling with automatic retry mechanisms
+- **Health Monitoring**: Continuous monitoring of Claude Code process health
 
-## Installation
+### ⚙️ **Advanced Configuration**
+- **Extensive Settings**: Fine-tune every aspect of ClaudeLoop behavior
+- **Configuration Validation**: Built-in validation with helpful error messages
+- **Development Mode**: Special features and debugging tools for developers
+- **Sleep Prevention**: Keep your computer awake during long processing sessions
 
-### From VS Code Marketplace
+### 📊 **Rich User Interface**
+- **Interactive Webview**: Intuitive interface for managing queues and monitoring progress
+- **Real-time Updates**: Live status updates and progress tracking
+- **History Browser**: Browse and filter previous processing runs
+- **Command Palette**: Quick access to all ClaudeLoop commands
 
-1. Open VS Code
-2. Go to Extensions view (`Ctrl+Shift+X` or `Cmd+Shift+X`)
-3. Search for "ClaudeLoop"
-4. Click "Install"
+## 🚀 Quick Start
 
-### From VSIX Package
+### Prerequisites
 
-1. Download the `.vsix` file from the releases page
-2. Open VS Code
-3. Go to Extensions view
-4. Click "..." menu → "Install from VSIX..."
-5. Select the downloaded `.vsix` file
+1. **Claude Code**: Install Claude Code from [https://www.anthropic.com/claude-code](https://www.anthropic.com/claude-code)
+2. **Python 3.8+**: Required for process management
+3. **VS Code 1.74.0+**: Compatible with recent VS Code versions
 
-### From Source
+### Installation
 
-1. Clone or download this repository
-2. Open the project in VS Code
-3. Run `npm install` to install dependencies
-4. Press `F5` to launch the extension in a new Extension Development Host window
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-loop)
+2. Or install via command palette: `Extensions: Install Extensions` → Search "ClaudeLoop"
+3. Or install from VSIX: `code --install-extension claude-loop-0.0.1.vsix`
 
-### Installing Claude CLI
+### Basic Usage
 
-Make sure you have Claude CLI installed:
+1. **Start ClaudeLoop**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start ClaudeLoop`
+2. **Add Messages**: Click "Add Message" or use `Claude: Add Message to Queue`
+3. **Start Processing**: Click "Start Processing" to begin automated queue processing
+4. **Monitor Progress**: Watch real-time updates in the ClaudeLoop panel
 
-```bash
-# Follow instructions at https://claude.ai/code
+## 📋 Commands
+
+| Command | Description |
+|---------|-------------|
+| `Claude: Start ClaudeLoop` | Start the ClaudeLoop interface and session |
+| `Claude: Stop ClaudeLoop` | Stop ClaudeLoop and close the session |
+| `Claude: Add Message to Queue` | Add a new message to the processing queue |
+
+## ⚙️ Configuration
+
+ClaudeLoop offers extensive configuration options. Access settings via `File → Preferences → Settings → Extensions → ClaudeLoop`.
+
+### Queue Management
+```json
+{
+  "claudeLoop.queue.autoMaintenance": true
+}
 ```
 
-## Usage
+### Session Management
+```json
+{
+  "claudeLoop.session.autoStart": false,
+  "claudeLoop.session.skipPermissions": true,
+  "claudeLoop.session.healthCheckInterval": 30000
+}
+```
 
-### Starting the Extension
+### Sleep Prevention
+```json
+{
+  "claudeLoop.sleepPrevention.enabled": true,
+  "claudeLoop.sleepPrevention.method": "auto"
+}
+```
 
-1. Open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
-2. Type "Claude: Start ClaudeLoop"
-3. The extension will open a new webview panel
+### History & Logging
+```json
+{
+  "claudeLoop.history.maxRuns": 20,
+  "claudeLoop.history.autoSave": true,
+  "claudeLoop.logging.enabled": false,
+  "claudeLoop.logging.level": "info"
+}
+```
 
-### Adding Messages to Queue
+## 🏗️ Architecture
 
-1. In the webview panel, enter your message in the text area
-2. Click "Add Message" or press `Ctrl+Enter`
-3. Messages will appear in the queue below
+ClaudeLoop follows a modular architecture with clear separation of concerns:
 
-### Processing Messages
+```
+src/
+├── core/           # Core state, types, and configuration
+├── claude/         # Claude CLI integration and communication
+├── queue/          # Queue management and processing
+├── services/       # External services (health, sleep, dependencies)
+├── ui/             # User interface and webview management
+└── utils/          # Shared utilities and logging
+```
 
-1. Click "Start Processing" to begin processing the queue
-2. The extension will:
-    - Check network connectivity
-    - Verify Claude CLI is available
-    - Process messages one by one
-    - Handle usage limits automatically
-    - Display results in the terminal
+### Key Components
 
-### Auto-Resume Functionality
+- **Queue Manager**: Handles message queueing, processing, and operations
+- **Claude Integration**: Manages Claude Code process and communication
+- **Dependency Checker**: Validates and manages required dependencies
+- **Configuration System**: Comprehensive settings with validation
 
-When Claude usage limits are reached:
+## 🔒 Security & Privacy
 
--   The extension detects the limit automatically
--   Shows a countdown timer until the limit resets
--   Automatically resumes processing when the limit is lifted
--   Displays progress in real-time
+- **Local Processing**: All processing happens locally on your machine
+- **No Data Collection**: ClaudeLoop doesn't collect or transmit personal data
+- **Secure Dependencies**: Validates Claude Code and Python installations
+- **Permission Awareness**: Uses `--dangerously-skip-permissions` only in trusted environments
 
-### Output Display Options
-
-Control where Claude responses are shown:
-
--   **Show outputs in terminal** (default: enabled): Displays responses in VS Code terminal
--   **Show outputs in interface** (default: disabled): Shows responses directly in the webview
--   Both options can be enabled simultaneously for maximum visibility
--   Settings are preserved during the session
-
-### Commands
-
--   `Claude: Start ClaudeLoop` - Open the main interface
--   `Claude: Stop ClaudeLoop` - Stop all processing and close interface
--   `Claude: Add Message to Queue` - Quick add a message via input box
-
-## Interface Elements
-
-### Status Colors
-
--   **Yellow**: Pending messages waiting to be processed
--   **Blue**: Currently processing
--   **Green**: Completed successfully
--   **Red**: Error occurred
--   **Orange**: Waiting for usage limit to reset
-
-### Controls
-
--   **Add Message**: Add new message to queue
--   **Start Processing**: Begin processing pending messages
--   **Stop Processing**: Stop current processing
--   **Clear Queue**: Remove all messages from queue
-
-### Settings
-
--   **Show outputs in terminal**: Toggle display of outputs in VS Code terminal
--   **Show outputs in interface**: Toggle display of outputs in the webview interface
-
-## Configuration
-
-The extension works with Claude CLI's default configuration. Make sure Claude CLI is properly authenticated and accessible from your terminal.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Claude CLI not found**
-
-    - Ensure Claude CLI is installed and in your PATH
-    - Try running `claude --help` in terminal
-
-2. **Network connectivity issues**
-
-    - Check your internet connection
-    - The extension tests connectivity before processing
-
-3. **Permission errors**
-    - The extension uses `--dangerously-skip-permissions` flag
-    - Only use in trusted environments
-
-### Debug Mode
-
-Enable debug logging by checking the VS Code Developer Console:
-
-1. Help → Toggle Developer Tools
-2. Check Console tab for extension logs
-
-## Development
+## 🛠️ Development
 
 ### Building from Source
 
 ```bash
+# Clone the repository
+git clone https://github.com/benbasha/claudeloop.git
+cd claudeloop
+
 # Install dependencies
 npm install
 
 # Compile TypeScript
 npm run compile
 
-# Watch for changes
+# Start watch mode for development
 npm run watch
 
-# Package extension (requires vsce)
-npm install -g vsce
+# Package for distribution
 vsce package
 ```
 
-### Project Structure
+### Development Mode
 
-```
-├── src/
-│   ├── extension.ts          # Main extension logic
-│   └── webview.html          # UI interface
-├── out/
-│   └── extension.js          # Compiled JavaScript
-├── package.json              # Extension manifest
-├── tsconfig.json             # TypeScript configuration
-└── README.md                 # This file
+Enable development mode for additional debugging features:
+
+```json
+{
+  "claudeLoop.developmentMode": true
+}
 ```
 
-## Security Considerations
+This enables:
+- Debug logging and diagnostics
+- Configuration validation tools
+- Advanced queue operations
 
-⚠️ **Important**: This extension uses Claude CLI's `--dangerously-skip-permissions` flag for automated processing. Only use this extension in trusted environments where you understand the security implications.
+## 🤝 Contributing
 
-## License
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
 
-This project is provided as-is for educational and productivity purposes.
+- Code style and conventions
+- Testing requirements
+- Pull request process
+- Issue reporting
 
-## Contributing
+## 📄 License
 
-Feel free to submit issues and pull requests to improve the extension.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🐛 Known Issues & Troubleshooting
 
-For issues related to:
+### Common Issues
 
--   Claude CLI: Visit https://claude.ai/code
--   VS Code Extension Development: Visit https://code.visualstudio.com/api
+**Claude Code Not Found**
+- Ensure Claude Code is installed and in your PATH
+- Restart VS Code after installing Claude Code
+- Check dependency status in ClaudeLoop panel
+
+**Python Not Found**
+- Install Python 3.8 or later
+- Ensure Python is in your PATH
+- On Windows, check "Add Python to PATH" during installation
+
+**Permission Errors**
+- ClaudeLoop uses `--dangerously-skip-permissions` for automation
+- Only use in trusted development environments
+- Disable if working with sensitive data
+
+### Getting Help
+
+- 💬 [Discussions](https://github.com/benbasha/claudeloop/discussions)
+- 📖 [Documentation](https://github.com/benbasha/claudeloop/wiki)
+
+## 📈 Changelog
+
+### Version 0.0.1-alpha (Latest)
+- 🎉 Initial alpha release with Claude Code automation
+- ✅ Complete architectural refactor from monolithic to modular design
+- ✅ Implemented robust dependency checking and validation
+- ✅ Added extensive configuration system with validation
+- ✅ Enhanced error handling and recovery mechanisms
+- ✅ Cross-platform compatibility improvements
+- ✅ Production-ready code with development mode features
+- ⚡ Queue processing and auto-resume functionality
+- 💤 Sleep prevention during processing
+- 📊 Basic history tracking
+
+---
+
+**Made with ❤️ for the Claude Code community**
+
+*ClaudeLoop is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic.*

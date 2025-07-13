@@ -69,12 +69,42 @@ export async function checkClaudeInstallation(): Promise<DependencyCheckResult> 
 }
 
 export async function checkPythonInstallation(): Promise<DependencyCheckResult> {
-    const pythonCommands = ['python3', 'python'];
+    const platform = os.platform();
+    
+    // Platform-specific Python command preferences
+    let pythonCommands: string[];
+    
+    switch (platform) {
+        case 'win32': // Windows
+            pythonCommands = ['python', 'python3', 'py'];
+            break;
+        case 'darwin': // macOS
+            pythonCommands = ['python3', 'python'];
+            break;
+        case 'linux': // Linux
+            pythonCommands = ['python3', 'python'];
+            break;
+        default:
+            pythonCommands = ['python3', 'python', 'py'];
+    }
     
     for (const cmd of pythonCommands) {
         const result = await checkCommand(cmd, ['--version']);
         if (result.available) {
-            return result;
+            // Verify Python version is 3.8+
+            const versionResult = await verifyPythonVersion(cmd);
+            if (versionResult.valid) {
+                return {
+                    ...result,
+                    version: versionResult.version
+                };
+            } else {
+                return {
+                    available: false,
+                    error: `Python version too old: ${versionResult.version}. Need Python 3.8+`,
+                    installInstructions: getPythonInstallInstructions()
+                };
+            }
         }
     }
     
@@ -85,24 +115,57 @@ export async function checkPythonInstallation(): Promise<DependencyCheckResult> 
     };
 }
 
+async function verifyPythonVersion(pythonCommand: string): Promise<{valid: boolean; version: string}> {
+    try {
+        const result = await checkCommand(pythonCommand, ['-c', 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")']);
+        
+        if (result.available && result.version) {
+            const version = result.version.trim();
+            const [major, minor] = version.split('.').map(Number);
+            
+            // Require Python 3.8+
+            const valid = major === 3 && minor >= 8;
+            
+            return { valid, version };
+        }
+        
+        return { valid: false, version: 'unknown' };
+    } catch (error) {
+        return { valid: false, version: 'unknown' };
+    }
+}
+
 export async function checkPtyWrapperFile(): Promise<DependencyCheckResult> {
     try {
-        // Check if the wrapper file exists in the expected location
-        const wrapperPath = path.join(__dirname, '..', '..', 'claude_pty_wrapper.py');
+        // Check multiple possible locations for the wrapper file
+        const possiblePaths = [
+            path.join(__dirname, '..', '..', 'claude_pty_wrapper.py'), // Development location
+            path.join(__dirname, 'claude_pty_wrapper.py'), // Compiled location  
+            path.join(__dirname, '..', 'claude_pty_wrapper.py'), // Alternative compiled location
+        ];
         
-        if (fs.existsSync(wrapperPath)) {
-            const stats = fs.statSync(wrapperPath);
-            if (stats.isFile()) {
-                return {
-                    available: true,
-                    path: wrapperPath
-                };
+        for (const wrapperPath of possiblePaths) {
+            try {
+                if (fs.existsSync(wrapperPath)) {
+                    const stats = fs.statSync(wrapperPath);
+                    if (stats.isFile()) {
+                        // Test if file is readable
+                        fs.accessSync(wrapperPath, fs.constants.R_OK);
+                        return {
+                            available: true,
+                            path: wrapperPath
+                        };
+                    }
+                }
+            } catch (error) {
+                // Try next path
+                continue;
             }
         }
         
         return {
             available: false,
-            error: 'Claude PTY wrapper file not found',
+            error: 'Claude PTY wrapper file not found in any expected location',
             installInstructions: 'The extension may not be properly installed. Try reinstalling the extension.'
         };
     } catch (error) {
@@ -172,33 +235,32 @@ function getClaudeInstallInstructions(): string {
     
     switch (platform) {
         case 'darwin': // macOS
-            return `To install Claude CLI on macOS:
-1. Visit https://claude.ai/cli
+            return `To install Claude Code on macOS:
+1. Visit https://www.anthropic.com/claude-code
 2. Follow the installation instructions for macOS
-3. Or use brew: 'brew install claude-cli' (if available)
-4. Restart VS Code after installation`;
+3. Restart VS Code after installation`;
         
         case 'win32': // Windows
-            return `To install Claude CLI on Windows:
-1. Visit https://claude.ai/cli
+            return `To install Claude Code on Windows:
+1. Visit https://www.anthropic.com/claude-code
 2. Download the Windows installer
 3. Run the installer as administrator
 4. Restart VS Code after installation
-5. Make sure Claude CLI is in your PATH`;
+5. Make sure Claude Code is in your PATH`;
         
         case 'linux': // Linux
-            return `To install Claude CLI on Linux:
-1. Visit https://claude.ai/cli
+            return `To install Claude Code on Linux:
+1. Visit https://www.anthropic.com/claude-code
 2. Follow the installation instructions for Linux
 3. You may need to download and install manually
-4. Make sure Claude CLI is in your PATH
+4. Make sure Claude Code is in your PATH
 5. Restart VS Code after installation`;
         
         default:
-            return `To install Claude CLI:
-1. Visit https://claude.ai/cli
+            return `To install Claude Code:
+1. Visit https://www.anthropic.com/claude-code
 2. Follow the installation instructions for your platform
-3. Make sure Claude CLI is in your PATH
+3. Make sure Claude Code is in your PATH
 4. Restart VS Code after installation`;
     }
 }
@@ -268,7 +330,7 @@ export function showDependencyStatus(results: Awaited<ReturnType<typeof runDepen
     const issues: string[] = [];
     
     if (!claude.available) {
-        issues.push(`❌ Claude CLI: ${claude.error}`);
+        issues.push(`❌ Claude Code: ${claude.error}`);
     }
     
     if (!python.available) {
@@ -290,7 +352,9 @@ export function showDependencyStatus(results: Awaited<ReturnType<typeof runDepen
             showInstallationInstructions(results);
         } else if (selection === 'Retry Check') {
             // Re-run check
-            runDependencyCheck().then(showDependencyStatus);
+            runDependencyCheck().then(showDependencyStatus, error => {
+                vscode.window.showErrorMessage(`Dependency check failed: ${error instanceof Error ? error.message : String(error)}`);
+            });
         }
     });
 }
@@ -301,9 +365,9 @@ function showInstallationInstructions(results: Awaited<ReturnType<typeof runDepe
     let instructions = 'ClaudeLoop Installation Requirements:\n\n';
     
     if (!claude.available) {
-        instructions += `🔴 Claude CLI Missing:\n${claude.installInstructions}\n\n`;
+        instructions += `🔴 Claude Code Missing:\n${claude.installInstructions}\n\n`;
     } else {
-        instructions += `✅ Claude CLI: ${claude.version}\n\n`;
+        instructions += `✅ Claude Code: ${claude.version}\n\n`;
     }
     
     if (!python.available) {
@@ -326,5 +390,9 @@ function showInstallationInstructions(results: Awaited<ReturnType<typeof runDepe
         language: 'markdown'
     }).then(doc => {
         vscode.window.showTextDocument(doc);
+    }, error => {
+        vscode.window.showErrorMessage(`Failed to show installation instructions: ${error instanceof Error ? error.message : String(error)}`);
+        // Fallback to information message
+        vscode.window.showInformationMessage(instructions);
     });
 }
