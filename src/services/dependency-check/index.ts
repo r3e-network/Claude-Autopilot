@@ -117,7 +117,7 @@ export async function checkPythonInstallation(): Promise<DependencyCheckResult> 
 
 async function verifyPythonVersion(pythonCommand: string): Promise<{valid: boolean; version: string}> {
     try {
-        const result = await checkCommand(pythonCommand, ['-c', 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")']);
+        const result = await checkCommand(pythonCommand, ['-c', '\'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")\'']);
         
         if (result.available && result.version) {
             const version = result.version.trim();
@@ -139,9 +139,7 @@ export async function checkPtyWrapperFile(): Promise<DependencyCheckResult> {
     try {
         // Check multiple possible locations for the wrapper file
         const possiblePaths = [
-            path.join(__dirname, '..', '..', 'claude_pty_wrapper.py'), // Development location
-            path.join(__dirname, 'claude_pty_wrapper.py'), // Compiled location  
-            path.join(__dirname, '..', 'claude_pty_wrapper.py'), // Alternative compiled location
+            path.join(__dirname, '..', '..', 'claude/session/claude_pty_wrapper.py'), // Development location
         ];
         
         for (const wrapperPath of possiblePaths) {
