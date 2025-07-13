@@ -3,13 +3,12 @@
   "displayName": "ClaudeLoop",
   "description": "Automated Claude Code task management with queue processing and auto-resume functionality",
   "version": "0.0.1",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
   },
   "categories": [
     "Machine Learning",
-    "Automation",
-    "Productivity",
     "Other"
   ],
   "main": "./out/extension.js",
