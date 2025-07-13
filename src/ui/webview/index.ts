@@ -32,9 +32,9 @@ export function updateSessionState(): void {
 }
 
 export function getWebviewContent(context: vscode.ExtensionContext): string {
-    const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'index.html');
-    const cssPath = path.join(context.extensionPath, 'src', 'webview', 'styles.css');
-    const jsPath = path.join(context.extensionPath, 'src', 'webview', 'script.js');
+    const htmlPath = path.join(context.extensionPath, 'out', 'webview', 'index.html');
+    const cssPath = path.join(context.extensionPath, 'out', 'webview', 'styles.css');
+    const jsPath = path.join(context.extensionPath, 'out', 'webview', 'script.js');
     
     try {
         let html = fs.readFileSync(htmlPath, 'utf8');
