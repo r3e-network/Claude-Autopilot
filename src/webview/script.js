@@ -147,18 +147,35 @@ function renderQueue() {
             additionalContent = `<div class="queue-item-error">Error: ${item.error}</div>`;
         }
 
+        const isDraggable = item.status === 'pending';
+        const actionsHtml = item.status === 'pending' ? `
+            <div class="queue-item-actions">
+                <button class="queue-item-action duplicate" onclick="duplicateMessage(${item.id})" title="Duplicate message">
+                    📋
+                </button>
+                <button class="queue-item-action edit" onclick="editMessage(${item.id})" title="Edit message">
+                    ✏️
+                </button>
+                <button class="queue-item-action remove" onclick="removeMessage(${item.id})" title="Remove message">
+                    ✕
+                </button>
+            </div>
+        ` : `
+            <div class="queue-item-actions">
+                <button class="queue-item-action remove" onclick="removeMessage(${item.id})" title="Remove message">
+                    ✕
+                </button>
+            </div>
+        `;
+
         return `
             <div class="queue-item ${item.status}" 
-                 draggable="true" 
+                 draggable="${isDraggable}" 
                  ondragstart="handleDragStart(event, ${index})"
                  ondragover="handleDragOver(event)"
                  ondrop="handleDrop(event, ${index})"
                  data-index="${index}">
-                <div class="queue-item-actions">
-                    <button class="queue-item-action remove" onclick="removeMessage(${item.id})" title="Remove message">
-                        ✕
-                    </button>
-                </div>
+                ${actionsHtml}
                 <div class="queue-item-header">
                     <span class="queue-item-status">${statusText}</span>
                     <span class="queue-item-time">${timeText}</span>
@@ -226,6 +243,30 @@ function removeMessage(messageId) {
     });
 }
 
+function duplicateMessage(messageId) {
+    const message = messageQueue.find(item => item.id === messageId);
+    if (message) {
+        vscode.postMessage({
+            command: 'duplicateMessage',
+            messageId: messageId
+        });
+    }
+}
+
+function editMessage(messageId) {
+    const message = messageQueue.find(item => item.id === messageId);
+    if (message) {
+        const newText = prompt('Edit message:', message.text);
+        if (newText !== null && newText.trim() !== '') {
+            vscode.postMessage({
+                command: 'editMessage',
+                messageId: messageId,
+                newText: newText.trim()
+            });
+        }
+    }
+}
+
 function sortQueue() {
     const field = document.getElementById('sortField').value;
     const direction = document.getElementById('sortDirection').value;
@@ -239,6 +280,14 @@ function sortQueue() {
 
 // Drag and Drop Functions
 function handleDragStart(event, index) {
+    const item = messageQueue[index];
+    
+    // Prevent dragging running or completed tasks
+    if (item && (item.status === 'processing' || item.status === 'completed' || item.status === 'error' || item.status === 'waiting')) {
+        event.preventDefault();
+        return false;
+    }
+    
     draggedIndex = index;
     event.dataTransfer.effectAllowed = 'move';
     event.target.style.opacity = '0.5';
@@ -246,11 +295,34 @@ function handleDragStart(event, index) {
 
 function handleDragOver(event) {
     event.preventDefault();
+    
+    // Only allow dropping on pending items or at the end
+    const targetElement = event.currentTarget;
+    const targetIndex = parseInt(targetElement.dataset.index);
+    const targetItem = messageQueue[targetIndex];
+    
+    if (targetItem && (targetItem.status === 'processing' || targetItem.status === 'completed' || targetItem.status === 'error' || targetItem.status === 'waiting')) {
+        event.dataTransfer.dropEffect = 'none';
+        return;
+    }
+    
     event.dataTransfer.dropEffect = 'move';
 }
 
 function handleDrop(event, targetIndex) {
     event.preventDefault();
+    
+    const targetItem = messageQueue[targetIndex];
+    const draggedItem = messageQueue[draggedIndex];
+    
+    // Prevent dropping on running/completed tasks or dragging them
+    if (targetItem && (targetItem.status === 'processing' || targetItem.status === 'completed' || targetItem.status === 'error' || targetItem.status === 'waiting')) {
+        return;
+    }
+    
+    if (draggedItem && (draggedItem.status === 'processing' || draggedItem.status === 'completed' || draggedItem.status === 'error' || draggedItem.status === 'waiting')) {
+        return;
+    }
     
     if (draggedIndex !== -1 && draggedIndex !== targetIndex) {
         vscode.postMessage({
@@ -284,6 +356,23 @@ function filterHistory() {
     });
 }
 
+function deleteHistoryRun(runId) {
+    if (confirm('Are you sure you want to delete this history run?')) {
+        vscode.postMessage({
+            command: 'deleteHistoryRun',
+            runId: runId
+        });
+    }
+}
+
+function deleteAllHistory() {
+    if (confirm('Are you sure you want to delete ALL history? This action cannot be undone.')) {
+        vscode.postMessage({
+            command: 'deleteAllHistory'
+        });
+    }
+}
+
 function renderHistory(history) {
     const container = document.getElementById('historyContainer');
     
@@ -303,7 +392,12 @@ function renderHistory(history) {
             <div class="history-item">
                 <div class="history-item-header">
                     <div class="history-item-title">Run ${run.id.split('_')[1]}</div>
-                    <div class="history-item-time">${startTime} (${duration})</div>
+                    <div class="history-item-actions">
+                        <button class="history-item-action delete" onclick="deleteHistoryRun('${run.id}')" title="Delete this run">
+                            🗑️
+                        </button>
+                        <div class="history-item-time">${startTime} (${duration})</div>
+                    </div>
                 </div>
                 <div class="history-item-stats">
                     <div class="history-stat history-stat-total">
@@ -322,7 +416,7 @@ function renderHistory(history) {
                 <div class="history-item-messages">
                     ${run.messages.map(msg => `
                         <div class="history-message">
-                            <div class="history-message-text">${msg.text.substring(0, 100)}${msg.text.length > 100 ? '...' : ''}</div>
+                            <div class="history-message-text">${msg.text}</div>
                             <div class="history-message-meta">
                                 <span class="status-${msg.status}">${msg.status.toUpperCase()}</span>
                                 <span>${new Date(msg.timestamp).toLocaleTimeString()}</span>
@@ -835,6 +929,7 @@ function toggleSleepPrevention() {
     
     console.log('Sleep prevention toggled:', isEnabled);
 }
+
 
 // Initialize sleep prevention checkbox from VS Code settings
 window.addEventListener('DOMContentLoaded', function() {

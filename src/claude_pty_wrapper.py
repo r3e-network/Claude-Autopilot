@@ -56,6 +56,8 @@ def main():
                     data = sys.stdin.buffer.read(1024)
                     if data:
                         # Debug: print what we're sending to Claude
+                        # Use stderr for debug output to avoid interfering with stdout data flow
+                        # between the PTY and Claude - stdout is reserved for actual program output
                         sys.stderr.write(f"[PTY] Sending to Claude: {repr(data)}\n")
                         sys.stderr.flush()
                         os.write(master, data)

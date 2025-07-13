@@ -266,6 +266,15 @@ select:focus {
     cursor: grabbing;
 }
 
+.queue-item[draggable="false"] {
+    cursor: default;
+    opacity: 0.8;
+}
+
+.queue-item[draggable="false"]:hover {
+    cursor: default;
+}
+
 .queue-item-actions {
     position: absolute;
     top: 10px;
@@ -304,6 +313,24 @@ select:focus {
     background: #d32f2f;
 }
 
+.queue-item-action.duplicate {
+    background: var(--vscode-charts-blue);
+    color: white;
+}
+
+.queue-item-action.duplicate:hover {
+    background: #1976d2;
+}
+
+.queue-item-action.edit {
+    background: var(--vscode-charts-orange);
+    color: white;
+}
+
+.queue-item-action.edit:hover {
+    background: #f57c00;
+}
+
 .history-section {
     margin-top: 30px;
 }
@@ -331,6 +358,36 @@ select:focus {
 .history-item-title {
     font-weight: bold;
     color: var(--vscode-editor-foreground);
+}
+
+.history-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.history-item-action {
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.history-item-action:hover {
+    background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.history-item-action.delete {
+    background: var(--vscode-charts-red);
+    color: white;
+}
+
+.history-item-action.delete:hover {
+    background: #d32f2f;
 }
 
 .history-item-time {

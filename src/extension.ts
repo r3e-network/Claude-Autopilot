@@ -49,7 +49,7 @@ let healthCheckTimer: NodeJS.Timeout | null = null;
 let sessionReady = false;
 let currentMessage: MessageItem | null = null;
 let processingQueue = false;
-let debugMode = true; // Enable debug logging (set to true for development)
+let debugMode = false; // Enable debug logging (set to true for development)
 
 // History and workspace management
 let currentRun: HistoryRun | null = null;
@@ -131,6 +131,24 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
     
     // Check for and recover any waiting messages with timers
     recoverWaitingMessages();
+    
+    // Send current state to newly opened webview
+    setTimeout(() => {
+        // Small delay to ensure webview is fully initialized
+        
+        // Force save current state in case anything changed while panel was closed
+        if (currentRun) {
+            saveWorkspaceHistory();
+        }
+        
+        // Send all current state to webview
+        updateWebviewContent();
+        updateSessionState();
+        sendSleepPreventionSetting();
+        loadWorkspaceHistory(); // Refresh history in case anything completed while closed
+        
+        debugLog('🔄 Webview state synchronized after reopening');
+    }, 100);
 
     // Handle messages from webview
     claudePanel.webview.onDidReceiveMessage(
@@ -186,17 +204,12 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
 
     // Handle panel disposal
     claudePanel.onDidDispose(() => {
-        stopClaudeLoop();
+        debugLog('🪟 Webview panel disposed - cleaning up but keeping Claude session running');
+        
+        // Clear the panel reference first to prevent "Webview is disposed" errors
         claudePanel = null;
-        // Clear any running timers when panel is disposed
-        if (resumeTimer) {
-            clearTimeout(resumeTimer);
-            resumeTimer = null;
-        }
-        if (countdownInterval) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
-        }
+        
+        // Clear UI-related timers
         if (claudeOutputTimer) {
             clearTimeout(claudeOutputTimer);
             claudeOutputTimer = null;
@@ -205,8 +218,14 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
             clearTimeout(claudeAutoClearTimer);
             claudeAutoClearTimer = null;
         }
-        // Stop sleep prevention when panel is disposed
-        stopSleepPrevention();
+        
+        // Reset running state so extension can be reopened
+        isRunning = false;
+        
+        // Keep Claude session and timers running in background
+        // Don't call stopClaudeLoop() here - that would kill Claude process
+        
+        vscode.window.showInformationMessage('ClaudeLoop panel closed. Claude session continues in background. Use "Start ClaudeLoop" to reopen.');
     }, null, []);
 
     isRunning = true;
@@ -224,6 +243,9 @@ function stopClaudeLoop(): void {
         claudeProcess = null;
         sessionReady = false;
     }
+    
+    // Stop sleep prevention when stopping Claude loop
+    stopSleepPrevention();
 
     // Clear timers
     if (resumeTimer) {
@@ -377,6 +399,9 @@ function resetClaudeSession(): void {
         claudeProcess = null;
         sessionReady = false;
     }
+    
+    // Stop sleep prevention when resetting Claude session
+    stopSleepPrevention();
 
     // Clear resume timer
     if (resumeTimer) {
@@ -452,10 +477,14 @@ function loadWorkspaceHistory(): void {
     const history = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
     
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'historyLoaded',
-            history: history.reverse() // Most recent first
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'historyLoaded',
+                history: history.reverse() // Most recent first
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send history to webview: ${error}`);
+        }
     }
 }
 
@@ -485,11 +514,15 @@ function filterHistory(filter: string): void {
     }
     
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'historyFiltered',
-            history: filteredHistory.reverse(),
-            filter: filter
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'historyFiltered',
+                history: filteredHistory.reverse(),
+                filter: filter
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send filtered history to webview: ${error}`);
+        }
     }
 }
 
@@ -565,10 +598,14 @@ function sortQueue(field: 'timestamp' | 'status' | 'text', direction: 'asc' | 'd
     savePendingQueue();
     
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'queueSorted',
-            sortConfig: queueSortConfig
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'queueSorted',
+                sortConfig: queueSortConfig
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send queue sort config to webview: ${error}`);
+        }
     }
 }
 
@@ -792,6 +829,7 @@ async function processNextMessage(): Promise<void> {
     message.status = 'processing';
     currentMessage = message;
     updateWebviewContent();
+    saveWorkspaceHistory(); // Save state when message starts processing
 
     try {
         // Claude is already ready (sessionReady = true), so send message immediately
@@ -808,6 +846,7 @@ async function processNextMessage(): Promise<void> {
         message.status = 'completed';
         message.completedAt = new Date().toISOString();
         updateWebviewContent();
+        saveWorkspaceHistory(); // Save state when message completes
         
         // Process next message after a delay
         setTimeout(() => {
@@ -820,6 +859,7 @@ async function processNextMessage(): Promise<void> {
         message.status = 'error';
         message.error = `Processing failed: ${error}`;
         updateWebviewContent();
+        saveWorkspaceHistory(); // Save state when message fails
         
         // Continue with next message
         setTimeout(() => {
@@ -963,17 +1003,23 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         
         // Check for usage limit - be more specific about the pattern
         if (output.includes('Claude usage limit reached') || output.includes('usage limit reached')) {
-            debugLog('⚠️ USAGE LIMIT DETECTED');
+            debugLog('⚠️ POTENTIAL USAGE LIMIT DETECTED');
             debugLog(`📋 Usage limit output: ${output}`);
-            if (currentMessage) {
+            if (currentMessage && isCurrentUsageLimit(output)) {
+                debugLog('✅ Confirmed: This is a current usage limit');
                 handleUsageLimit(output, currentMessage);
+            } else {
+                debugLog('⚠️ Skipped: Usage limit is old or not within 6-hour window');
             }
             return;
         }
         
-        // Check for authentication errors
-        const authErrors = ['authentication', 'login', 'unauthorized'];
-        const isAuthError = authErrors.some(authError => output.includes(authError));
+        // Check for Claude CLI specific authentication errors
+        const claudeAuthErrors = [
+            'Claude CLI authentication failed',
+            'Please authenticate with Claude'
+        ];
+        const isAuthError = claudeAuthErrors.some(authError => output.includes(authError));
         
         if (isAuthError) {
             debugLog('🔐 AUTHENTICATION ERROR detected');
@@ -1004,6 +1050,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
             debugLog('🔐 Permission prompt detected during startup - session ready for user interaction');
             sessionReady = true;
             startHealthCheck(); // Start monitoring Claude process health
+            startSleepPrevention(); // Start sleep prevention when Claude is ready
             updateSessionState();
             if (debugMode) {
                 console.log('Claude session is ready (permission prompt)');
@@ -1013,6 +1060,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
             debugLog('✅ Claude ready prompt detected during startup');
             sessionReady = true;
             startHealthCheck(); // Start monitoring Claude process health
+            startSleepPrevention(); // Start sleep prevention when Claude is ready
             updateSessionState();
             if (debugMode) {
                 console.log('Claude session is ready');
@@ -1043,6 +1091,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         debugLog(`🔚 PROCESS CLOSED with code: ${code}`);
         sessionReady = false;
         stopHealthCheck(); // Stop health monitoring
+        stopSleepPrevention(); // Stop sleep prevention when Claude ends
         
         // Flush any remaining Claude output
         if (claudeOutputTimer) {
@@ -1094,6 +1143,7 @@ function startClaudeSession(skipPermissions: boolean = true): void {
         
         sessionReady = false;
         stopHealthCheck(); // Stop health monitoring
+        stopSleepPrevention(); // Stop sleep prevention when Claude errors
         
         // Flush any remaining Claude output
         if (claudeOutputTimer) {
@@ -1137,16 +1187,62 @@ function startClaudeSession(skipPermissions: boolean = true): void {
     });
 }
 
-function calculateWaitTime(resetTime: string): number {
-    // Default to 60 minutes if can't parse
-    if (resetTime === 'unknown time') {
-        return 60;
-    }
-    
+function isCurrentUsageLimit(output: string): boolean {
     try {
-        // Parse the reset time (e.g., "2:30 PM", "14:30", "9pm (Asia/Jerusalem)")
-        const now = new Date();
+        // Find ALL occurrences of usage limit messages in the output
+        const usageLimitPattern = /(Claude\s+)?usage\s+limit\s+reached[^.]*reset\s+at\s+(\d{1,2}[:\d]*(?:\s*[APM]{2})?(?:\s*\([^)]+\))?)/gi;
+        const matches = [];
+        let match;
         
+        // Collect all matches
+        while ((match = usageLimitPattern.exec(output)) !== null) {
+            matches.push({
+                fullMatch: match[0],
+                resetTime: match[2],
+                index: match.index
+            });
+        }
+        
+        if (matches.length === 0) {
+            debugLog('⚠️ No usage limit with reset time found in output');
+            return false;
+        }
+        
+        // Get the LAST occurrence (most recent)
+        const lastMatch = matches[matches.length - 1];
+        const resetTime = lastMatch.resetTime;
+        
+        debugLog(`🕐 Found ${matches.length} usage limit occurrence(s), checking last one: "${lastMatch.fullMatch}"`);
+        debugLog(`⏰ Reset time from last occurrence: "${resetTime}"`);
+        
+        // Parse the reset time and check if it's within the next 6 hours
+        const now = new Date();
+        const resetDate = parseResetTime(resetTime, now);
+        
+        if (!resetDate) {
+            debugLog('❌ Could not parse reset time, treating as current limit');
+            return true; // Default to treating as current if we can't parse
+        }
+        
+        const timeDiffMs = resetDate.getTime() - now.getTime();
+        const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
+        
+        debugLog(`⏱️ Time until reset: ${timeDiffHours.toFixed(2)} hours`);
+        
+        // Check if reset time is within the next 6 hours
+        const isWithin6Hours = timeDiffMs > 0 && timeDiffHours <= 6;
+        
+        debugLog(`✅ Is within 6-hour window: ${isWithin6Hours}`);
+        return isWithin6Hours;
+        
+    } catch (error) {
+        debugLog(`❌ Error checking usage limit timing: ${error}`);
+        return true; // Default to treating as current if there's an error
+    }
+}
+
+function parseResetTime(resetTime: string, referenceTime: Date): Date | null {
+    try {
         // Clean up the time string - remove timezone info and normalize
         const cleanTime = resetTime.replace(/\s*\([^)]+\)/, '').trim();
         const [timePart, ampm] = cleanTime.split(' ');
@@ -1161,7 +1257,7 @@ function calculateWaitTime(resetTime: string): number {
             minutes = 0;
         }
         
-        const resetDate = new Date(now);
+        const resetDate = new Date(referenceTime);
         let resetHours = hours;
         
         // Handle AM/PM format (case insensitive)
@@ -1179,15 +1275,37 @@ function calculateWaitTime(resetTime: string): number {
         resetDate.setHours(resetHours, minutes, 0, 0);
         
         // If reset time is in the past, assume it's tomorrow
-        if (resetDate <= now) {
+        if (resetDate <= referenceTime) {
             resetDate.setDate(resetDate.getDate() + 1);
+        }
+        
+        return resetDate;
+    } catch (error) {
+        debugLog(`❌ Error parsing reset time "${resetTime}": ${error}`);
+        return null;
+    }
+}
+
+function calculateWaitTime(resetTime: string): number {
+    // Default to 60 minutes if can't parse
+    if (resetTime === 'unknown time') {
+        return 60;
+    }
+    
+    try {
+        const now = new Date();
+        const resetDate = parseResetTime(resetTime, now);
+        
+        if (!resetDate) {
+            debugLog('❌ Could not parse reset time for wait calculation');
+            return 60; // Default to 60 minutes
         }
         
         const waitMs = resetDate.getTime() - now.getTime();
         return Math.max(1, Math.ceil(waitMs / (1000 * 60))); // At least 1 minute
     } catch (error) {
         if (debugMode) {
-            console.error('Error parsing reset time:', error);
+            console.error('Error calculating wait time:', error);
         }
         return 60; // Default to 60 minutes
     }
@@ -1244,9 +1362,6 @@ function handleUsageLimit(output: string, message: MessageItem): void {
     
     // Start countdown timer for the continue message
     startCountdownTimer(continueMessage, waitSeconds);
-    
-    // Start sleep prevention if enabled
-    startSleepPrevention();
 }
 
 
@@ -1308,8 +1423,8 @@ function resumeProcessingFromWait(message: MessageItem): void {
     updateWebviewContent();
     saveWorkspaceHistory(); // Save the updated queue state
     
-    // Stop sleep prevention when resuming
-    stopSleepPrevention();
+    
+    debugLog(`🔄 Resumed processing from wait - message ${message.id} status updated`);
     
     vscode.window.showInformationMessage('Usage limit has reset. Resuming processing with "continue" message...');
     
@@ -1339,8 +1454,6 @@ function recoverWaitingMessages(): void {
                 debugLog(`⏰ Recovering timer for message ${message.id} - ${timeLeft} seconds remaining`);
                 message.waitSeconds = timeLeft;
                 startCountdownTimer(message, timeLeft);
-                // Start sleep prevention if we're recovering a waiting timer
-                startSleepPrevention();
             }
         }
     });
@@ -1350,7 +1463,15 @@ function startSleepPrevention(): void {
     const config = vscode.workspace.getConfiguration('claudeLoop');
     const preventSleep = config.get<boolean>('preventSleep', false);
     
-    if (!preventSleep || sleepPreventionActive) {
+    debugLog(`💤 Sleep prevention setting: ${preventSleep}, already active: ${sleepPreventionActive}`);
+    
+    if (!preventSleep) {
+        debugLog('💤 Sleep prevention disabled in settings');
+        return;
+    }
+    
+    if (sleepPreventionActive) {
+        debugLog('💤 Sleep prevention already active');
         return;
     }
     
@@ -1362,23 +1483,37 @@ function startSleepPrevention(): void {
         switch (platform) {
             case 'darwin': // macOS
                 command = 'caffeinate';
-                args = ['-d']; // Prevent display sleep
+                args = ['-i', '-s', '-t', (60 * 60 * 24).toString()]; // Prevent idle/system sleep for 2 hours
                 break;
             case 'win32': // Windows
-                command = 'powershell';
-                args = ['-Command', 'Add-Type -Assembly System.Windows.Forms; [System.Windows.Forms.Application]::SetSuspendState("Hibernate", $false, $false)'];
+                // Use a simple ping to localhost to keep system active
+                command = 'ping';
+                args = ['-t', 'localhost'];
                 break;
             case 'linux': // Linux
                 command = 'systemd-inhibit';
-                args = ['--what=sleep', '--who=ClaudeLoop', '--why=Waiting for Claude usage limit reset', 'sleep', '999999'];
+                args = ['--what=sleep:idle', '--who=ClaudeLoop', '--why=Waiting for Claude usage limit reset', 'sleep', '7200'];
                 break;
             default:
                 debugLog('❌ Sleep prevention not supported on this platform');
                 return;
         }
         
-        sleepPreventionProcess = spawn(command, args);
+        debugLog(`🔧 Starting sleep prevention: ${command} ${args.join(' ')}`);
+        sleepPreventionProcess = spawn(command, args, {
+            detached: false,
+            stdio: ['ignore', 'pipe', 'pipe']
+        });
         sleepPreventionActive = true;
+        
+        // Log stdout for debugging
+        sleepPreventionProcess.stdout?.on('data', (data) => {
+            debugLog(`☕ Sleep prevention stdout: ${data.toString()}`);
+        });
+        
+        sleepPreventionProcess.stderr?.on('data', (data) => {
+            debugLog(`⚠️ Sleep prevention stderr: ${data.toString()}`);
+        });
         
         sleepPreventionProcess.on('error', (error) => {
             debugLog(`❌ Sleep prevention failed: ${error.message}`);
@@ -1386,8 +1521,8 @@ function startSleepPrevention(): void {
             sleepPreventionProcess = null;
         });
         
-        sleepPreventionProcess.on('exit', () => {
-            debugLog('🛌 Sleep prevention ended');
+        sleepPreventionProcess.on('exit', (code) => {
+            debugLog(`🛌 Sleep prevention ended with code: ${code}`);
             sleepPreventionActive = false;
             sleepPreventionProcess = null;
         });
@@ -1431,38 +1566,55 @@ function sendSleepPreventionSetting(): void {
     const preventSleep = config.get<boolean>('preventSleep', false);
     
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'setSleepPreventionSetting',
-            enabled: preventSleep
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'setSleepPreventionSetting',
+                enabled: preventSleep
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send sleep prevention setting to webview: ${error}`);
+        }
     }
 }
 
 function updateWebviewContent(): void {
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'updateQueue',
-            queue: messageQueue
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'updateQueue',
+                queue: messageQueue
+            });
+        } catch (error) {
+            // Webview is disposed or unavailable
+            debugLog(`❌ Failed to update webview content: ${error}`);
+        }
     }
 }
 
 function updateSessionState(): void {
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'sessionStateChanged',
-            isSessionRunning: sessionReady,
-            isProcessing: processingQueue
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'sessionStateChanged',
+                isSessionRunning: sessionReady,
+                isProcessing: processingQueue
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to update session state: ${error}`);
+        }
     }
 }
 
 function sendToWebviewTerminal(output: string): void {
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'terminalOutput',
-            output: output
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'terminalOutput',
+                output: output
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send to webview terminal: ${error}`);
+        }
     }
 }
 
@@ -1565,10 +1717,14 @@ function flushClaudeOutput(): void {
     
     // Send to webview
     if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'claudeOutput',
-            output: output
-        });
+        try {
+            claudePanel.webview.postMessage({
+                command: 'claudeOutput',
+                output: output
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send Claude output to webview: ${error}`);
+        }
     }
     
     // Send to terminal with colored formatting
@@ -1593,14 +1749,6 @@ function clearClaudeOutput(): void {
         claudeAutoClearTimer = null;
     }
     
-    // Send clear command to webview
-    if (claudePanel) {
-        claudePanel.webview.postMessage({
-            command: 'clearClaudeOutput'
-        });
-    }
-    
-    debugLog(`✨ Claude output cleared and ready for new content`);
 }
 
 function handleClaudeKeypress(key: string): void {
