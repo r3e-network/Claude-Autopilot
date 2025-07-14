@@ -257,26 +257,6 @@ If you find ClaudeLoop helpful, consider:
 - 🤝 Contributing code or documentation
 - 💬 Helping others in discussions
 
-## 📈 Changelog
-
-### Version 0.0.2 (Latest)
-- 🎨 **NEW**: Beautiful icon representing automation while sleeping
-- ✨ Enhanced visual identity in VS Code marketplace
-- 📦 Optimized package size and performance
-- 🔍 Improved discoverability with professional branding
-
-### Version 0.0.1
-- 🎉 Initial alpha release with Claude Code automation
-- ✅ Complete architectural refactor from monolithic to modular design
-- ✅ Implemented robust dependency checking and validation
-- ✅ Added extensive configuration system with validation
-- ✅ Enhanced error handling and recovery mechanisms
-- ✅ Cross-platform compatibility improvements
-- ✅ Production-ready code with development mode features
-- ⚡ Queue processing and auto-resume functionality
-- 💤 Sleep prevention during processing
-- 📊 Basic history tracking
-
 ---
 
 **Made with ❤️ for the Claude Code community**
