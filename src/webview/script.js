@@ -1259,7 +1259,7 @@ function showError(message) {
 
 // Handle Enter key in textarea
 document.getElementById('messageInput').addEventListener('keydown', function (event) {
-    if (event.key === 'Enter' && event.ctrlKey) {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
         addMessage();
     }
 });
@@ -1427,3 +1427,4 @@ function updateDevelopmentModeUI(enabled) {
         terminalSection.style.display = enabled ? 'block' : 'none';
     }
 }
+

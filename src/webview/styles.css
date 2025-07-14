@@ -128,7 +128,7 @@ button:disabled .btn-icon {
 }
 
 textarea {
-    width: 100%;
+    width: calc(100% - 20px);
     min-height: 100px;
     padding: 10px;
     border: 1px solid var(--vscode-input-border);
@@ -708,3 +708,4 @@ select:focus {
     font-size: 12px;
     border-radius: 6px;
 }
+
