@@ -5,6 +5,17 @@ All notable changes to the ClaudeLoop extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - 2025-01-14
+
+### ✨ Added
+- **Cross-platform keyboard shortcuts**: Added Cmd+Enter (Mac) and Ctrl+Enter (Windows/Linux) support for adding messages to queue
+- **Visual keyboard hints**: Added helpful text showing available keyboard shortcuts in the interface
+- **Improved input layout**: Enhanced styling and layout of the message input section
+
+### 🔧 Fixed
+- Better cross-platform compatibility for keyboard shortcuts
+- Improved user experience with visual feedback for available shortcuts
+
 ## [0.0.1] - 2024-01-15
 
 ### 🎉 Initial Alpha Release - Claude Code Task Management

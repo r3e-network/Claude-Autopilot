@@ -2,7 +2,7 @@
   "name": "claude-loop",
   "displayName": "ClaudeLoop",
   "description": "Automated Claude Code task management with queue processing and auto-resume functionality",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
