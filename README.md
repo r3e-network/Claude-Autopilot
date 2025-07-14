@@ -1,7 +1,7 @@
 # ClaudeLoop - Automated Claude Code Task Management
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-loop)
-[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/benbasha/claudeloop/releases/tag/v0.0.4)
+[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/benbasha/ClaudeLoop/releases/tag/v0.0.4)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **ClaudeLoop** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
@@ -139,8 +139,8 @@ src/
 
 ```bash
 # Clone the repository
-git clone https://github.com/benbasha/claudeloop.git
-cd claudeloop
+git clone https://github.com/benbasha/ClaudeLoop.git
+cd ClaudeLoop
 
 # Install dependencies
 npm install
@@ -244,10 +244,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 
-- 🐛 [Bug Reports](https://github.com/benbasha/claudeloop/issues/new?template=bug_report.md)
-- 💡 [Feature Requests](https://github.com/benbasha/claudeloop/issues/new?template=feature_request.md)
-- 💬 [Discussions](https://github.com/benbasha/claudeloop/discussions)
-- 📖 [Wiki Documentation](https://github.com/benbasha/claudeloop/wiki)
+- 🐛 [Bug Reports](https://github.com/benbasha/ClaudeLoop/issues/new?template=bug_report.md)
+- 💡 [Feature Requests](https://github.com/benbasha/ClaudeLoop/issues/new?template=feature_request.md)
+- 💬 [Discussions](https://github.com/benbasha/ClaudeLoop/discussions)
+- 📖 [Wiki Documentation](https://github.com/benbasha/ClaudeLoop/wiki)
 
 ### Support
 
