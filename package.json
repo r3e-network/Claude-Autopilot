@@ -1,8 +1,8 @@
 {
-  "name": "claude-loop",
-  "displayName": "ClaudeLoop",
+  "name": "claude-autopilot",
+  "displayName": "Claude Autopilot",
   "description": "Automated Claude Code task management with queue processing and auto-resume functionality",
-  "version": "0.0.4",
+  "version": "0.1.0",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
@@ -15,17 +15,17 @@
   "contributes": {
     "commands": [
       {
-        "command": "claude-loop.start",
-        "title": "Start ClaudeLoop",
+        "command": "claude-autopilot.start",
+        "title": "Start Claude Autopilot",
         "category": "Claude"
       },
       {
-        "command": "claude-loop.stop",
-        "title": "Stop ClaudeLoop",
+        "command": "claude-autopilot.stop",
+        "title": "Stop Claude Autopilot",
         "category": "Claude"
       },
       {
-        "command": "claude-loop.addMessage",
+        "command": "claude-autopilot.addMessage",
         "title": "Add Message to Queue",
         "category": "Claude"
       }
@@ -33,106 +33,106 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "claude-loop.start",
+          "command": "claude-autopilot.start",
           "when": "true"
         },
         {
-          "command": "claude-loop.stop",
+          "command": "claude-autopilot.stop",
           "when": "true"
         },
         {
-          "command": "claude-loop.addMessage",
+          "command": "claude-autopilot.addMessage",
           "when": "true"
         }
       ]
     },
     "configuration": {
-      "title": "ClaudeLoop",
+      "title": "Claude Autopilot",
       "properties": {
-        "claudeLoop.developmentMode": {
+        "claudeAutopilot.developmentMode": {
           "type": "boolean",
           "default": false,
           "description": "Enable development mode with debug controls and testing features"
         },
-        "claudeLoop.queue.maxSize": {
+        "claudeAutopilot.queue.maxSize": {
           "type": "number",
           "default": 1000,
           "minimum": 10,
           "maximum": 10000,
           "description": "Maximum number of messages in queue before cleanup"
         },
-        "claudeLoop.queue.maxMessageSize": {
+        "claudeAutopilot.queue.maxMessageSize": {
           "type": "number",
           "default": 50000,
           "minimum": 1000,
           "maximum": 1000000,
           "description": "Maximum size of individual message text (bytes)"
         },
-        "claudeLoop.queue.maxOutputSize": {
+        "claudeAutopilot.queue.maxOutputSize": {
           "type": "number",
           "default": 100000,
           "minimum": 1000,
           "maximum": 1000000,
           "description": "Maximum size of message output (bytes)"
         },
-        "claudeLoop.queue.retentionHours": {
+        "claudeAutopilot.queue.retentionHours": {
           "type": "number",
           "default": 24,
           "minimum": 1,
           "maximum": 168,
           "description": "Hours to keep completed messages before cleanup"
         },
-        "claudeLoop.queue.autoMaintenance": {
+        "claudeAutopilot.queue.autoMaintenance": {
           "type": "boolean",
           "default": true,
           "description": "Enable automatic queue maintenance and cleanup"
         },
-        "claudeLoop.session.autoStart": {
+        "claudeAutopilot.session.autoStart": {
           "type": "boolean",
           "default": false,
           "description": "Automatically start Claude session when extension activates"
         },
-        "claudeLoop.session.skipPermissions": {
+        "claudeAutopilot.session.skipPermissions": {
           "type": "boolean",
           "default": true,
           "description": "Skip Claude CLI permission prompts (use --dangerously-skip-permissions)"
         },
-        "claudeLoop.session.healthCheckInterval": {
+        "claudeAutopilot.session.healthCheckInterval": {
           "type": "number",
           "default": 30000,
           "minimum": 5000,
           "maximum": 300000,
           "description": "Interval for Claude process health checks (milliseconds)"
         },
-        "claudeLoop.sleepPrevention.enabled": {
+        "claudeAutopilot.sleepPrevention.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Prevent computer from sleeping while processing queue"
         },
-        "claudeLoop.sleepPrevention.method": {
+        "claudeAutopilot.sleepPrevention.method": {
           "type": "string",
           "enum": ["auto", "caffeinate", "powershell", "systemd-inhibit"],
           "default": "auto",
           "description": "Method to use for sleep prevention"
         },
-        "claudeLoop.history.maxRuns": {
+        "claudeAutopilot.history.maxRuns": {
           "type": "number",
           "default": 20,
           "minimum": 1,
           "maximum": 100,
           "description": "Maximum number of history runs to keep"
         },
-        "claudeLoop.history.autoSave": {
+        "claudeAutopilot.history.autoSave": {
           "type": "boolean",
           "default": true,
           "description": "Automatically save workspace history"
         },
-        "claudeLoop.logging.enabled": {
+        "claudeAutopilot.logging.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging"
         },
-        "claudeLoop.logging.level": {
+        "claudeAutopilot.logging.level": {
           "type": "string",
           "enum": ["error", "warn", "info", "debug"],
           "default": "info",
@@ -173,11 +173,11 @@
   "publisher": "benbasha",
   "repository": {
     "type": "git",
-    "url": "https://github.com/benbasha/claudeloop"
+    "url": "https://github.com/benbasha/Claude-Autopilot"
   },
-  "homepage": "https://github.com/benbasha/claudeloop#readme",
+  "homepage": "https://github.com/benbasha/Claude-Autopilot#readme",
   "bugs": {
-    "url": "https://github.com/benbasha/claudeloop/discussions"
+    "url": "https://github.com/benbasha/Claude-Autopilot/discussions"
   },
   "galleryBanner": {
     "color": "#1e1e1e",

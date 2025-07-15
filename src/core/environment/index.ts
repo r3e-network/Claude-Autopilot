@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 export function isDevelopmentMode(): boolean {
     // Check if running in development environment
-    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const config = vscode.workspace.getConfiguration('claudeAutopilot');
     const devMode = config.get<boolean>('developmentMode', false);
     
     // Also check if this is a debug/development build

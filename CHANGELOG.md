@@ -1,9 +1,32 @@
 # Changelog
 
-All notable changes to the ClaudeLoop extension will be documented in this file.
+All notable changes to the Claude Autopilot extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 2025-07-15
+
+### 🎉 Major Rebrand
+- **Extension Renamed**: Complete rebrand from "ClaudeLoop" to "Claude Autopilot"
+- **New Package Name**: Changed from `claude-loop` to `claude-autopilot`
+- **Updated Commands**: All commands now use `claude-autopilot.*` prefix
+- **New Repository**: Moved to `https://github.com/benbasha/Claude-Autopilot`
+
+### ✨ Added
+- **Collaboration Guide**: Added comprehensive `COLLABORATION.md` with contribution guidelines
+- **Updated Configuration**: All settings now use `claudeAutopilot.*` namespace
+- **Consistent Branding**: Updated all UI text, documentation, and user-facing messages
+
+### 🔧 Changed
+- **Breaking Change**: Configuration keys changed from `claudeLoop.*` to `claudeAutopilot.*`
+- **Command IDs**: Updated from `claude-loop.*` to `claude-autopilot.*`
+- **Repository URLs**: All links now point to new GitHub repository
+
+### 📚 Documentation
+- **README**: Updated with new branding and repository links
+- **Architecture**: Updated CLAUDE.md with new command references
+- **Deployment**: Updated deployment guide with new package information
 
 ## [0.0.4] - 2025-07-14
 
@@ -190,4 +213,4 @@ All new configuration options with validation:
 
 ---
 
-**Note**: ClaudeLoop is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic.
+**Note**: Claude Autopilot is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic.

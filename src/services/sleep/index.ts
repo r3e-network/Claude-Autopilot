@@ -5,7 +5,7 @@ import { sleepPreventionActive, sleepPreventionProcess, setSleepPreventionActive
 import { debugLog } from '../../utils/logging';
 
 export function startSleepPrevention(): void {
-    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const config = vscode.workspace.getConfiguration('claudeAutopilot');
     const preventSleep = config.get<boolean>('preventSleep', false);
     
     debugLog(`💤 Sleep prevention setting: ${preventSleep}, already active: ${sleepPreventionActive}`);
@@ -96,7 +96,7 @@ export function stopSleepPrevention(): void {
 }
 
 export function toggleSleepPreventionSetting(enabled: boolean): void {
-    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const config = vscode.workspace.getConfiguration('claudeAutopilot');
     config.update('preventSleep', enabled, vscode.ConfigurationTarget.Global);
     debugLog(`💤 Sleep prevention setting updated: ${enabled}`);
     
@@ -106,7 +106,7 @@ export function toggleSleepPreventionSetting(enabled: boolean): void {
 }
 
 export function sendSleepPreventionSetting(): void {
-    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const config = vscode.workspace.getConfiguration('claudeAutopilot');
     const preventSleep = config.get<boolean>('preventSleep', false);
     
     if (claudePanel) {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { debugLog } from '../../utils/logging';
 
-export interface ClaudeLoopConfig {
+export interface ClaudeAutopilotConfig {
     // Development settings
     developmentMode: boolean;
     
@@ -46,7 +46,7 @@ export interface ClaudeLoopConfig {
     };
 }
 
-export const DEFAULT_CONFIG: ClaudeLoopConfig = {
+export const DEFAULT_CONFIG: ClaudeAutopilotConfig = {
     developmentMode: false,
     
     queue: {
@@ -92,7 +92,7 @@ export interface ConfigValidationError {
     message: string;
 }
 
-export function validateConfig(config: Partial<ClaudeLoopConfig>): ConfigValidationError[] {
+export function validateConfig(config: Partial<ClaudeAutopilotConfig>): ConfigValidationError[] {
     const errors: ConfigValidationError[] = [];
     
     // Helper function to add validation errors
@@ -159,11 +159,11 @@ export function validateConfig(config: Partial<ClaudeLoopConfig>): ConfigValidat
     return errors;
 }
 
-export function getValidatedConfig(): ClaudeLoopConfig {
-    const workspaceConfig = vscode.workspace.getConfiguration('claudeLoop');
+export function getValidatedConfig(): ClaudeAutopilotConfig {
+    const workspaceConfig = vscode.workspace.getConfiguration('claudeAutopilot');
     
     // Get all configuration values with defaults
-    const config: ClaudeLoopConfig = {
+    const config: ClaudeAutopilotConfig = {
         developmentMode: workspaceConfig.get('developmentMode', DEFAULT_CONFIG.developmentMode),
         
         queue: {
@@ -214,11 +214,11 @@ export function getValidatedConfig(): ClaudeLoopConfig {
         // Show warning to user about invalid configuration
         const errorMessages = errors.map(e => `${e.path}: ${e.message}`).join('\n');
         vscode.window.showWarningMessage(
-            `ClaudeLoop configuration has invalid values:\n${errorMessages}\n\nUsing default values for invalid settings.`,
+            `Claude Autopilot configuration has invalid values:\n${errorMessages}\n\nUsing default values for invalid settings.`,
             'Open Settings'
         ).then(selection => {
             if (selection === 'Open Settings') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'claudeLoop');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'claudeAutopilot');
             }
         });
         
@@ -229,7 +229,7 @@ export function getValidatedConfig(): ClaudeLoopConfig {
     return config;
 }
 
-function getDefaultsForInvalidConfig(config: ClaudeLoopConfig, errors: ConfigValidationError[]): ClaudeLoopConfig {
+function getDefaultsForInvalidConfig(config: ClaudeAutopilotConfig, errors: ConfigValidationError[]): ClaudeAutopilotConfig {
     const fixedConfig = { ...config };
     
     // Reset invalid values to defaults
@@ -253,7 +253,7 @@ function getDefaultsForInvalidConfig(config: ClaudeLoopConfig, errors: ConfigVal
 }
 
 export function resetConfigToDefaults(): void {
-    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const config = vscode.workspace.getConfiguration('claudeAutopilot');
     
     // Reset all settings to undefined (which uses defaults)
     const resetPromises = [
@@ -266,7 +266,7 @@ export function resetConfigToDefaults(): void {
     ];
     
     Promise.all(resetPromises).then(() => {
-        vscode.window.showInformationMessage('ClaudeLoop configuration reset to defaults');
+        vscode.window.showInformationMessage('Claude Autopilot configuration reset to defaults');
         debugLog('🔄 Configuration reset to defaults');
     }).catch(error => {
         vscode.window.showErrorMessage(`Failed to reset configuration: ${error}`);
@@ -279,7 +279,7 @@ export function showConfigValidationStatus(): void {
     const errors = validateConfig(config);
     
     if (errors.length === 0) {
-        vscode.window.showInformationMessage('✅ ClaudeLoop configuration is valid');
+        vscode.window.showInformationMessage('✅ Claude Autopilot configuration is valid');
     } else {
         const errorSummary = `${errors.length} configuration error(s) found:\n` +
                            errors.map(e => `• ${e.path}: ${e.message}`).join('\n');
@@ -290,7 +290,7 @@ export function showConfigValidationStatus(): void {
             'Reset to Defaults'
         ).then(selection => {
             if (selection === 'Open Settings') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'claudeLoop');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'claudeAutopilot');
             } else if (selection === 'Reset to Defaults') {
                 resetConfigToDefaults();
             }
@@ -299,10 +299,10 @@ export function showConfigValidationStatus(): void {
 }
 
 // Configuration change listener
-export function watchConfigChanges(callback: (config: ClaudeLoopConfig) => void): vscode.Disposable {
+export function watchConfigChanges(callback: (config: ClaudeAutopilotConfig) => void): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(event => {
-        if (event.affectsConfiguration('claudeLoop')) {
-            debugLog('🔧 ClaudeLoop configuration changed, revalidating...');
+        if (event.affectsConfiguration('claudeAutopilot')) {
+            debugLog('🔧 Claude Autopilot configuration changed, revalidating...');
             const newConfig = getValidatedConfig();
             callback(newConfig);
         }

@@ -1,11 +1,11 @@
-# ClaudeLoop VS Code Extension - Deployment Guide
+# Claude Autopilot VS Code Extension - Deployment Guide
 
-This guide covers how to deploy ClaudeLoop to the VS Code Marketplace.
+This guide covers how to deploy Claude Autopilot to the VS Code Marketplace.
 
 ## 📦 Package Information
 
-- **Extension Name**: claude-loop
-- **Display Name**: ClaudeLoop  
+- **Extension Name**: claude-autopilot
+- **Display Name**: Claude Autopilot  
 - **Version**: 0.0.1 (Alpha)
 - **Publisher**: benbasha
 - **Package Size**: ~53 KB
@@ -39,7 +39,7 @@ This guide covers how to deploy ClaudeLoop to the VS Code Marketplace.
 - [x] Cross-platform compatibility verified
 
 ### ✅ **Marketplace Preparation**
-- [x] VSIX package created (claude-loop-0.0.1.vsix)
+- [x] VSIX package created (claude-autopilot-0.0.1.vsix)
 - [x] Package size optimized (53 KB)
 - [x] Unwanted files excluded (.history, .idea, src/)
 - [x] Essential files included (out/, README, CHANGELOG, LICENSE)
@@ -98,7 +98,7 @@ vsce publish major  # 3.0.0
 - Go to [Visual Studio Marketplace](https://marketplace.visualstudio.com/manage)
 - Sign in with Microsoft account
 - Click "New Extension" → "Visual Studio Code"
-- Upload the `claude-loop-2.0.0.vsix` file
+- Upload the `claude-autopilot-2.0.0.vsix` file
 - Fill in marketplace details
 
 ## 📊 Marketplace Configuration
@@ -163,19 +163,19 @@ vsce publish major  # 3.0.0
 vsce publish patch
 
 # Unpublish (if needed)
-vsce unpublish benbasha.claude-loop
+vsce unpublish benbasha.claude-autopilot
 
 # Show package info
-vsce show benbasha.claude-loop
+vsce show benbasha.claude-autopilot
 
 # Package without publishing
-vsce package --out claude-loop-v0.0.1.vsix
+vsce package --out claude-autopilot-v0.0.1.vsix
 ```
 
 ## 📁 Package Contents
 
 ```
-claude-loop-0.0.1.vsix (53.44 KB)
+claude-autopilot-0.0.1.vsix (53.44 KB)
 ├── extension.vsixmanifest
 ├── [Content_Types].xml
 └── extension/

@@ -1,17 +1,17 @@
-# ClaudeLoop - Automated Claude Code Task Management
+# Claude Autopilot - Automated Claude Code Task Management
 
-[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-loop)
-[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/benbasha/ClaudeLoop/releases/tag/v0.0.4)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
+[![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://github.com/benbasha/Claude-Autopilot/releases/tag/v0.0.4)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**ClaudeLoop** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
+**Claude Autopilot** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
 ## ✨ Features
 
 ### 🚀 **24/7 Automated Processing**
-- **Set It and Forget It**: Queue hundreds of tasks and let ClaudeLoop work autonomously
+- **Set It and Forget It**: Queue hundreds of tasks and let Claude Autopilot work autonomously
 - **Auto-Resume**: Automatically resume processing when Claude usage limits reset - no manual intervention needed
 - **Sleep Prevention**: Keeps your computer awake during processing so work continues overnight
 - **Smart Queue Management**: Process multiple Claude Code tasks automatically with intelligent queueing
@@ -25,7 +25,7 @@
 - **Health Monitoring**: Continuous monitoring of Claude Code process health
 
 ### ⚙️ **Advanced Configuration**
-- **Extensive Settings**: Fine-tune every aspect of ClaudeLoop behavior
+- **Extensive Settings**: Fine-tune every aspect of Claude Autopilot behavior
 - **Configuration Validation**: Built-in validation with helpful error messages
 - **Development Mode**: Special features and debugging tools for developers
 - **Sleep Prevention**: Keep your computer awake during long processing sessions
@@ -34,7 +34,7 @@
 - **Interactive Webview**: Intuitive interface for managing queues and monitoring progress
 - **Real-time Updates**: Live status updates and progress tracking
 - **History Browser**: Browse and filter previous processing runs
-- **Command Palette**: Quick access to all ClaudeLoop commands
+- **Command Palette**: Quick access to all Claude Autopilot commands
 
 ## 🚀 Quick Start
 
@@ -46,30 +46,30 @@
 
 ### Installation
 
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-loop)
-2. Or install via command palette: `Extensions: Install Extensions` → Search "ClaudeLoop"
-3. Or install from VSIX: `code --install-extension claude-loop-0.0.1.vsix`
-4. **Cursor**: ClaudeLoop works seamlessly in Cursor with the same installation process
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
+2. Or install via command palette: `Extensions: Install Extensions` → Search "Claude Autopilot"
+3. Or install from VSIX: `code --install-extension claude-autopilot-0.0.1.vsix`
+4. **Cursor**: Claude Autopilot works seamlessly in Cursor with the same installation process
 
 ### Basic Usage
 
-1. **Start ClaudeLoop**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start ClaudeLoop`
+1. **Start Claude Autopilot**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start Claude Autopilot`
 2. **Add Messages**: Queue up all your tasks - add 10, 50, or 200+ messages
 3. **Start Processing**: Click "Start Processing" and walk away
 4. **Live Your Life**: Go eat dinner, play with kids, sleep, or enjoy your weekend
-5. **Return to Completed Work**: ClaudeLoop handles everything automatically, even through Claude usage limits
+5. **Return to Completed Work**: Claude Autopilot handles everything automatically, even through Claude usage limits
 
 ## 📋 Commands
 
 | Command | Description |
 |---------|-------------|
-| `Claude: Start ClaudeLoop` | Start the ClaudeLoop interface and session |
-| `Claude: Stop ClaudeLoop` | Stop ClaudeLoop and close the session |
+| `Claude: Start Claude Autopilot` | Start the Claude Autopilot interface and session |
+| `Claude: Stop Claude Autopilot` | Stop Claude Autopilot and close the session |
 | `Claude: Add Message to Queue` | Add a new message to the processing queue |
 
 ## ⚙️ Configuration
 
-ClaudeLoop offers extensive configuration options. Access settings via `File → Preferences → Settings → Extensions → ClaudeLoop`.
+Claude Autopilot offers extensive configuration options. Access settings via `File → Preferences → Settings → Extensions → Claude Autopilot`.
 
 ### Queue Management
 ```json
@@ -107,7 +107,7 @@ ClaudeLoop offers extensive configuration options. Access settings via `File →
 
 ## 🏗️ Architecture
 
-ClaudeLoop follows a modular architecture with clear separation of concerns:
+Claude Autopilot follows a modular architecture with clear separation of concerns:
 
 ```
 src/
@@ -129,7 +129,7 @@ src/
 ## 🔒 Security & Privacy
 
 - **Local Processing**: All processing happens locally on your machine
-- **No Data Collection**: ClaudeLoop doesn't collect or transmit personal data
+- **No Data Collection**: Claude Autopilot doesn't collect or transmit personal data
 - **Secure Dependencies**: Validates Claude Code and Python installations
 - **Permission Awareness**: Uses `--dangerously-skip-permissions` only in trusted environments
 
@@ -139,8 +139,8 @@ src/
 
 ```bash
 # Clone the repository
-git clone https://github.com/benbasha/ClaudeLoop.git
-cd ClaudeLoop
+git clone https://github.com/benbasha/Claude Autopilot.git
+cd Claude Autopilot
 
 # Install dependencies
 npm install
@@ -191,13 +191,13 @@ This enables:
 
 ### Core Concepts
 
-**Queue Processing**: ClaudeLoop maintains a persistent queue of messages that can be processed automatically. Each message represents a task or instruction for Claude Code.
+**Queue Processing**: Claude Autopilot maintains a persistent queue of messages that can be processed automatically. Each message represents a task or instruction for Claude Code.
 
-**Auto-Resume**: When Claude Code hits usage limits, ClaudeLoop automatically detects this and schedules the queue to resume when limits reset.
+**Auto-Resume**: When Claude Code hits usage limits, Claude Autopilot automatically detects this and schedules the queue to resume when limits reset.
 
 **Workspace Integration**: Each VS Code workspace maintains its own queue and history, allowing you to manage multiple projects independently.
 
-**Dependency Management**: ClaudeLoop automatically checks for and validates all required dependencies (Claude Code, Python) before starting.
+**Dependency Management**: Claude Autopilot automatically checks for and validates all required dependencies (Claude Code, Python) before starting.
 
 ### Advanced Features
 
@@ -230,7 +230,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 **Claude Code Not Found**
 - Ensure Claude Code is installed and in your PATH
 - Restart VS Code after installing Claude Code
-- Check dependency status in ClaudeLoop panel
+- Check dependency status in Claude Autopilot panel
 
 **Python Not Found**
 - Install Python 3.8 or later
@@ -238,20 +238,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - On Windows, check "Add Python to PATH" during installation
 
 **Permission Errors**
-- ClaudeLoop uses `--dangerously-skip-permissions` for automation
+- Claude Autopilot uses `--dangerously-skip-permissions` for automation
 - Only use in trusted development environments
 - Disable if working with sensitive data
 
 ### Getting Help
 
-- 🐛 [Bug Reports](https://github.com/benbasha/ClaudeLoop/issues/new?template=bug_report.md)
-- 💡 [Feature Requests](https://github.com/benbasha/ClaudeLoop/issues/new?template=feature_request.md)
-- 💬 [Discussions](https://github.com/benbasha/ClaudeLoop/discussions)
-- 📖 [Wiki Documentation](https://github.com/benbasha/ClaudeLoop/wiki)
+- 🐛 [Bug Reports](https://github.com/benbasha/Claude Autopilot/issues/new?template=bug_report.md)
+- 💡 [Feature Requests](https://github.com/benbasha/Claude Autopilot/issues/new?template=feature_request.md)
+- 💬 [Discussions](https://github.com/benbasha/Claude Autopilot/discussions)
+- 📖 [Wiki Documentation](https://github.com/benbasha/Claude Autopilot/wiki)
 
 ### Support
 
-If you find ClaudeLoop helpful, consider:
+If you find Claude Autopilot helpful, consider:
 - ⭐ Starring the repository
 - 🐛 Reporting bugs or suggesting features
 - 🤝 Contributing code or documentation
@@ -261,4 +261,4 @@ If you find ClaudeLoop helpful, consider:
 
 **Made with ❤️ for the Claude Code community**
 
-*ClaudeLoop is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic.*
+*Claude Autopilot is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic.*

@@ -47,15 +47,15 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register commands
-    const startCommand = vscode.commands.registerCommand('claude-loop.start', () => {
+    const startCommand = vscode.commands.registerCommand('claude-autopilot.start', () => {
         startClaudeLoop(context);
     });
 
-    const stopCommand = vscode.commands.registerCommand('claude-loop.stop', () => {
+    const stopCommand = vscode.commands.registerCommand('claude-autopilot.stop', () => {
         stopClaudeLoop();
     });
 
-    const addMessageCommand = vscode.commands.registerCommand('claude-loop.addMessage', () => {
+    const addMessageCommand = vscode.commands.registerCommand('claude-autopilot.addMessage', () => {
         addMessageToQueue();
     });
 
@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 function startClaudeLoop(context: vscode.ExtensionContext): void {
     if (isRunning && claudePanel) {
         claudePanel.reveal(vscode.ViewColumn.Two);
-        vscode.window.showInformationMessage('ClaudeLoop is already running - showing existing panel');
+        vscode.window.showInformationMessage('Claude Autopilot is already running - showing existing panel');
         return;
     }
     
@@ -74,8 +74,8 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
     }
 
     const panel = vscode.window.createWebviewPanel(
-        'claudeLoop',
-        'ClaudeLoop',
+        'claudeAutopilot',
+        'Claude Autopilot',
         vscode.ViewColumn.Two,
         {
             enableScripts: true,
@@ -212,7 +212,7 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
                 case 'resetConfig':
                     developmentOnly(() => {
                         vscode.window.showWarningMessage(
-                            'This will reset all ClaudeLoop settings to defaults. Continue?',
+                            'This will reset all Claude Autopilot settings to defaults. Continue?',
                             'Reset',
                             'Cancel'
                         ).then(selection => {
@@ -237,11 +237,11 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
         clearClaudeOutput();
         setIsRunning(false);
         
-        vscode.window.showInformationMessage('ClaudeLoop panel closed. Claude session continues in background. Use "Start ClaudeLoop" to reopen.');
+        vscode.window.showInformationMessage('Claude Autopilot panel closed. Claude session continues in background. Use "Start Claude Autopilot" to reopen.');
     }, null, []);
 
     setIsRunning(true);
-    vscode.window.showInformationMessage('ClaudeLoop started');
+    vscode.window.showInformationMessage('Claude Autopilot started');
 }
 
 function stopClaudeLoop(): void {
@@ -259,12 +259,12 @@ function stopClaudeLoop(): void {
         setClaudePanel(null);
     }
 
-    vscode.window.showInformationMessage('ClaudeLoop stopped');
+    vscode.window.showInformationMessage('Claude Autopilot stopped');
 }
 
 function addMessageToQueue(): void {
     vscode.window.showInputBox({
-        prompt: 'Enter message to add to ClaudeLoop queue',
+        prompt: 'Enter message to add to Claude Autopilot queue',
         placeHolder: 'Type your message here...'
     }).then(message => {
         if (message) {
@@ -281,7 +281,7 @@ function addMessageToQueue(): void {
 
 function sendDevelopmentModeSetting(): void {
     if (claudePanel) {
-        const config = vscode.workspace.getConfiguration('claudeLoop');
+        const config = vscode.workspace.getConfiguration('claudeAutopilot');
         const isDevelopmentMode = config.get<boolean>('developmentMode', false);
         
         claudePanel.webview.postMessage({
@@ -292,7 +292,7 @@ function sendDevelopmentModeSetting(): void {
 }
 
 function toggleDebugLogging(): void {
-    const config = vscode.workspace.getConfiguration('claudeLoop');
+    const config = vscode.workspace.getConfiguration('claudeAutopilot');
     const isDevelopmentMode = config.get<boolean>('developmentMode', false);
     
     if (!isDevelopmentMode) {

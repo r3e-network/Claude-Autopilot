@@ -54,7 +54,7 @@ export function getWebviewContent(context: vscode.ExtensionContext): string {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>ClaudeLoop</title>
+                <title>Claude Autopilot</title>
                 <style>
                     body { 
                         font-family: Arial, sans-serif; 
@@ -69,7 +69,7 @@ export function getWebviewContent(context: vscode.ExtensionContext): string {
                 </style>
             </head>
             <body>
-                <h1>ClaudeLoop</h1>
+                <h1>Claude Autopilot</h1>
                 <p class="error">Error loading webview content. Please check the HTML file.</p>
             </body>
             </html>
