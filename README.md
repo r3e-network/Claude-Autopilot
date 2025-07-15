@@ -6,6 +6,10 @@
 
 **Claude Autopilot** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
 
+<div align="center">
+  <img src="img/claude-autopilot.png" alt="Claude Autopilot Interface" width="600">
+</div>
+
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
 ## ✨ Features
