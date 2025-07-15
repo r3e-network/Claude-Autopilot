@@ -74,34 +74,34 @@ Claude Autopilot offers extensive configuration options. Access settings via `Fi
 ### Queue Management
 ```json
 {
-  "claudeLoop.queue.autoMaintenance": true
+  "claudeAutopilot.queue.autoMaintenance": true
 }
 ```
 
 ### Session Management
 ```json
 {
-  "claudeLoop.session.autoStart": false,
-  "claudeLoop.session.skipPermissions": true,
-  "claudeLoop.session.healthCheckInterval": 30000
+  "claudeAutopilot.session.autoStart": false,
+  "claudeAutopilot.session.skipPermissions": true,
+  "claudeAutopilot.session.healthCheckInterval": 30000
 }
 ```
 
 ### Sleep Prevention
 ```json
 {
-  "claudeLoop.sleepPrevention.enabled": true,
-  "claudeLoop.sleepPrevention.method": "auto"
+  "claudeAutopilot.sleepPrevention.enabled": true,
+  "claudeAutopilot.sleepPrevention.method": "auto"
 }
 ```
 
 ### History & Logging
 ```json
 {
-  "claudeLoop.history.maxRuns": 20,
-  "claudeLoop.history.autoSave": true,
-  "claudeLoop.logging.enabled": false,
-  "claudeLoop.logging.level": "info"
+  "claudeAutopilot.history.maxRuns": 20,
+  "claudeAutopilot.history.autoSave": true,
+  "claudeAutopilot.logging.enabled": false,
+  "claudeAutopilot.logging.level": "info"
 }
 ```
 
@@ -161,7 +161,7 @@ Enable development mode for additional debugging features:
 
 ```json
 {
-  "claudeLoop.developmentMode": true
+  "claudeAutopilot.developmentMode": true
 }
 ```
 
