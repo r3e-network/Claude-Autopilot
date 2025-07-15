@@ -6,7 +6,7 @@ This guide covers how to deploy Claude Autopilot to the VS Code Marketplace.
 
 - **Extension Name**: claude-autopilot
 - **Display Name**: Claude Autopilot  
-- **Version**: 0.0.1 (Alpha)
+- **Version**: 0.1.0
 - **Publisher**: benbasha
 - **Package Size**: ~53 KB
 - **Files**: 32 files (optimized)
