@@ -143,7 +143,7 @@ src/
 
 ```bash
 # Clone the repository
-git clone https://github.com/benbasha/Claude Autopilot.git
+git clone https://github.com/benbasha/Claude-Autopilot.git
 cd Claude Autopilot
 
 # Install dependencies
