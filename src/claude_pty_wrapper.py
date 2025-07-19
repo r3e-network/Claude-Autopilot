@@ -37,7 +37,7 @@ def main():
     try:
         while claude_process.poll() is None:
             # Use select to handle both reading from master and stdin
-            ready, _, _ = select.select([master, sys.stdin], [], [], 0.1)
+            ready, _, _ = select.select([master, sys.stdin], [], [])
             
             if master in ready:
                 try:
