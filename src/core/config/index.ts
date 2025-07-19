@@ -13,16 +13,12 @@ export interface ClaudeAutopilotConfig {
         maxErrorSize: number;
         cleanupThreshold: number;
         retentionHours: number;
-        autoMaintenance: boolean;
     };
     
     // Session settings
     session: {
         autoStart: boolean;
         skipPermissions: boolean;
-        healthCheckInterval: number;
-        outputThrottleMs: number;
-        autoClearOutputMs: number;
     };
     
     // Sleep prevention settings
@@ -38,11 +34,9 @@ export interface ClaudeAutopilotConfig {
         persistPendingQueue: boolean;
     };
     
-    // Debug and logging
-    logging: {
-        enabled: boolean;
-        level: 'error' | 'warn' | 'info' | 'debug';
-        outputToConsole: boolean;
+    // Security settings
+    security: {
+        allowDangerousXssbypass: boolean;
     };
 }
 
@@ -55,16 +49,12 @@ export const DEFAULT_CONFIG: ClaudeAutopilotConfig = {
         maxOutputSize: 100000,
         maxErrorSize: 10000,
         cleanupThreshold: 500,
-        retentionHours: 24,
-        autoMaintenance: true
+        retentionHours: 24
     },
     
     session: {
         autoStart: false,
-        skipPermissions: true,
-        healthCheckInterval: 30000,
-        outputThrottleMs: 1000,
-        autoClearOutputMs: 30000
+        skipPermissions: true
     },
     
     sleepPrevention: {
@@ -78,10 +68,8 @@ export const DEFAULT_CONFIG: ClaudeAutopilotConfig = {
         persistPendingQueue: true
     },
     
-    logging: {
-        enabled: false,
-        level: 'info',
-        outputToConsole: false
+    security: {
+        allowDangerousXssbypass: false
     }
 };
 
@@ -133,26 +121,56 @@ export function validateConfig(config: Partial<ClaudeAutopilotConfig>): ConfigVa
     if (config.session) {
         const s = config.session;
         
-        if (s.healthCheckInterval !== undefined) {
-            if (typeof s.healthCheckInterval !== 'number' || s.healthCheckInterval < 5000 || s.healthCheckInterval > 300000) {
-                addError('session.healthCheckInterval', s.healthCheckInterval, 'number (5000-300000)', 'Must be a number between 5s and 5min');
+        if (s.autoStart !== undefined && typeof s.autoStart !== 'boolean') {
+            addError('session.autoStart', s.autoStart, 'boolean', 'Auto start must be true or false');
+        }
+        
+        if (s.skipPermissions !== undefined && typeof s.skipPermissions !== 'boolean') {
+            addError('session.skipPermissions', s.skipPermissions, 'boolean', 'Skip permissions must be true or false');
+        }
+    }
+    
+    // Validate sleep prevention settings
+    if (config.sleepPrevention) {
+        const sp = config.sleepPrevention;
+        
+        if (sp.enabled !== undefined && typeof sp.enabled !== 'boolean') {
+            addError('sleepPrevention.enabled', sp.enabled, 'boolean', 'Sleep prevention enabled must be true or false');
+        }
+        
+        if (sp.method !== undefined) {
+            const validMethods = ['caffeinate', 'powershell', 'systemd-inhibit', 'auto'];
+            if (!validMethods.includes(sp.method)) {
+                addError('sleepPrevention.method', sp.method, validMethods.join(' | '), 'Must be one of the supported methods');
             }
         }
     }
     
-    // Validate sleep prevention method
-    if (config.sleepPrevention?.method !== undefined) {
-        const validMethods = ['caffeinate', 'powershell', 'systemd-inhibit', 'auto'];
-        if (!validMethods.includes(config.sleepPrevention.method)) {
-            addError('sleepPrevention.method', config.sleepPrevention.method, validMethods.join(' | '), 'Must be one of the supported methods');
+    // Validate history settings
+    if (config.history) {
+        const h = config.history;
+        
+        if (h.maxRuns !== undefined) {
+            if (typeof h.maxRuns !== 'number' || h.maxRuns < 1 || h.maxRuns > 100) {
+                addError('history.maxRuns', h.maxRuns, 'number (1-100)', 'Must be a number between 1 and 100');
+            }
+        }
+        
+        if (h.autoSave !== undefined && typeof h.autoSave !== 'boolean') {
+            addError('history.autoSave', h.autoSave, 'boolean', 'Auto save must be true or false');
+        }
+        
+        if (h.persistPendingQueue !== undefined && typeof h.persistPendingQueue !== 'boolean') {
+            addError('history.persistPendingQueue', h.persistPendingQueue, 'boolean', 'Persist pending queue must be true or false');
         }
     }
     
-    // Validate logging level
-    if (config.logging?.level !== undefined) {
-        const validLevels = ['error', 'warn', 'info', 'debug'];
-        if (!validLevels.includes(config.logging.level)) {
-            addError('logging.level', config.logging.level, validLevels.join(' | '), 'Must be one of the supported log levels');
+    // Validate security settings
+    if (config.security) {
+        const sec = config.security;
+        
+        if (sec.allowDangerousXssbypass !== undefined && typeof sec.allowDangerousXssbypass !== 'boolean') {
+            addError('security.allowDangerousXssbypass', sec.allowDangerousXssbypass, 'boolean', 'Allow dangerous XSS bypass must be true or false');
         }
     }
     
@@ -172,16 +190,12 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
             maxOutputSize: workspaceConfig.get('queue.maxOutputSize', DEFAULT_CONFIG.queue.maxOutputSize),
             maxErrorSize: workspaceConfig.get('queue.maxErrorSize', DEFAULT_CONFIG.queue.maxErrorSize),
             cleanupThreshold: workspaceConfig.get('queue.cleanupThreshold', DEFAULT_CONFIG.queue.cleanupThreshold),
-            retentionHours: workspaceConfig.get('queue.retentionHours', DEFAULT_CONFIG.queue.retentionHours),
-            autoMaintenance: workspaceConfig.get('queue.autoMaintenance', DEFAULT_CONFIG.queue.autoMaintenance)
+            retentionHours: workspaceConfig.get('queue.retentionHours', DEFAULT_CONFIG.queue.retentionHours)
         },
         
         session: {
             autoStart: workspaceConfig.get('session.autoStart', DEFAULT_CONFIG.session.autoStart),
-            skipPermissions: workspaceConfig.get('session.skipPermissions', DEFAULT_CONFIG.session.skipPermissions),
-            healthCheckInterval: workspaceConfig.get('session.healthCheckInterval', DEFAULT_CONFIG.session.healthCheckInterval),
-            outputThrottleMs: workspaceConfig.get('session.outputThrottleMs', DEFAULT_CONFIG.session.outputThrottleMs),
-            autoClearOutputMs: workspaceConfig.get('session.autoClearOutputMs', DEFAULT_CONFIG.session.autoClearOutputMs)
+            skipPermissions: workspaceConfig.get('session.skipPermissions', DEFAULT_CONFIG.session.skipPermissions)
         },
         
         sleepPrevention: {
@@ -195,10 +209,8 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
             persistPendingQueue: workspaceConfig.get('history.persistPendingQueue', DEFAULT_CONFIG.history.persistPendingQueue)
         },
         
-        logging: {
-            enabled: workspaceConfig.get('logging.enabled', DEFAULT_CONFIG.logging.enabled),
-            level: workspaceConfig.get('logging.level', DEFAULT_CONFIG.logging.level),
-            outputToConsole: workspaceConfig.get('logging.outputToConsole', DEFAULT_CONFIG.logging.outputToConsole)
+        security: {
+            allowDangerousXssbypass: workspaceConfig.get('security.allowDangerousXssbypass', DEFAULT_CONFIG.security.allowDangerousXssbypass)
         }
     };
     
@@ -262,7 +274,7 @@ export function resetConfigToDefaults(): void {
         config.update('session', undefined),
         config.update('sleepPrevention', undefined),
         config.update('history', undefined),
-        config.update('logging', undefined)
+        config.update('security', undefined)
     ];
     
     Promise.all(resetPromises).then(() => {

@@ -60,6 +60,12 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(startCommand, stopCommand, addMessageCommand, configWatcher);
+    
+    // Auto-start Claude session if configured
+    if (config.session.autoStart) {
+        debugLog('🚀 Auto-starting Claude session based on configuration');
+        startClaudeLoop(context);
+    }
 }
 
 function startClaudeLoop(context: vscode.ExtensionContext): void {
@@ -73,13 +79,31 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
         setIsRunning(false);
     }
 
+    // Check for dangerous XSS bypass setting
+    const config = getValidatedConfig();
+    if (config.security.allowDangerousXssbypass) {
+        vscode.window.showWarningMessage(
+            '⚠️ SECURITY WARNING: XSS bypass is enabled! This allows potentially dangerous content in the webview. Only continue if you trust all message content.',
+            'I Understand the Risk',
+            'Disable XSS Bypass'
+        ).then(selection => {
+            if (selection === 'Disable XSS Bypass') {
+                const workspaceConfig = vscode.workspace.getConfiguration('claudeAutopilot');
+                workspaceConfig.update('security.allowDangerousXssbypass', false, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage('XSS bypass has been disabled for security.');
+            }
+        });
+    }
+
     const panel = vscode.window.createWebviewPanel(
         'claudeAutopilot',
         'Claude Autopilot',
         vscode.ViewColumn.Two,
         {
             enableScripts: true,
-            retainContextWhenHidden: true
+            retainContextWhenHidden: true,
+            // Conditionally enable local resource access based on security setting
+            localResourceRoots: config.security.allowDangerousXssbypass ? undefined : []
         }
     );
 

@@ -82,11 +82,6 @@
           "maximum": 168,
           "description": "Hours to keep completed messages before cleanup"
         },
-        "claudeAutopilot.queue.autoMaintenance": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable automatic queue maintenance and cleanup"
-        },
         "claudeAutopilot.session.autoStart": {
           "type": "boolean",
           "default": false,
@@ -96,13 +91,6 @@
           "type": "boolean",
           "default": true,
           "description": "Skip Claude CLI permission prompts (use --dangerously-skip-permissions)"
-        },
-        "claudeAutopilot.session.healthCheckInterval": {
-          "type": "number",
-          "default": 30000,
-          "minimum": 5000,
-          "maximum": 300000,
-          "description": "Interval for Claude process health checks (milliseconds)"
         },
         "claudeAutopilot.sleepPrevention.enabled": {
           "type": "boolean",
@@ -127,16 +115,15 @@
           "default": true,
           "description": "Automatically save workspace history"
         },
-        "claudeAutopilot.logging.enabled": {
+        "claudeAutopilot.history.persistPendingQueue": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save pending messages to survive VS Code restart"
+        },
+        "claudeAutopilot.security.allowDangerousXssbypass": {
           "type": "boolean",
           "default": false,
-          "description": "Enable debug logging"
-        },
-        "claudeAutopilot.logging.level": {
-          "type": "string",
-          "enum": ["error", "warn", "info", "debug"],
-          "default": "info",
-          "description": "Logging level for debug output"
+          "description": "⚠️ DANGER: Allow bypassing XSS protection in webview content. Only enable if you trust all message content and understand the security risks."
         }
       }
     }

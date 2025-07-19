@@ -13,6 +13,13 @@ export function saveWorkspaceHistory(): void {
         return;
     }
     
+    // Check if auto-save is enabled
+    const config = getValidatedConfig();
+    if (!config.history.autoSave) {
+        debugLog(`💾 History auto-save is disabled, skipping save`);
+        return;
+    }
+    
     try {
         const storageKey = getHistoryStorageKey();
         const existingHistory = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
@@ -139,6 +146,13 @@ export function endCurrentHistoryRun(): void {
 export function savePendingQueue(): void {
     if (!extensionContext) return;
     
+    // Check if pending queue persistence is enabled
+    const config = getValidatedConfig();
+    if (!config.history.persistPendingQueue) {
+        debugLog(`📋 Pending queue persistence is disabled, skipping save`);
+        return;
+    }
+    
     const pendingMessages = messageQueue.filter(msg => 
         msg.status === 'pending' || msg.status === 'waiting'
     );
@@ -149,6 +163,13 @@ export function savePendingQueue(): void {
 
 export function loadPendingQueue(): void {
     if (!extensionContext) return;
+    
+    // Check if pending queue persistence is enabled
+    const config = getValidatedConfig();
+    if (!config.history.persistPendingQueue) {
+        debugLog(`📋 Pending queue persistence is disabled, skipping load`);
+        return;
+    }
     
     const storageKey = getPendingQueueStorageKey();
     const pendingMessages = extensionContext.globalState.get<MessageItem[]>(storageKey, []);
