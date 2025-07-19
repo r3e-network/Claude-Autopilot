@@ -37,8 +37,6 @@ def main():
     try:
         while claude_process.poll() is None:
             # Use select to handle both reading from master and stdin
-            # Use None for blocking select (waits until data is available)
-            # This prevents busy-waiting and reduces CPU usage
             ready, _, _ = select.select([master, sys.stdin], [], [])
             
             if master in ready:
