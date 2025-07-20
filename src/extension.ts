@@ -62,9 +62,12 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(startCommand, stopCommand, addMessageCommand, configWatcher);
     
     // Auto-start Claude session if configured
+    debugLog(`🔧 Auto-start setting: ${config.session.autoStart}`);
     if (config.session.autoStart) {
         debugLog('🚀 Auto-starting Claude session based on configuration');
-        startClaudeLoop(context);
+        setTimeout(() => {
+            startClaudeLoop(context);
+        }, 1000); // Small delay to ensure extension is fully loaded
     }
 }
 

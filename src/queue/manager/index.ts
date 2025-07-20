@@ -5,12 +5,14 @@ import { debugLog } from '../../utils/logging';
 import { updateWebviewContent } from '../../ui/webview';
 import { processNextMessage } from '../../claude/communication';
 import { enforceMessageSizeLimits, enforceQueueSizeLimit, performQueueMaintenance } from '../memory';
+import { savePendingQueue } from '../processor/history';
 
 export function removeMessageFromQueue(messageId: number): void {
     const index = messageQueue.findIndex(msg => msg.id === messageId);
     if (index >= 0) {
         messageQueue.splice(index, 1);
         updateWebviewContent();
+        savePendingQueue(); // Save queue changes
         vscode.window.showInformationMessage('Message removed from queue');
     }
 }
@@ -29,6 +31,7 @@ export function duplicateMessageInQueue(messageId: number): void {
         messageQueue.splice(originalIndex + 1, 0, duplicatedMessage);
         
         updateWebviewContent();
+        savePendingQueue(); // Save queue changes
         vscode.window.showInformationMessage(`Message duplicated: ${message.text.substring(0, 50)}...`);
     }
 }
@@ -45,6 +48,7 @@ export function editMessageInQueue(messageId: number, newText: string): void {
         
         debugLog(`Message edited from "${oldText}" to "${newText}"`);
         updateWebviewContent();
+        savePendingQueue(); // Save queue changes
         vscode.window.showInformationMessage(`Message edited: ${oldText.substring(0, 30)}... → ${newText.substring(0, 30)}...`);
     } else {
         debugLog(`ERROR: Message with ID ${messageId} not found in queue`);
@@ -102,6 +106,7 @@ export function sortQueue(field: 'timestamp' | 'status' | 'text', direction: 'as
 export function clearMessageQueue(): void {
     messageQueue.length = 0;
     updateWebviewContent();
+    savePendingQueue(); // Save queue changes (empty queue)
     vscode.window.showInformationMessage('Message queue cleared');
 }
 
@@ -129,6 +134,9 @@ export function addMessageToQueueFromWebview(message: string): void {
     } else {
         vscode.window.showInformationMessage(`Message added to queue: ${message.substring(0, 50)}...`);
     }
+    
+    // Save pending queue after adding message
+    savePendingQueue();
     
     // Auto-start processing if conditions are met
     tryAutoStartProcessing();

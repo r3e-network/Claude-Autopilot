@@ -53,11 +53,13 @@ export function saveWorkspaceHistory(): void {
         extensionContext.globalState.update(storageKey, recentHistory);
         debugLog(`💾 Saved workspace history with ${recentHistory.length} runs`);
         
-        savePendingQueue();
     } catch (error) {
         debugLog(`❌ Failed to save workspace history: ${error}`);
         vscode.window.showErrorMessage(`Failed to save workspace history: ${error instanceof Error ? error.message : String(error)}`);
     }
+    
+    // Always try to save pending queue regardless of history auto-save setting
+    savePendingQueue();
 }
 
 export function loadWorkspaceHistory(): void {
