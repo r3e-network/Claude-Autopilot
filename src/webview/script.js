@@ -8,6 +8,7 @@ let sessionState = {
 };
 let historyData = [];
 let draggedIndex = -1;
+let allowDangerousXssbypass = false;
 
 // Security utilities
 function sanitizeHtml(unsafe) {
@@ -26,6 +27,11 @@ function validateMessage(text) {
     if (text.length === 0) return { valid: false, error: 'Message cannot be empty' };
     if (text.length > 50000) return { valid: false, error: 'Message too long (max 50,000 characters)' };
     
+    // Skip XSS validation if bypass is enabled
+    if (allowDangerousXssbypass) {
+        return { valid: true };
+    }
+    
     const dangerousPatterns = [
         /<script[^>]*>/i,
         /javascript:/i,
@@ -39,7 +45,7 @@ function validateMessage(text) {
     
     for (const pattern of dangerousPatterns) {
         if (pattern.test(text)) {
-            return { valid: false, error: 'Message contains potentially dangerous content' };
+            return { valid: false, error: 'Message contains potentially dangerous content. Enable XSS bypass in settings if needed.' };
         }
     }
     
@@ -156,6 +162,14 @@ function resetSession() {
     } catch (error) {
         console.error('Error resetting session:', error);
         showError('Failed to reset session');
+    }
+}
+
+function openSettings() {
+    try {
+        vscode.postMessage({ command: 'openSettings' });
+    } catch (error) {
+        console.error('Error opening settings:', error);
     }
 }
 
@@ -833,8 +847,12 @@ window.addEventListener('message', event => {
         case 'claudeOutput':
             appendToClaudeOutput(message.output);
             break;
-        case 'setSleepPreventionSetting':
-            document.getElementById('preventSleep').checked = message.enabled;
+        case 'setSecuritySettings':
+            allowDangerousXssbypass = message.allowDangerousXssbypass;
+            const securityWarning = document.getElementById('securityWarning');
+            if (securityWarning) {
+                securityWarning.style.display = message.allowDangerousXssbypass ? 'block' : 'none';
+            }
             break;
         case 'setDevelopmentModeSetting':
             updateDevelopmentModeUI(message.enabled);
@@ -1356,27 +1374,9 @@ window.addEventListener('beforeunload', function() {
     lastParsedHtml = '';
 });
 
-function toggleSleepPrevention() {
-    try {
-        const checkbox = document.getElementById('preventSleep');
-        const isEnabled = checkbox.checked;
-        
-        vscode.postMessage({
-            command: 'toggleSleepPrevention',
-            enabled: isEnabled
-        });
-        
-        console.log('Sleep prevention toggled:', isEnabled);
-    } catch (error) {
-        console.error('Error toggling sleep prevention:', error);
-    }
-}
 
 // Initialize sleep prevention checkbox from VS Code settings
 window.addEventListener('DOMContentLoaded', function() {
-    vscode.postMessage({
-        command: 'getSleepPreventionSetting'
-    });
     
     // Check if development mode is enabled
     vscode.postMessage({

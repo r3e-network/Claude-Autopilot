@@ -12,7 +12,8 @@ import {
     loadPendingQueue, clearPendingQueue, saveWorkspaceHistory, endCurrentHistoryRun,
     startAutomaticMaintenance, stopAutomaticMaintenance, performQueueMaintenance, getMemoryUsageSummary
 } from './queue';
-import { recoverWaitingMessages, toggleSleepPreventionSetting, sendSleepPreventionSetting, stopSleepPrevention, stopHealthCheck } from './services';
+import { recoverWaitingMessages, stopSleepPrevention, stopHealthCheck } from './services';
+import { sendSecuritySettings, toggleXssbypassSetting } from './services/security';
 import { debugLog } from './utils';
 
 // Development-only imports
@@ -48,11 +49,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Register commands
     const startCommand = vscode.commands.registerCommand('claude-autopilot.start', () => {
-        startClaudeLoop(context);
+        startClaudeAutopilot(context);
     });
 
     const stopCommand = vscode.commands.registerCommand('claude-autopilot.stop', () => {
-        stopClaudeLoop();
+        stopClaudeAutopilot();
     });
 
     const addMessageCommand = vscode.commands.registerCommand('claude-autopilot.addMessage', () => {
@@ -62,16 +63,14 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(startCommand, stopCommand, addMessageCommand, configWatcher);
     
     // Auto-start Claude session if configured
-    debugLog(`🔧 Auto-start setting: ${config.session.autoStart}`);
     if (config.session.autoStart) {
-        debugLog('🚀 Auto-starting Claude session based on configuration');
         setTimeout(() => {
-            startClaudeLoop(context);
+            startClaudeAutopilot(context);
         }, 1000); // Small delay to ensure extension is fully loaded
     }
 }
 
-function startClaudeLoop(context: vscode.ExtensionContext): void {
+function startClaudeAutopilot(context: vscode.ExtensionContext): void {
     if (isRunning && claudePanel) {
         claudePanel.reveal(vscode.ViewColumn.Two);
         vscode.window.showInformationMessage('Claude Autopilot is already running - showing existing panel');
@@ -82,31 +81,13 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
         setIsRunning(false);
     }
 
-    // Check for dangerous XSS bypass setting
-    const config = getValidatedConfig();
-    if (config.security.allowDangerousXssbypass) {
-        vscode.window.showWarningMessage(
-            '⚠️ SECURITY WARNING: XSS bypass is enabled! This allows potentially dangerous content in the webview. Only continue if you trust all message content.',
-            'I Understand the Risk',
-            'Disable XSS Bypass'
-        ).then(selection => {
-            if (selection === 'Disable XSS Bypass') {
-                const workspaceConfig = vscode.workspace.getConfiguration('claudeAutopilot');
-                workspaceConfig.update('security.allowDangerousXssbypass', false, vscode.ConfigurationTarget.Global);
-                vscode.window.showInformationMessage('XSS bypass has been disabled for security.');
-            }
-        });
-    }
-
     const panel = vscode.window.createWebviewPanel(
         'claudeAutopilot',
         'Claude Autopilot',
         vscode.ViewColumn.Two,
         {
             enableScripts: true,
-            retainContextWhenHidden: true,
-            // Conditionally enable local resource access based on security setting
-            localResourceRoots: config.security.allowDangerousXssbypass ? undefined : []
+            retainContextWhenHidden: true
         }
     );
 
@@ -122,9 +103,19 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
     setTimeout(() => {
         updateWebviewContent();
         updateSessionState();
-        sendSleepPreventionSetting();
+        sendSecuritySettings();
         loadWorkspaceHistory();
         debugLog('🔄 Webview state synchronized after reopening');
+        
+        // Auto-start processing if configured
+        const config = getValidatedConfig();
+        if (config.session.autoStart) {
+            setTimeout(() => {
+                startProcessingQueue(config.session.skipPermissions).catch(error => {
+                    vscode.window.showErrorMessage(`Failed to auto-start processing: ${error.message}`);
+                });
+            }, 500); // Small delay to ensure webview is fully loaded
+        }
     }, 100);
 
     // Handle messages from webview
@@ -180,11 +171,14 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
                 case 'filterHistory':
                     filterHistory(message.filter);
                     break;
-                case 'toggleSleepPrevention':
-                    toggleSleepPreventionSetting(message.enabled);
+                case 'toggleXssbypass':
+                    toggleXssbypassSetting(message.enabled);
                     break;
-                case 'getSleepPreventionSetting':
-                    sendSleepPreventionSetting();
+                case 'getSecuritySettings':
+                    sendSecuritySettings();
+                    break;
+                case 'openSettings':
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'claudeAutopilot');
                     break;
                 case 'getDevelopmentModeSetting':
                     sendDevelopmentModeSetting();
@@ -271,7 +265,7 @@ function startClaudeLoop(context: vscode.ExtensionContext): void {
     vscode.window.showInformationMessage('Claude Autopilot started');
 }
 
-function stopClaudeLoop(): void {
+function stopClaudeAutopilot(): void {
     if (!isRunning) {
         return;
     }
@@ -357,7 +351,7 @@ export function deactivate(): void {
     try {
         flushClaudeOutput();
         clearClaudeOutput();
-        stopClaudeLoop();
+        stopClaudeAutopilot();
     } catch (error) {
         console.error('Error during final cleanup:', error);
     }

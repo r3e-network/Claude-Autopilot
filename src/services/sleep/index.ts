@@ -37,7 +37,7 @@ export function startSleepPrevention(): void {
                 break;
             case 'linux':
                 command = 'systemd-inhibit';
-                args = ['--what=sleep:idle', '--who=ClaudeLoop', '--why=Waiting for Claude usage limit reset', 'sleep', '7200'];
+                args = ['--what=sleep:idle', '--who=ClaudeAutopilot', '--why=Waiting for Claude usage limit reset', 'sleep', '7200'];
                 break;
             default:
                 debugLog('❌ Sleep prevention not supported on this platform');
