@@ -1,7 +1,7 @@
 # Claude Autopilot - Automated Claude Code Task Management
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/benbasha/Claude-Autopilot/releases/tag/v0.1.0)
+[![Version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/benbasha/Claude-Autopilot/releases/tag/v0.1.1)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Claude Autopilot** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
@@ -15,30 +15,34 @@
 ## ✨ Features
 
 ### 🚀 **24/7 Automated Processing**
-- **Set It and Forget It**: Queue hundreds of tasks and let Claude Autopilot work autonomously
-- **Auto-Resume**: Automatically resume processing when Claude usage limits reset - no manual intervention needed
-- **Sleep Prevention**: Keeps your computer awake during processing so work continues overnight
-- **Smart Queue Management**: Process multiple Claude Code tasks automatically with intelligent queueing
-- **Batch Processing**: Handle large workloads efficiently - perfect for weekend or overnight runs
+
+-   **Set It and Forget It**: Queue hundreds of tasks and let Claude Autopilot work autonomously
+-   **Auto-Resume**: Automatically resume processing when Claude usage limits reset - no manual intervention needed
+-   **Sleep Prevention**: Keeps your computer awake during processing so work continues overnight
+-   **Smart Queue Management**: Process multiple Claude Code tasks automatically with intelligent queueing
+-   **Batch Processing**: Handle large workloads efficiently - perfect for weekend or overnight runs
 
 ### 🔧 **Robust Process Management**
-- **Dependency Checking**: Automatic detection and validation of Claude Code and Python dependencies
-- **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
-- **IDE Compatibility**: Full support for VS Code and Cursor
-- **Error Recovery**: Comprehensive error handling with automatic retry mechanisms
-- **Health Monitoring**: Continuous monitoring of Claude Code process health
+
+-   **Dependency Checking**: Automatic detection and validation of Claude Code and Python dependencies
+-   **Cross-Platform Support**: Works seamlessly on Windows, macOS, and Linux
+-   **IDE Compatibility**: Full support for VS Code and Cursor
+-   **Error Recovery**: Comprehensive error handling with automatic retry mechanisms
+-   **Health Monitoring**: Continuous monitoring of Claude Code process health
 
 ### ⚙️ **Advanced Configuration**
-- **Extensive Settings**: Fine-tune every aspect of Claude Autopilot behavior
-- **Configuration Validation**: Built-in validation with helpful error messages
-- **Development Mode**: Special features and debugging tools for developers
-- **Sleep Prevention**: Keep your computer awake during long processing sessions
+
+-   **Extensive Settings**: Fine-tune every aspect of Claude Autopilot behavior
+-   **Configuration Validation**: Built-in validation with helpful error messages
+-   **Development Mode**: Special features and debugging tools for developers
+-   **Sleep Prevention**: Keep your computer awake during long processing sessions
 
 ### 📊 **Rich User Interface**
-- **Interactive Webview**: Intuitive interface for managing queues and monitoring progress
-- **Real-time Updates**: Live status updates and progress tracking
-- **History Browser**: Browse and filter previous processing runs
-- **Command Palette**: Quick access to all Claude Autopilot commands
+
+-   **Interactive Webview**: Intuitive interface for managing queues and monitoring progress
+-   **Real-time Updates**: Live status updates and progress tracking
+-   **History Browser**: Browse and filter previous processing runs
+-   **Command Palette**: Quick access to all Claude Autopilot commands
 
 ## 🚀 Quick Start
 
@@ -65,47 +69,51 @@
 
 ## 📋 Commands
 
-| Command | Description |
-|---------|-------------|
+| Command                          | Description                                      |
+| -------------------------------- | ------------------------------------------------ |
 | `Claude: Start Claude Autopilot` | Start the Claude Autopilot interface and session |
-| `Claude: Stop Claude Autopilot` | Stop Claude Autopilot and close the session |
-| `Claude: Add Message to Queue` | Add a new message to the processing queue |
+| `Claude: Stop Claude Autopilot`  | Stop Claude Autopilot and close the session      |
+| `Claude: Add Message to Queue`   | Add a new message to the processing queue        |
 
 ## ⚙️ Configuration
 
 Claude Autopilot offers extensive configuration options. Access settings via `File → Preferences → Settings → Extensions → Claude Autopilot`.
 
 ### Queue Management
+
 ```json
 {
-  "claudeAutopilot.queue.autoMaintenance": true
+    "claudeAutopilot.queue.autoMaintenance": true
 }
 ```
 
 ### Session Management
+
 ```json
 {
-  "claudeAutopilot.session.autoStart": false,
-  "claudeAutopilot.session.skipPermissions": true,
-  "claudeAutopilot.session.healthCheckInterval": 30000
+    "claudeAutopilot.session.autoStart": false,
+    "claudeAutopilot.session.skipPermissions": true,
+    "claudeAutopilot.session.healthCheckInterval": 30000
 }
 ```
 
 ### Sleep Prevention
+
 ```json
 {
-  "claudeAutopilot.sleepPrevention.enabled": true,
-  "claudeAutopilot.sleepPrevention.method": "auto"
+    "claudeAutopilot.sleepPrevention.enabled": true,
+    "claudeAutopilot.sleepPrevention.method": "auto"
 }
 ```
 
 ### History & Logging
+
 ```json
 {
-  "claudeAutopilot.history.maxRuns": 20,
-  "claudeAutopilot.history.autoSave": true,
-  "claudeAutopilot.logging.enabled": false,
-  "claudeAutopilot.logging.level": "info"
+    "claudeAutopilot.history.maxRuns": 20,
+    "claudeAutopilot.history.autoSave": true,
+    "claudeAutopilot.logging.enabled": false,
+    "claudeAutopilot.logging.level": "info"
 }
 ```
 
@@ -125,17 +133,17 @@ src/
 
 ### Key Components
 
-- **Queue Manager**: Handles message queueing, processing, and operations
-- **Claude Integration**: Manages Claude Code process and communication
-- **Dependency Checker**: Validates and manages required dependencies
-- **Configuration System**: Comprehensive settings with validation
+-   **Queue Manager**: Handles message queueing, processing, and operations
+-   **Claude Integration**: Manages Claude Code process and communication
+-   **Dependency Checker**: Validates and manages required dependencies
+-   **Configuration System**: Comprehensive settings with validation
 
 ## 🔒 Security & Privacy
 
-- **Local Processing**: All processing happens locally on your machine
-- **No Data Collection**: Claude Autopilot doesn't collect or transmit personal data
-- **Secure Dependencies**: Validates Claude Code and Python installations
-- **Permission Awareness**: Uses `--dangerously-skip-permissions` only in trusted environments
+-   **Local Processing**: All processing happens locally on your machine
+-   **No Data Collection**: Claude Autopilot doesn't collect or transmit personal data
+-   **Secure Dependencies**: Validates Claude Code and Python installations
+-   **Permission Awareness**: Uses `--dangerously-skip-permissions` only in trusted environments
 
 ## 🛠️ Development
 
@@ -165,31 +173,34 @@ Enable development mode for additional debugging features:
 
 ```json
 {
-  "claudeAutopilot.developmentMode": true
+    "claudeAutopilot.developmentMode": true
 }
 ```
 
 This enables:
-- Debug logging and diagnostics
-- Configuration validation tools
-- Advanced queue operations
+
+-   Debug logging and diagnostics
+-   Configuration validation tools
+-   Advanced queue operations
 
 ## 🎯 Use Cases
 
 ### Perfect for:
-- **Weekend Warriors**: Queue up your entire week's refactoring Friday evening
-- **Large Refactoring Projects**: Process hundreds of files while you sleep
-- **Batch Code Generation**: Generate components, tests, and documentation overnight
-- **Migration Tasks**: Convert frameworks or update dependencies during family time
-- **Quality Assurance**: Run comprehensive code reviews while you're at dinner
-- **Documentation Generation**: Create docs for your entire codebase while you relax
+
+-   **Weekend Warriors**: Queue up your entire week's refactoring Friday evening
+-   **Large Refactoring Projects**: Process hundreds of files while you sleep
+-   **Batch Code Generation**: Generate components, tests, and documentation overnight
+-   **Migration Tasks**: Convert frameworks or update dependencies during family time
+-   **Quality Assurance**: Run comprehensive code reviews while you're at dinner
+-   **Documentation Generation**: Create docs for your entire codebase while you relax
 
 ### Real-World Examples:
-- Converting a React class component codebase to functional components
-- Adding TypeScript types to a large JavaScript project
-- Generating API documentation from code comments
-- Migrating from one testing framework to another
-- Adding accessibility features across a web application
+
+-   Converting a React class component codebase to functional components
+-   Adding TypeScript types to a large JavaScript project
+-   Generating API documentation from code comments
+-   Migrating from one testing framework to another
+-   Adding accessibility features across a web application
 
 ## 📚 Wiki & Documentation
 
@@ -217,11 +228,11 @@ This enables:
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
 
-- Code style and conventions  
-- Testing requirements
-- Pull request process
-- Issue reporting
-- Development environment setup
+-   Code style and conventions
+-   Testing requirements
+-   Pull request process
+-   Issue reporting
+-   Development environment setup
 
 ## 📄 License
 
@@ -232,37 +243,41 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Common Issues
 
 **Claude Code Not Found**
-- Ensure Claude Code is installed and in your PATH
-- Restart VS Code after installing Claude Code
-- Check dependency status in Claude Autopilot panel
+
+-   Ensure Claude Code is installed and in your PATH
+-   Restart VS Code after installing Claude Code
+-   Check dependency status in Claude Autopilot panel
 
 **Python Not Found**
-- Install Python 3.8 or later
-- Ensure Python is in your PATH
-- On Windows, check "Add Python to PATH" during installation
+
+-   Install Python 3.8 or later
+-   Ensure Python is in your PATH
+-   On Windows, check "Add Python to PATH" during installation
 
 **Permission Errors**
-- Claude Autopilot uses `--dangerously-skip-permissions` for automation
-- Only use in trusted development environments
-- Disable if working with sensitive data
+
+-   Claude Autopilot uses `--dangerously-skip-permissions` for automation
+-   Only use in trusted development environments
+-   Disable if working with sensitive data
 
 ### Getting Help
 
-- 🐛 [Bug Reports](https://github.com/benbasha/Claude Autopilot/issues/new?template=bug_report.md)
-- 💡 [Feature Requests](https://github.com/benbasha/Claude Autopilot/issues/new?template=feature_request.md)
-- 💬 [Discussions](https://github.com/benbasha/Claude Autopilot/discussions)
-- 📖 [Wiki Documentation](https://github.com/benbasha/Claude Autopilot/wiki)
+-   🐛 [Bug Reports](https://github.com/benbasha/Claude Autopilot/issues/new?template=bug_report.md)
+-   💡 [Feature Requests](https://github.com/benbasha/Claude Autopilot/issues/new?template=feature_request.md)
+-   💬 [Discussions](https://github.com/benbasha/Claude Autopilot/discussions)
+-   📖 [Wiki Documentation](https://github.com/benbasha/Claude Autopilot/wiki)
 
 ### Support
 
 If you find Claude Autopilot helpful, consider:
-- ⭐ Starring the repository
-- 🐛 Reporting bugs or suggesting features
-- 🤝 Contributing code or documentation
-- 💬 Helping others in discussions
+
+-   ⭐ Starring the repository
+-   🐛 Reporting bugs or suggesting features
+-   🤝 Contributing code or documentation
+-   💬 Helping others in discussions
 
 ---
 
 **Made with ❤️ for the Claude Code community**
 
-*Claude Autopilot is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic.*
+_Claude Autopilot is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic._
