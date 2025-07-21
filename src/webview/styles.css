@@ -709,3 +709,76 @@ select:focus {
     border-radius: 6px;
 }
 
+/* Sexy Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    top: 2px;
+    background: var(--vscode-foreground);
+    border-radius: 50%;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: var(--vscode-button-background);
+    border-color: var(--vscode-button-background);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 8px rgba(0, 122, 255, 0.3);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+    background: var(--vscode-button-foreground);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch:hover .toggle-slider {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-switch input:checked:hover + .toggle-slider {
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 12px rgba(0, 122, 255, 0.4);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Animation for smooth transitions */
+.toggle-slider:before {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
