@@ -13,7 +13,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Claude Autopilot</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1>Claude Autopilot</h1>
+                <button id="settingsBtn" onclick="openSettings()" class="btn-secondary" title="Open Settings">
+                    <span class="btn-icon">⚙️</span>Settings
+                </button>
+            </div>
             <p>Queue messages for automated Claude CLI processing with intelligent session management</p>
         </div>
 
@@ -44,17 +49,18 @@
             <button id="resetBtn" onclick="resetSession()" class="btn-warning">
                 <span class="btn-icon">🔄</span>Reset Session
             </button>
-            <label
-                style="display: flex; align-items: center; gap: 8px; margin-left: 20px; color: var(--vscode-foreground); font-size: 14px;">
-                <input type="checkbox" id="skipPermissions" checked style="transform: scale(1.2);">
-                Skip permissions check
-            </label>
-            <label
-                style="display: flex; align-items: center; gap: 8px; margin-left: 20px; color: var(--vscode-foreground); font-size: 14px;">
-                <input type="checkbox" id="preventSleep" style="transform: scale(1.2);"
-                    onchange="toggleSleepPrevention()">
-                Prevent computer sleep during waits
-            </label>
+            <div class="toggle-container" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="skipPermissions" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+                <span style="color: var(--vscode-foreground); font-size: 14px;">Skip permissions check</span>
+            </div>
+        </div>
+
+        <div id="securityWarning"
+            style="display: none; background: #ff6b6b22; border: 1px solid #ff6b6b; border-radius: 4px; padding: 8px; margin-bottom: 15px; color: #ff6b6b; font-size: 13px;">
+            ⚠️ XSS bypass is enabled - potentially dangerous content allowed in messages
         </div>
 
         <div class="debug-section" id="debugSection" style="display: none;">

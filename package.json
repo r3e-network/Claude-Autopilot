@@ -82,11 +82,6 @@
           "maximum": 168,
           "description": "Hours to keep completed messages before cleanup"
         },
-        "claudeAutopilot.queue.autoMaintenance": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable automatic queue maintenance and cleanup"
-        },
         "claudeAutopilot.session.autoStart": {
           "type": "boolean",
           "default": false,
@@ -97,12 +92,11 @@
           "default": true,
           "description": "Skip Claude CLI permission prompts (use --dangerously-skip-permissions)"
         },
-        "claudeAutopilot.session.healthCheckInterval": {
-          "type": "number",
-          "default": 30000,
-          "minimum": 5000,
-          "maximum": 300000,
-          "description": "Interval for Claude process health checks (milliseconds)"
+        "claudeAutopilot.session.scheduledStartTime": {
+          "type": "string",
+          "default": "",
+          "description": "Schedule session start at specific time (HH:MM format, e.g., '09:30'). Cannot be used with autoStart. Empty string disables scheduling.",
+          "pattern": "^(([01]?[0-9]|2[0-3]):[0-5][0-9])?$"
         },
         "claudeAutopilot.sleepPrevention.enabled": {
           "type": "boolean",
@@ -127,16 +121,20 @@
           "default": true,
           "description": "Automatically save workspace history"
         },
-        "claudeAutopilot.logging.enabled": {
+        "claudeAutopilot.history.persistPendingQueue": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save pending messages to survive VS Code restart"
+        },
+        "claudeAutopilot.history.showInUI": {
           "type": "boolean",
           "default": false,
-          "description": "Enable debug logging"
+          "description": "Show history section in the Claude Autopilot interface"
         },
-        "claudeAutopilot.logging.level": {
-          "type": "string",
-          "enum": ["error", "warn", "info", "debug"],
-          "default": "info",
-          "description": "Logging level for debug output"
+        "claudeAutopilot.security.allowDangerousXssbypass": {
+          "type": "boolean",
+          "default": false,
+          "description": "⚠️ DANGER: Allow bypassing XSS protection in webview content. Only enable if you trust all message content and understand the security risks."
         }
       }
     }

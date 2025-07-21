@@ -48,9 +48,9 @@ export function getWorkspacePath(): string {
 }
 
 export function getHistoryStorageKey(): string {
-    return `claudeloop_history_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
+    return `claudeautopilot_history_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
 }
 
 export function getPendingQueueStorageKey(): string {
-    return `claudeloop_pending_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
+    return `claudeautopilot_pending_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
 }

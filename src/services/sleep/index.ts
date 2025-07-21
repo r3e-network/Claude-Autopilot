@@ -3,10 +3,11 @@ import { spawn } from 'child_process';
 import * as os from 'os';
 import { sleepPreventionActive, sleepPreventionProcess, setSleepPreventionActive, setSleepPreventionProcess, claudePanel } from '../../core/state';
 import { debugLog } from '../../utils/logging';
+import { getValidatedConfig } from '../../core/config';
 
 export function startSleepPrevention(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
-    const preventSleep = config.get<boolean>('preventSleep', false);
+    const config = getValidatedConfig();
+    const preventSleep = config.sleepPrevention.enabled;
     
     debugLog(`💤 Sleep prevention setting: ${preventSleep}, already active: ${sleepPreventionActive}`);
     
@@ -36,7 +37,7 @@ export function startSleepPrevention(): void {
                 break;
             case 'linux':
                 command = 'systemd-inhibit';
-                args = ['--what=sleep:idle', '--who=ClaudeLoop', '--why=Waiting for Claude usage limit reset', 'sleep', '7200'];
+                args = ['--what=sleep:idle', '--who=ClaudeAutopilot', '--why=Waiting for Claude usage limit reset', 'sleep', '7200'];
                 break;
             default:
                 debugLog('❌ Sleep prevention not supported on this platform');
@@ -97,7 +98,7 @@ export function stopSleepPrevention(): void {
 
 export function toggleSleepPreventionSetting(enabled: boolean): void {
     const config = vscode.workspace.getConfiguration('claudeAutopilot');
-    config.update('preventSleep', enabled, vscode.ConfigurationTarget.Global);
+    config.update('sleepPrevention.enabled', enabled, vscode.ConfigurationTarget.Global);
     debugLog(`💤 Sleep prevention setting updated: ${enabled}`);
     
     if (!enabled && sleepPreventionActive) {
@@ -106,8 +107,8 @@ export function toggleSleepPreventionSetting(enabled: boolean): void {
 }
 
 export function sendSleepPreventionSetting(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
-    const preventSleep = config.get<boolean>('preventSleep', false);
+    const config = getValidatedConfig();
+    const preventSleep = config.sleepPrevention.enabled;
     
     if (claudePanel) {
         try {

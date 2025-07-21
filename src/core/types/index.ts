@@ -1,5 +1,5 @@
 export interface MessageItem {
-    id: number;
+    id: string;
     text: string;
     timestamp: string;
     status: 'pending' | 'processing' | 'completed' | 'error' | 'waiting';
@@ -16,6 +16,7 @@ export interface HistoryRun {
     endTime?: string;
     workspacePath: string;
     messages: MessageItem[];
+    messageStatusMap: { [messageId: string]: 'pending' | 'processing' | 'completed' | 'error' | 'waiting' };
     totalMessages: number;
     completedMessages: number;
     errorMessages: number;

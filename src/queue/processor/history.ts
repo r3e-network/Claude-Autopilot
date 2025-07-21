@@ -13,6 +13,13 @@ export function saveWorkspaceHistory(): void {
         return;
     }
     
+    // Check if auto-save is enabled
+    const config = getValidatedConfig();
+    if (!config.history.autoSave) {
+        debugLog(`💾 History auto-save is disabled, skipping save`);
+        return;
+    }
+    
     try {
         const storageKey = getHistoryStorageKey();
         const existingHistory = extensionContext.globalState.get<HistoryRun[]>(storageKey, []);
@@ -25,6 +32,14 @@ export function saveWorkspaceHistory(): void {
         currentRun.completedMessages = messageQueue.filter(m => m.status === 'completed').length;
         currentRun.errorMessages = messageQueue.filter(m => m.status === 'error').length;
         currentRun.waitingMessages = messageQueue.filter(m => m.status === 'waiting').length;
+        
+        // Update message status map
+        currentRun.messageStatusMap = {};
+        messageQueue.forEach(msg => {
+            if (currentRun) {
+            currentRun.messageStatusMap[msg.id] = msg.status;
+        }
+        });
         
         const existingIndex = existingHistory.findIndex(run => run.id === currentRun!.id);
         if (existingIndex >= 0) {
@@ -46,11 +61,13 @@ export function saveWorkspaceHistory(): void {
         extensionContext.globalState.update(storageKey, recentHistory);
         debugLog(`💾 Saved workspace history with ${recentHistory.length} runs`);
         
-        savePendingQueue();
     } catch (error) {
         debugLog(`❌ Failed to save workspace history: ${error}`);
         vscode.window.showErrorMessage(`Failed to save workspace history: ${error instanceof Error ? error.message : String(error)}`);
     }
+    
+    // Always try to save pending queue regardless of history auto-save setting
+    savePendingQueue();
 }
 
 export function loadWorkspaceHistory(): void {
@@ -115,6 +132,7 @@ export function startNewHistoryRun(): void {
         startTime: new Date().toISOString(),
         workspacePath: getWorkspacePath(),
         messages: [],
+        messageStatusMap: {},
         totalMessages: 0,
         completedMessages: 0,
         errorMessages: 0,
@@ -129,6 +147,46 @@ export function ensureHistoryRun(): void {
     }
 }
 
+export function updateMessageStatusInHistory(messageId: string, status: 'pending' | 'processing' | 'completed' | 'error' | 'waiting', output?: string, error?: string): void {
+    if (!currentRun) {
+        debugLog('⚠️ No active history run to update message status');
+        return;
+    }
+    
+    // Update in message status map
+    currentRun.messageStatusMap[messageId] = status;
+    
+    // Find and update the actual message in the messages array
+    const messageIndex = currentRun.messages.findIndex(m => m.id === messageId);
+    if (messageIndex !== -1) {
+        currentRun.messages[messageIndex].status = status;
+        if (output !== undefined) {
+            currentRun.messages[messageIndex].output = output;
+        }
+        if (error !== undefined) {
+            currentRun.messages[messageIndex].error = error;
+        }
+        if (status === 'completed') {
+            currentRun.messages[messageIndex].completedAt = new Date().toISOString();
+        }
+    }
+    
+    // Update counters based on status map
+    const statusCounts = Object.values(currentRun.messageStatusMap).reduce((counts, s) => {
+        counts[s] = (counts[s] || 0) + 1;
+        return counts;
+    }, {} as { [key: string]: number });
+    
+    currentRun.completedMessages = statusCounts.completed || 0;
+    currentRun.errorMessages = statusCounts.error || 0;
+    currentRun.waitingMessages = statusCounts.waiting || 0;
+    
+    debugLog(`📝 Updated message ${messageId} status to ${status} in history`);
+    
+    // Save updated history
+    saveWorkspaceHistory();
+}
+
 export function endCurrentHistoryRun(): void {
     if (currentRun) {
         currentRun.endTime = new Date().toISOString();
@@ -138,6 +196,13 @@ export function endCurrentHistoryRun(): void {
 
 export function savePendingQueue(): void {
     if (!extensionContext) return;
+    
+    // Check if pending queue persistence is enabled
+    const config = getValidatedConfig();
+    if (!config.history.persistPendingQueue) {
+        debugLog(`📋 Pending queue persistence is disabled, skipping save`);
+        return;
+    }
     
     const pendingMessages = messageQueue.filter(msg => 
         msg.status === 'pending' || msg.status === 'waiting'
@@ -149,6 +214,13 @@ export function savePendingQueue(): void {
 
 export function loadPendingQueue(): void {
     if (!extensionContext) return;
+    
+    // Check if pending queue persistence is enabled
+    const config = getValidatedConfig();
+    if (!config.history.persistPendingQueue) {
+        debugLog(`📋 Pending queue persistence is disabled, skipping load`);
+        return;
+    }
     
     const storageKey = getPendingQueueStorageKey();
     const pendingMessages = extensionContext.globalState.get<MessageItem[]>(storageKey, []);

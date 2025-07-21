@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { claudePanel, messageQueue, debugMode, sessionReady, processingQueue } from '../../core/state';
 import { debugLog } from '../../utils/logging';
+import { getValidatedConfig } from '../../core/config';
 
 export function updateWebviewContent(): void {
     if (claudePanel) {
@@ -74,5 +75,20 @@ export function getWebviewContent(context: vscode.ExtensionContext): string {
             </body>
             </html>
         `;
+    }
+}
+
+export function sendHistoryVisibilitySettings(): void {
+    const config = getValidatedConfig();
+    
+    if (claudePanel) {
+        try {
+            claudePanel.webview.postMessage({
+                command: 'setHistoryVisibility',
+                showInUI: config.history.showInUI
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send history visibility settings to webview: ${error}`);
+        }
     }
 }
