@@ -262,10 +262,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 
--   🐛 [Bug Reports](https://github.com/benbasha/Claude Autopilot/issues/new?template=bug_report.md)
--   💡 [Feature Requests](https://github.com/benbasha/Claude Autopilot/issues/new?template=feature_request.md)
--   💬 [Discussions](https://github.com/benbasha/Claude Autopilot/discussions)
--   📖 [Wiki Documentation](https://github.com/benbasha/Claude Autopilot/wiki)
+-   🐛 [Bug Reports](https://github.com/benbasha/Claude-Autopilot/issues/new?template=bug_report.md)
+-   💡 [Feature Requests](https://github.com/benbasha/Claude-Autopilot/issues/new?template=feature_request.md)
+-   💬 [Discussions](https://github.com/benbasha/Claude-Autopilot/discussions)
+-   📖 [Wiki Documentation](https://github.com/benbasha/Claude-Autopilot/wiki)
 
 ### Support
 
