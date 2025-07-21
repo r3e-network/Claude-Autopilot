@@ -92,6 +92,12 @@
           "default": true,
           "description": "Skip Claude CLI permission prompts (use --dangerously-skip-permissions)"
         },
+        "claudeAutopilot.session.scheduledStartTime": {
+          "type": "string",
+          "default": "",
+          "description": "Schedule session start at specific time (HH:MM format, e.g., '09:30'). Cannot be used with autoStart. Empty string disables scheduling.",
+          "pattern": "^(([01]?[0-9]|2[0-3]):[0-5][0-9])?$"
+        },
         "claudeAutopilot.sleepPrevention.enabled": {
           "type": "boolean",
           "default": true,

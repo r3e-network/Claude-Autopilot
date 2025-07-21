@@ -19,6 +19,7 @@ export interface ClaudeAutopilotConfig {
     session: {
         autoStart: boolean;
         skipPermissions: boolean;
+        scheduledStartTime: string; // Format: "HH:MM" or empty string for disabled
     };
     
     // Sleep prevention settings
@@ -54,7 +55,8 @@ export const DEFAULT_CONFIG: ClaudeAutopilotConfig = {
     
     session: {
         autoStart: false,
-        skipPermissions: true
+        skipPermissions: true,
+        scheduledStartTime: ''
     },
     
     sleepPrevention: {
@@ -128,6 +130,19 @@ export function validateConfig(config: Partial<ClaudeAutopilotConfig>): ConfigVa
         if (s.skipPermissions !== undefined && typeof s.skipPermissions !== 'boolean') {
             addError('session.skipPermissions', s.skipPermissions, 'boolean', 'Skip permissions must be true or false');
         }
+        
+        if (s.scheduledStartTime !== undefined) {
+            if (typeof s.scheduledStartTime !== 'string') {
+                addError('session.scheduledStartTime', s.scheduledStartTime, 'string', 'Scheduled start time must be a string');
+            } else if (s.scheduledStartTime !== '' && !/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(s.scheduledStartTime)) {
+                addError('session.scheduledStartTime', s.scheduledStartTime, 'HH:MM format', 'Scheduled start time must be in HH:MM format (e.g., "09:30") or empty string to disable');
+            }
+        }
+        
+        // Check for conflicting settings
+        if (s.autoStart === true && s.scheduledStartTime !== undefined && s.scheduledStartTime !== '') {
+            addError('session.autoStart + session.scheduledStartTime', 'both enabled', 'only one enabled', 'Cannot use both autoStart and scheduledStartTime - choose one or the other');
+        }
     }
     
     // Validate sleep prevention settings
@@ -195,7 +210,8 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
         
         session: {
             autoStart: workspaceConfig.get('session.autoStart', DEFAULT_CONFIG.session.autoStart),
-            skipPermissions: workspaceConfig.get('session.skipPermissions', DEFAULT_CONFIG.session.skipPermissions)
+            skipPermissions: workspaceConfig.get('session.skipPermissions', DEFAULT_CONFIG.session.skipPermissions),
+            scheduledStartTime: workspaceConfig.get('session.scheduledStartTime', DEFAULT_CONFIG.session.scheduledStartTime)
         },
         
         sleepPrevention: {

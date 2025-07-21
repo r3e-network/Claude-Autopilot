@@ -12,7 +12,7 @@ import {
     loadPendingQueue, clearPendingQueue, saveWorkspaceHistory, endCurrentHistoryRun,
     startAutomaticMaintenance, stopAutomaticMaintenance, performQueueMaintenance, getMemoryUsageSummary
 } from './queue';
-import { recoverWaitingMessages, stopSleepPrevention, stopHealthCheck } from './services';
+import { recoverWaitingMessages, stopSleepPrevention, stopHealthCheck, startScheduledSession, stopScheduledSession } from './services';
 import { sendSecuritySettings, toggleXssbypassSetting } from './services/security';
 import { debugLog } from './utils';
 
@@ -44,7 +44,17 @@ export function activate(context: vscode.ExtensionContext) {
     // Watch for configuration changes
     const configWatcher = watchConfigChanges((newConfig) => {
         debugLog('🔧 Configuration updated, reloading settings...');
-        // Could trigger updates to services here if needed
+        
+        // Restart scheduler if scheduledStartTime changed
+        stopScheduledSession();
+        if (newConfig.session.scheduledStartTime && !newConfig.session.autoStart) {
+            startScheduledSession(() => {
+                // Start Claude session directly (not just open panel)
+                startClaudeSession(newConfig.session.skipPermissions).catch(error => {
+                    vscode.window.showErrorMessage(`Scheduled Claude session failed to start: ${error.message}`);
+                });
+            });
+        }
     });
 
     // Register commands
@@ -62,10 +72,20 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(startCommand, stopCommand, addMessageCommand, configWatcher);
     
-    // Auto-start Claude session if configured
+    // Auto-start or schedule Claude session based on configuration
     if (config.session.autoStart) {
         setTimeout(() => {
             startClaudeAutopilot(context);
+        }, 1000); // Small delay to ensure extension is fully loaded
+    } else if (config.session.scheduledStartTime) {
+        // Start scheduler for timed session start
+        setTimeout(() => {
+            startScheduledSession(() => {
+                // Start Claude session directly (not just open panel)
+                startClaudeSession(config.session.skipPermissions).catch(error => {
+                    vscode.window.showErrorMessage(`Scheduled Claude session failed to start: ${error.message}`);
+                });
+            });
         }, 1000); // Small delay to ensure extension is fully loaded
     }
 }
@@ -329,6 +349,7 @@ export function deactivate(): void {
     // Stop all timers and background processes first
     stopHealthCheck();
     stopAutomaticMaintenance();
+    stopScheduledSession();
     
     // Clear development timers if available
     if (clearAllTimers) {
