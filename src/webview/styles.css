@@ -743,7 +743,7 @@ select:focus {
     height: 18px;
     width: 18px;
     left: 2px;
-    top: 2px;
+    top: 3px;
     background: var(--vscode-foreground);
     border-radius: 50%;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

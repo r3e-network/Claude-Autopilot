@@ -6,8 +6,9 @@ import { updateWebviewContent } from '../../ui/webview';
 import { processNextMessage } from '../../claude/communication';
 import { enforceMessageSizeLimits, enforceQueueSizeLimit, performQueueMaintenance } from '../memory';
 import { savePendingQueue } from '../processor/history';
+import { generateMessageId } from '../../utils/id-generator';
 
-export function removeMessageFromQueue(messageId: number): void {
+export function removeMessageFromQueue(messageId: string): void {
     const index = messageQueue.findIndex(msg => msg.id === messageId);
     if (index >= 0) {
         messageQueue.splice(index, 1);
@@ -17,11 +18,11 @@ export function removeMessageFromQueue(messageId: number): void {
     }
 }
 
-export function duplicateMessageInQueue(messageId: number): void {
+export function duplicateMessageInQueue(messageId: string): void {
     const message = messageQueue.find(msg => msg.id === messageId);
     if (message) {
         const duplicatedMessage: MessageItem = {
-            id: Date.now(),
+            id: generateMessageId(),
             text: message.text,
             timestamp: new Date().toISOString(),
             status: 'pending'
@@ -36,7 +37,7 @@ export function duplicateMessageInQueue(messageId: number): void {
     }
 }
 
-export function editMessageInQueue(messageId: number, newText: string): void {
+export function editMessageInQueue(messageId: string, newText: string): void {
     debugLog(`EditMessageInQueue called with messageId: ${messageId}, newText: ${newText}`);
     const message = messageQueue.find(msg => msg.id === messageId);
     debugLog(`Found message: ${message ? message.text : 'not found'}`);
@@ -112,7 +113,7 @@ export function clearMessageQueue(): void {
 
 export function addMessageToQueueFromWebview(message: string): void {
     const messageItem: MessageItem = {
-        id: Date.now(),
+        id: generateMessageId(),
         text: message,
         timestamp: new Date().toISOString(),
         status: 'pending'

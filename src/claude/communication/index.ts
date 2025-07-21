@@ -3,7 +3,7 @@ import { MessageItem } from '../../core/types';
 import { messageQueue, claudeProcess, sessionReady, processingQueue, currentMessage, setCurrentMessage, setProcessingQueue } from '../../core/state';
 import { debugLog } from '../../utils/logging';
 import { updateWebviewContent, updateSessionState } from '../../ui/webview';
-import { saveWorkspaceHistory, ensureHistoryRun } from '../../queue/processor/history';
+import { saveWorkspaceHistory, ensureHistoryRun, updateMessageStatusInHistory } from '../../queue/processor/history';
 import { TIMEOUT_MS, ANSI_CLEAR_SCREEN_PATTERNS } from '../../core/constants';
 import { startClaudeSession } from '../../claude/session';
 
@@ -51,6 +51,7 @@ export async function processNextMessage(): Promise<void> {
 
     debugLog(`📋 Processing message #${message.id}: ${message.text.substring(0, 50)}...`);
     message.status = 'processing';
+    updateMessageStatusInHistory(message.id, 'processing');
     setCurrentMessage(message);
     updateWebviewContent();
     saveWorkspaceHistory();
@@ -67,6 +68,7 @@ export async function processNextMessage(): Promise<void> {
         debugLog(`✓ Message #${message.id} completed`);
         message.status = 'completed';
         message.completedAt = new Date().toISOString();
+        updateMessageStatusInHistory(message.id, 'completed');
         updateWebviewContent();
         saveWorkspaceHistory();
         
@@ -82,6 +84,7 @@ export async function processNextMessage(): Promise<void> {
         
         message.status = 'error';
         message.error = `Processing failed: ${errorString}`;
+        updateMessageStatusInHistory(message.id, 'error', undefined, message.error);
         updateWebviewContent();
         saveWorkspaceHistory();
         

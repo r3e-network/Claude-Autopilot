@@ -33,6 +33,7 @@ export interface ClaudeAutopilotConfig {
         maxRuns: number;
         autoSave: boolean;
         persistPendingQueue: boolean;
+        showInUI: boolean;
     };
     
     // Security settings
@@ -67,7 +68,8 @@ export const DEFAULT_CONFIG: ClaudeAutopilotConfig = {
     history: {
         maxRuns: 20,
         autoSave: true,
-        persistPendingQueue: true
+        persistPendingQueue: true,
+        showInUI: false
     },
     
     security: {
@@ -178,6 +180,10 @@ export function validateConfig(config: Partial<ClaudeAutopilotConfig>): ConfigVa
         if (h.persistPendingQueue !== undefined && typeof h.persistPendingQueue !== 'boolean') {
             addError('history.persistPendingQueue', h.persistPendingQueue, 'boolean', 'Persist pending queue must be true or false');
         }
+        
+        if (h.showInUI !== undefined && typeof h.showInUI !== 'boolean') {
+            addError('history.showInUI', h.showInUI, 'boolean', 'Show in UI must be true or false');
+        }
     }
     
     // Validate security settings
@@ -222,7 +228,8 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
         history: {
             maxRuns: workspaceConfig.get('history.maxRuns', DEFAULT_CONFIG.history.maxRuns),
             autoSave: workspaceConfig.get('history.autoSave', DEFAULT_CONFIG.history.autoSave),
-            persistPendingQueue: workspaceConfig.get('history.persistPendingQueue', DEFAULT_CONFIG.history.persistPendingQueue)
+            persistPendingQueue: workspaceConfig.get('history.persistPendingQueue', DEFAULT_CONFIG.history.persistPendingQueue),
+            showInUI: workspaceConfig.get('history.showInUI', DEFAULT_CONFIG.history.showInUI)
         },
         
         security: {

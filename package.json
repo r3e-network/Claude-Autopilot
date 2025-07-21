@@ -126,6 +126,11 @@
           "default": true,
           "description": "Save pending messages to survive VS Code restart"
         },
+        "claudeAutopilot.history.showInUI": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show history section in the Claude Autopilot interface"
+        },
         "claudeAutopilot.security.allowDangerousXssbypass": {
           "type": "boolean",
           "default": false,

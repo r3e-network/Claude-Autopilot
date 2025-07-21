@@ -854,6 +854,12 @@ window.addEventListener('message', event => {
                 securityWarning.style.display = message.allowDangerousXssbypass ? 'block' : 'none';
             }
             break;
+        case 'setHistoryVisibility':
+            const historySection = document.querySelector('.history-section');
+            if (historySection) {
+                historySection.style.display = message.showInUI ? 'block' : 'none';
+            }
+            break;
         case 'setDevelopmentModeSetting':
             updateDevelopmentModeUI(message.enabled);
             break;

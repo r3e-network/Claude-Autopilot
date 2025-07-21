@@ -4,7 +4,7 @@ import {
     setExtensionContext, setDebugMode, isDevelopmentMode, developmentOnly,
     getValidatedConfig, showConfigValidationStatus, resetConfigToDefaults, watchConfigChanges
 } from './core';
-import { updateWebviewContent, updateSessionState, getWebviewContent } from './ui';
+import { updateWebviewContent, updateSessionState, getWebviewContent, sendHistoryVisibilitySettings } from './ui';
 import { startClaudeSession, resetClaudeSession, handleClaudeKeypress, startProcessingQueue, stopProcessingQueue, flushClaudeOutput, clearClaudeOutput } from './claude';
 import {
     removeMessageFromQueue, duplicateMessageInQueue, editMessageInQueue, reorderQueue, sortQueue, clearMessageQueue,
@@ -44,6 +44,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Watch for configuration changes
     const configWatcher = watchConfigChanges((newConfig) => {
         debugLog('🔧 Configuration updated, reloading settings...');
+        
+        // Update UI settings
+        sendSecuritySettings();
+        sendHistoryVisibilitySettings();
         
         // Restart scheduler if scheduledStartTime changed
         stopScheduledSession();
@@ -124,6 +128,7 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
         updateWebviewContent();
         updateSessionState();
         sendSecuritySettings();
+        sendHistoryVisibilitySettings();
         loadWorkspaceHistory();
         debugLog('🔄 Webview state synchronized after reopening');
         

@@ -4,6 +4,7 @@ import { messageQueue, processingQueue, resumeTimer, countdownInterval, setProce
 import { debugLog } from '../../utils/logging';
 import { updateWebviewContent } from '../../ui/webview';
 import { processNextMessage } from '../../claude/communication';
+import { generateMessageId } from '../../utils/id-generator';
 
 export function isCurrentUsageLimit(output: string): boolean {
     try {
@@ -163,7 +164,7 @@ export function handleUsageLimit(output: string, message: MessageItem): void {
     const currentMessageIndex = messageQueue.findIndex(msg => msg.id === message.id);
     
     const continueMessage: MessageItem = {
-        id: Date.now() + 1,
+        id: generateMessageId(),
         text: 'continue',
         timestamp: new Date().toISOString(),
         status: 'waiting',
@@ -297,7 +298,7 @@ export function simulateUsageLimit(): void {
     const currentProcessingIndex = messageQueue.findIndex(msg => msg.status === 'processing');
     
     const continueMessage: MessageItem = {
-        id: Date.now() + 1,
+        id: generateMessageId(),
         text: 'continue',
         timestamp: new Date().toISOString(),
         status: 'waiting',

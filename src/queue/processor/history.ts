@@ -33,6 +33,14 @@ export function saveWorkspaceHistory(): void {
         currentRun.errorMessages = messageQueue.filter(m => m.status === 'error').length;
         currentRun.waitingMessages = messageQueue.filter(m => m.status === 'waiting').length;
         
+        // Update message status map
+        currentRun.messageStatusMap = {};
+        messageQueue.forEach(msg => {
+            if (currentRun) {
+            currentRun.messageStatusMap[msg.id] = msg.status;
+        }
+        });
+        
         const existingIndex = existingHistory.findIndex(run => run.id === currentRun!.id);
         if (existingIndex >= 0) {
             existingHistory[existingIndex] = currentRun;
@@ -124,6 +132,7 @@ export function startNewHistoryRun(): void {
         startTime: new Date().toISOString(),
         workspacePath: getWorkspacePath(),
         messages: [],
+        messageStatusMap: {},
         totalMessages: 0,
         completedMessages: 0,
         errorMessages: 0,
@@ -136,6 +145,46 @@ export function ensureHistoryRun(): void {
     if (!currentRun) {
         startNewHistoryRun();
     }
+}
+
+export function updateMessageStatusInHistory(messageId: string, status: 'pending' | 'processing' | 'completed' | 'error' | 'waiting', output?: string, error?: string): void {
+    if (!currentRun) {
+        debugLog('⚠️ No active history run to update message status');
+        return;
+    }
+    
+    // Update in message status map
+    currentRun.messageStatusMap[messageId] = status;
+    
+    // Find and update the actual message in the messages array
+    const messageIndex = currentRun.messages.findIndex(m => m.id === messageId);
+    if (messageIndex !== -1) {
+        currentRun.messages[messageIndex].status = status;
+        if (output !== undefined) {
+            currentRun.messages[messageIndex].output = output;
+        }
+        if (error !== undefined) {
+            currentRun.messages[messageIndex].error = error;
+        }
+        if (status === 'completed') {
+            currentRun.messages[messageIndex].completedAt = new Date().toISOString();
+        }
+    }
+    
+    // Update counters based on status map
+    const statusCounts = Object.values(currentRun.messageStatusMap).reduce((counts, s) => {
+        counts[s] = (counts[s] || 0) + 1;
+        return counts;
+    }, {} as { [key: string]: number });
+    
+    currentRun.completedMessages = statusCounts.completed || 0;
+    currentRun.errorMessages = statusCounts.error || 0;
+    currentRun.waitingMessages = statusCounts.waiting || 0;
+    
+    debugLog(`📝 Updated message ${messageId} status to ${status} in history`);
+    
+    // Save updated history
+    saveWorkspaceHistory();
 }
 
 export function endCurrentHistoryRun(): void {
