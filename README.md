@@ -353,3 +353,4 @@ If you find Claude Autopilot helpful, consider:
 **Made with ❤️ for the Claude Code community**
 
 _Claude Autopilot is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic._
+
