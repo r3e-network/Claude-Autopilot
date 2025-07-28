@@ -76,23 +76,23 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Register commands
-    const startCommand = vscode.commands.registerCommand('claude-autopilot.start', () => {
+    const startCommand = vscode.commands.registerCommand('autoclaude.start', () => {
         startClaudeAutopilot(context);
     });
 
-    const stopCommand = vscode.commands.registerCommand('claude-autopilot.stop', () => {
+    const stopCommand = vscode.commands.registerCommand('autoclaude.stop', () => {
         stopClaudeAutopilot();
     });
 
-    const addMessageCommand = vscode.commands.registerCommand('claude-autopilot.addMessage', () => {
+    const addMessageCommand = vscode.commands.registerCommand('autoclaude.addMessage', () => {
         addMessageToQueue();
     });
 
-    const runScriptChecksCommand = vscode.commands.registerCommand('claude-autopilot.runScriptChecks', async () => {
+    const runScriptChecksCommand = vscode.commands.registerCommand('autoclaude.runScriptChecks', async () => {
         await runScriptChecks();
     });
 
-    const runScriptLoopCommand = vscode.commands.registerCommand('claude-autopilot.runScriptLoop', async () => {
+    const runScriptLoopCommand = vscode.commands.registerCommand('autoclaude.runScriptLoop', async () => {
         await runScriptCheckLoop();
     });
 
@@ -119,7 +119,7 @@ export function activate(context: vscode.ExtensionContext) {
 function startClaudeAutopilot(context: vscode.ExtensionContext): void {
     if (isRunning && claudePanel) {
         claudePanel.reveal(vscode.ViewColumn.Two);
-        vscode.window.showInformationMessage('Claude Autopilot is already running - showing existing panel');
+        vscode.window.showInformationMessage('AutoClaude is already running - showing existing panel');
         return;
     }
     
@@ -128,8 +128,8 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
     }
 
     const panel = vscode.window.createWebviewPanel(
-        'claudeAutopilot',
-        'Claude Autopilot',
+        'autoclaude',
+        'AutoClaude',
         vscode.ViewColumn.Two,
         {
             enableScripts: true,
@@ -228,7 +228,7 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                     sendSecuritySettings();
                     break;
                 case 'openSettings':
-                    vscode.commands.executeCommand('workbench.action.openSettings', 'claudeAutopilot');
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'autoclaude');
                     break;
                 case 'getDevelopmentModeSetting':
                     sendDevelopmentModeSetting();
@@ -283,7 +283,7 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                 case 'resetConfig':
                     developmentOnly(() => {
                         vscode.window.showWarningMessage(
-                            'This will reset all Claude Autopilot settings to defaults. Continue?',
+                            'This will reset all AutoClaude settings to defaults. Continue?',
                             'Reset',
                             'Cancel'
                         ).then(selection => {
@@ -323,11 +323,11 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
         clearClaudeOutput();
         setIsRunning(false);
         
-        vscode.window.showInformationMessage('Claude Autopilot panel closed. Claude session continues in background. Use "Start Claude Autopilot" to reopen.');
+        vscode.window.showInformationMessage('AutoClaude panel closed. Claude session continues in background. Use "Start AutoClaude" to reopen.');
     }, null, []);
 
     setIsRunning(true);
-    vscode.window.showInformationMessage('Claude Autopilot started');
+    vscode.window.showInformationMessage('AutoClaude started');
 }
 
 async function getWorkspaceFiles(query: string, page: number = 0): Promise<void> {
@@ -425,12 +425,12 @@ function stopClaudeAutopilot(): void {
         setClaudePanel(null);
     }
 
-    vscode.window.showInformationMessage('Claude Autopilot stopped');
+    vscode.window.showInformationMessage('AutoClaude stopped');
 }
 
 function addMessageToQueue(): void {
     vscode.window.showInputBox({
-        prompt: 'Enter message to add to Claude Autopilot queue',
+        prompt: 'Enter message to add to AutoClaude queue',
         placeHolder: 'Type your message here...'
     }).then(message => {
         if (message) {
@@ -447,7 +447,7 @@ function addMessageToQueue(): void {
 
 function sendDevelopmentModeSetting(): void {
     if (claudePanel) {
-        const config = vscode.workspace.getConfiguration('claudeAutopilot');
+        const config = vscode.workspace.getConfiguration('autoclaude');
         const isDevelopmentMode = config.get<boolean>('developmentMode', false);
         
         claudePanel.webview.postMessage({
@@ -458,7 +458,7 @@ function sendDevelopmentModeSetting(): void {
 }
 
 function toggleDebugLogging(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     const isDevelopmentMode = config.get<boolean>('developmentMode', false);
     
     if (!isDevelopmentMode) {
@@ -541,7 +541,7 @@ async function runScriptCheckLoop(): Promise<void> {
     }
 
     if (!isRunning || !claudePanel) {
-        vscode.window.showErrorMessage('Claude Autopilot must be running to use script check loop');
+        vscode.window.showErrorMessage('AutoClaude must be running to use script check loop');
         return;
     }
 
@@ -574,7 +574,7 @@ async function runScriptLoopWithConfig(scriptConfig: any): Promise<void> {
     }
 
     if (!isRunning || !claudePanel) {
-        vscode.window.showErrorMessage('Claude Autopilot must be running to use script check loop');
+        vscode.window.showErrorMessage('AutoClaude must be running to use script check loop');
         return;
     }
 
@@ -672,7 +672,7 @@ async function runMessageInLoopWithConfig(messageId: string, scriptConfig: any):
     }
 
     if (!isRunning || !claudePanel) {
-        vscode.window.showErrorMessage('Claude Autopilot must be running to use message loop');
+        vscode.window.showErrorMessage('AutoClaude must be running to use message loop');
         return;
     }
 

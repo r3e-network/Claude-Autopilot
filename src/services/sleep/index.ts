@@ -97,7 +97,7 @@ export function stopSleepPrevention(): void {
 }
 
 export function toggleSleepPreventionSetting(enabled: boolean): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     config.update('sleepPrevention.enabled', enabled, vscode.ConfigurationTarget.Global);
     debugLog(`💤 Sleep prevention setting updated: ${enabled}`);
     

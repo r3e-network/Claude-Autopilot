@@ -199,7 +199,7 @@ export function validateConfig(config: Partial<ClaudeAutopilotConfig>): ConfigVa
 }
 
 export function getValidatedConfig(): ClaudeAutopilotConfig {
-    const workspaceConfig = vscode.workspace.getConfiguration('claudeAutopilot');
+    const workspaceConfig = vscode.workspace.getConfiguration('autoclaude');
     
     // Get all configuration values with defaults
     const config: ClaudeAutopilotConfig = {
@@ -253,7 +253,7 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
             'Open Settings'
         ).then(selection => {
             if (selection === 'Open Settings') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'claudeAutopilot');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'autoclaude');
             }
         });
         
@@ -288,7 +288,7 @@ function getDefaultsForInvalidConfig(config: ClaudeAutopilotConfig, errors: Conf
 }
 
 export function resetConfigToDefaults(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     
     // Reset all settings to undefined (which uses defaults)
     const resetPromises = [
@@ -325,7 +325,7 @@ export function showConfigValidationStatus(): void {
             'Reset to Defaults'
         ).then(selection => {
             if (selection === 'Open Settings') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'claudeAutopilot');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'autoclaude');
             } else if (selection === 'Reset to Defaults') {
                 resetConfigToDefaults();
             }
@@ -336,7 +336,7 @@ export function showConfigValidationStatus(): void {
 // Configuration change listener
 export function watchConfigChanges(callback: (config: ClaudeAutopilotConfig) => void): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(event => {
-        if (event.affectsConfiguration('claudeAutopilot')) {
+        if (event.affectsConfiguration('autoclaude')) {
             debugLog('🔧 Claude Autopilot configuration changed, revalidating...');
             const newConfig = getValidatedConfig();
             callback(newConfig);

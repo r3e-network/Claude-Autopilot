@@ -35,7 +35,7 @@ export interface ScriptRunnerConfig {
     continueOnError: boolean;
 }
 
-const AUTOPILOT_FOLDER = '.autopilot';
+const AUTOCLAUDE_FOLDER = '.autoclaude';
 const SCRIPTS_FOLDER = 'scripts';
 const CONFIG_FILE = 'config.json';
 
@@ -60,12 +60,12 @@ export class ScriptRunner {
     }
 
     private async ensureAutopilotFolder(): Promise<void> {
-        const autopilotPath = path.join(this.workspacePath, AUTOPILOT_FOLDER);
+        const autopilotPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER);
         const scriptsPath = path.join(autopilotPath, SCRIPTS_FOLDER);
 
         if (!fs.existsSync(autopilotPath)) {
             fs.mkdirSync(autopilotPath, { recursive: true });
-            debugLog(`Created ${AUTOPILOT_FOLDER} folder`);
+            debugLog(`Created ${AUTOCLAUDE_FOLDER} folder`);
         }
 
         if (!fs.existsSync(scriptsPath)) {
@@ -75,7 +75,7 @@ export class ScriptRunner {
     }
 
     private async loadConfig(): Promise<void> {
-        const configPath = path.join(this.workspacePath, AUTOPILOT_FOLDER, CONFIG_FILE);
+        const configPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER, CONFIG_FILE);
         
         if (fs.existsSync(configPath)) {
             try {
@@ -98,7 +98,7 @@ export class ScriptRunner {
     }
 
     private async saveConfig(): Promise<void> {
-        const configPath = path.join(this.workspacePath, AUTOPILOT_FOLDER, CONFIG_FILE);
+        const configPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER, CONFIG_FILE);
         fs.writeFileSync(configPath, JSON.stringify(this.config, null, 2));
         debugLog('Saved script runner configuration');
     }
@@ -111,7 +111,7 @@ export class ScriptRunner {
                 description: 'Checks for TODO, FIXME, placeholders, and incomplete implementations',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'production-readiness.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'production-readiness.js')
             },
             {
                 id: 'build-check',
@@ -119,7 +119,7 @@ export class ScriptRunner {
                 description: 'Ensures the project can build successfully',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'build-check.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'build-check.js')
             },
             {
                 id: 'test-check',
@@ -127,7 +127,7 @@ export class ScriptRunner {
                 description: 'Runs all tests and ensures they pass',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'test-check.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'test-check.js')
             },
             {
                 id: 'format-check',
@@ -135,7 +135,7 @@ export class ScriptRunner {
                 description: 'Ensures code is properly formatted',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'format-check.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'format-check.js')
             },
             {
                 id: 'github-actions',
@@ -143,15 +143,15 @@ export class ScriptRunner {
                 description: 'Validates GitHub Actions workflows',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'github-actions.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'github-actions.js')
             }
         ];
     }
 
     private async copyPredefinedScripts(): Promise<void> {
-        const scriptsPath = path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER);
+        const scriptsPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER);
         
-        // Write all built-in scripts to the .autopilot/scripts folder
+        // Write all built-in scripts to the .autoclaude/scripts folder
         for (const [filename, content] of Object.entries(BUILTIN_SCRIPTS)) {
             const scriptPath = path.join(scriptsPath, filename);
             
@@ -169,7 +169,7 @@ export class ScriptRunner {
         }
         
         // Create default config if it doesn't exist
-        const configPath = path.join(this.workspacePath, AUTOPILOT_FOLDER, CONFIG_FILE);
+        const configPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER, CONFIG_FILE);
         if (!fs.existsSync(configPath)) {
             fs.writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2));
             debugLog('Created default config.json');
@@ -203,7 +203,7 @@ export class ScriptRunner {
     }
 
     async loadUserScripts(): Promise<void> {
-        const scriptsPath = path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER);
+        const scriptsPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER);
         const files = fs.readdirSync(scriptsPath).filter(f => f.endsWith('.js'));
         
         for (const file of files) {

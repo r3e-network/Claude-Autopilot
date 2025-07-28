@@ -276,7 +276,7 @@ export function recoverWaitingMessages(): void {
 }
 
 export function simulateUsageLimit(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     const isDevelopmentMode = config.get<boolean>('developmentMode', false);
     
     if (!isDevelopmentMode) {
@@ -324,7 +324,7 @@ export function simulateUsageLimit(): void {
 }
 
 export function clearAllTimers(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     const isDevelopmentMode = config.get<boolean>('developmentMode', false);
     
     if (!isDevelopmentMode) {
@@ -357,7 +357,7 @@ export function clearAllTimers(): void {
 }
 
 export function debugQueueState(): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     const isDevelopmentMode = config.get<boolean>('developmentMode', false);
     
     if (!isDevelopmentMode) {

@@ -342,7 +342,7 @@ export function showDependencyStatus(results: Awaited<ReturnType<typeof runDepen
     const message = `Dependencies missing:\n${issues.join('\n')}`;
     
     vscode.window.showErrorMessage(
-        'Claude Autopilot: Missing Dependencies',
+        'AutoClaude: Missing Dependencies',
         'Show Instructions',
         'Retry Check'
     ).then(selection => {
@@ -360,7 +360,7 @@ export function showDependencyStatus(results: Awaited<ReturnType<typeof runDepen
 function showInstallationInstructions(results: Awaited<ReturnType<typeof runDependencyCheck>>): void {
     const { claude, python, wrapper } = results;
     
-    let instructions = 'Claude Autopilot Installation Requirements:\n\n';
+    let instructions = 'AutoClaude Installation Requirements:\n\n';
     
     if (!claude.available) {
         instructions += `🔴 Claude Code Missing:\n${claude.installInstructions}\n\n`;

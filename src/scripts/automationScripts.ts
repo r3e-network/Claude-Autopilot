@@ -106,7 +106,7 @@ async function check() {
 function findCodeFiles(dir) {
     const files = [];
     const extensions = ['.js', '.ts', '.jsx', '.tsx'];
-    const skipDirs = ['.git', 'node_modules', 'dist', 'build', 'coverage', '.autopilot'];
+    const skipDirs = ['.git', 'node_modules', 'dist', 'build', 'coverage', '.autoclaude'];
     
     function scan(currentDir) {
         const items = fs.readdirSync(currentDir);
@@ -203,7 +203,7 @@ async function check() {
 function findCodeFiles(dir) {
     const files = [];
     const extensions = ['.js', '.ts', '.jsx', '.tsx'];
-    const skipDirs = ['.git', 'node_modules', 'dist', 'build', 'coverage', '.autopilot'];
+    const skipDirs = ['.git', 'node_modules', 'dist', 'build', 'coverage', '.autoclaude'];
     
     function scan(currentDir) {
         const items = fs.readdirSync(currentDir);

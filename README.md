@@ -1,13 +1,13 @@
-# Claude Autopilot - Automated Claude Code Task Management
+# AutoClaude - Intelligent Development Automation
 
-[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.claude-autopilot)
-[![Version](https://img.shields.io/badge/version-1.0.2-blue)](https://github.com/r3e-network/Claude-Autopilot/releases/tag/v1.0.2)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v2.0.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Claude Autopilot** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
+**AutoClaude** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
 
 <div align="center">
-  <img src="img/claude-autopilot.png" alt="Claude Autopilot Interface" width="600">
+  <img src="img/autoclaude.png" alt="AutoClaude Interface" width="600">
 </div>
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
@@ -16,7 +16,7 @@
 
 ### 🚀 **24/7 Automated Processing**
 
--   **Set It and Forget It**: Queue hundreds of tasks and let Claude Autopilot work autonomously
+-   **Set It and Forget It**: Queue hundreds of tasks and let AutoClaude work autonomously
 -   **Auto-Resume**: Automatically resume processing when Claude usage limits reset - no manual intervention needed
 -   **Sleep Prevention**: Keeps your computer awake during processing so work continues overnight
 -   **Smart Queue Management**: Process multiple Claude Code tasks automatically with intelligent queueing
@@ -32,7 +32,7 @@
 
 ### ⚙️ **Advanced Configuration**
 
--   **Extensive Settings**: Fine-tune every aspect of Claude Autopilot behavior
+-   **Extensive Settings**: Fine-tune every aspect of AutoClaude behavior
 -   **Configuration Validation**: Built-in validation with helpful error messages
 -   **Development Mode**: Special features and debugging tools for developers
 -   **Sleep Prevention**: Keep your computer awake during long processing sessions
@@ -47,14 +47,14 @@
 -   **GitHub Actions Validation**: Check your CI/CD workflows for errors
 -   **Fix Loop**: Automatically ask Claude to fix issues and re-run checks until all pass
 -   **Message Loop**: Run individual messages in a loop with script checks until they pass
--   **Custom Scripts**: Add your own validation scripts in the `.autopilot` folder
+-   **Custom Scripts**: Add your own validation scripts in the `.autoclaude` folder
 
 ### 📊 **Rich User Interface**
 
 -   **Interactive Webview**: Intuitive interface for managing queues and monitoring progress
 -   **Real-time Updates**: Live status updates and progress tracking
 -   **History Browser**: Browse and filter previous processing runs
--   **Command Palette**: Quick access to all Claude Autopilot commands
+-   **Command Palette**: Quick access to all AutoClaude commands
 
 ## 🚀 Quick Start
 
@@ -66,18 +66,18 @@
 
 ### Installation
 
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=r3e.claude-autopilot)
-2. Or install via command palette: `Extensions: Install Extensions` → Search "Claude Autopilot"
-3. Or install from VSIX: `code --install-extension claude-autopilot-1.0.2.vsix`
-4. **Cursor**: Claude Autopilot works seamlessly in Cursor with the same installation process
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
+2. Or install via command palette: `Extensions: Install Extensions` → Search "AutoClaude"
+3. Or install from VSIX: `code --install-extension autoclaude-1.0.2.vsix`
+4. **Cursor**: AutoClaude works seamlessly in Cursor with the same installation process
 
 ### Basic Usage
 
-1. **Start Claude Autopilot**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start Claude Autopilot`
+1. **Start AutoClaude**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start AutoClaude`
 2. **Add Messages**: Queue up all your tasks - add 10, 50, or 200+ messages
 3. **Start Processing**: Click "Start Processing" and walk away
 4. **Live Your Life**: Go eat dinner, play with kids, sleep, or enjoy your weekend
-5. **Return to Completed Work**: Claude Autopilot handles everything automatically, even through Claude usage limits
+5. **Return to Completed Work**: AutoClaude handles everything automatically, even through Claude usage limits
 
 ### 🔍 Script Runner - Automated Quality Checks
 
@@ -146,7 +146,7 @@ The Script Checks section appears directly above the message input area, providi
    - Set max iterations (1-20, default: 5)
 
 6. **Custom Scripts** 📝
-   - Add your own validation scripts to `.autopilot/scripts/`
+   - Add your own validation scripts to `.autoclaude/scripts/`
    - Scripts automatically appear in the UI
    - Must output JSON format:
    ```json
@@ -157,11 +157,11 @@ The Script Checks section appears directly above the message input area, providi
    }
    ```
    - Support any language (bash, python, node, etc.)
-   - Examples provided in `.autopilot/scripts/examples/`
+   - Examples provided in `.autoclaude/scripts/examples/`
 
 #### Script Configuration
 
-Scripts are configured in `.autopilot/config.json`:
+Scripts are configured in `.autoclaude/config.json`:
 ```json
 {
   "scripts": {
@@ -180,7 +180,7 @@ Scripts are configured in `.autopilot/config.json`:
 
 ### 🔄 Loop Features - Intelligent Task Refinement
 
-Claude Autopilot provides two powerful loop features that ensure your tasks are completed to perfection.
+AutoClaude provides two powerful loop features that ensure your tasks are completed to perfection.
 
 #### 1. Script Fix Loop (Global)
 
@@ -262,15 +262,15 @@ Control loop behavior with these settings:
 
 | Command                          | Description                                      |
 | -------------------------------- | ------------------------------------------------ |
-| `Claude: Start Claude Autopilot` | Start the Claude Autopilot interface and session |
-| `Claude: Stop Claude Autopilot`  | Stop Claude Autopilot and close the session      |
+| `Claude: Start AutoClaude` | Start the AutoClaude interface and session |
+| `Claude: Stop AutoClaude`  | Stop AutoClaude and close the session      |
 | `Claude: Add Message to Queue`   | Add a new message to the processing queue        |
 | `Claude: Run Script Checks`      | Run all enabled validation scripts               |
 | `Claude: Run Script Check Loop`  | Run scripts and auto-fix issues in a loop       |
 
 ## ⚙️ Configuration
 
-Claude Autopilot offers extensive configuration options. Access settings via `File → Preferences → Settings → Extensions → Claude Autopilot`.
+AutoClaude offers extensive configuration options. Access settings via `File → Preferences → Settings → Extensions → AutoClaude`.
 
 ### Queue Management
 
@@ -322,7 +322,7 @@ Claude Autopilot offers extensive configuration options. Access settings via `Fi
 
 ## 🏗️ Architecture
 
-Claude Autopilot follows a modular architecture with clear separation of concerns:
+AutoClaude follows a modular architecture with clear separation of concerns:
 
 ```
 src/
@@ -346,7 +346,7 @@ src/
 ## 🔒 Security & Privacy
 
 -   **Local Processing**: All processing happens locally on your machine
--   **No Data Collection**: Claude Autopilot doesn't collect or transmit personal data
+-   **No Data Collection**: AutoClaude doesn't collect or transmit personal data
 -   **Secure Dependencies**: Validates Claude Code and Python installations
 -   **Permission Awareness**: Uses `--dangerously-skip-permissions` only in trusted environments
 
@@ -356,8 +356,8 @@ src/
 
 ```bash
 # Clone the repository
-git clone https://github.com/benbasha/Claude-Autopilot.git
-cd Claude Autopilot
+git clone https://github.com/benbasha/AutoClaude.git
+cd AutoClaude
 
 # Install dependencies
 npm install
@@ -429,13 +429,13 @@ This enables:
 
 ### Core Concepts
 
-**Queue Processing**: Claude Autopilot maintains a persistent queue of messages that can be processed automatically. Each message represents a task or instruction for Claude Code.
+**Queue Processing**: AutoClaude maintains a persistent queue of messages that can be processed automatically. Each message represents a task or instruction for Claude Code.
 
-**Auto-Resume**: When Claude Code hits usage limits, Claude Autopilot automatically detects this and schedules the queue to resume when limits reset.
+**Auto-Resume**: When Claude Code hits usage limits, AutoClaude automatically detects this and schedules the queue to resume when limits reset.
 
 **Workspace Integration**: Each VS Code workspace maintains its own queue and history, allowing you to manage multiple projects independently.
 
-**Dependency Management**: Claude Autopilot automatically checks for and validates all required dependencies (Claude Code, Python) before starting.
+**Dependency Management**: AutoClaude automatically checks for and validates all required dependencies (Claude Code, Python) before starting.
 
 ### Advanced Features
 
@@ -459,7 +459,7 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 
 ## 👥 Credits
 
--   **Original Author**: [Ben Basha](https://github.com/benbasha) - Created the foundational Claude Autopilot extension
+-   **Original Author**: [Ben Basha](https://github.com/benbasha) - Created the foundational AutoClaude extension
 -   **Current Maintainer**: [Jimmy](https://github.com/r3e-network) (jimmy@r3e.network) - Added script runner, quality checks, and message loop features
 
 ## 📄 License
@@ -474,7 +474,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 -   Ensure Claude Code is installed and in your PATH
 -   Restart VS Code after installing Claude Code
--   Check dependency status in Claude Autopilot panel
+-   Check dependency status in AutoClaude panel
 
 **Python Not Found**
 
@@ -484,20 +484,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Permission Errors**
 
--   Claude Autopilot uses `--dangerously-skip-permissions` for automation
+-   AutoClaude uses `--dangerously-skip-permissions` for automation
 -   Only use in trusted development environments
 -   Disable if working with sensitive data
 
 ### Getting Help
 
--   🐛 [Bug Reports](https://github.com/r3e-network/Claude-Autopilot/issues/new?template=bug_report.md)
--   💡 [Feature Requests](https://github.com/r3e-network/Claude-Autopilot/issues/new?template=feature_request.md)
--   💬 [Discussions](https://github.com/r3e-network/Claude-Autopilot/discussions)
--   📖 [Wiki Documentation](https://github.com/r3e-network/Claude-Autopilot/wiki)
+-   🐛 [Bug Reports](https://github.com/r3e-network/AutoClaude/issues/new?template=bug_report.md)
+-   💡 [Feature Requests](https://github.com/r3e-network/AutoClaude/issues/new?template=feature_request.md)
+-   💬 [Discussions](https://github.com/r3e-network/AutoClaude/discussions)
+-   📖 [Wiki Documentation](https://github.com/r3e-network/AutoClaude/wiki)
 
 ### Support
 
-If you find Claude Autopilot helpful, consider:
+If you find AutoClaude helpful, consider:
 
 -   ⭐ Starring the repository
 -   🐛 Reporting bugs or suggesting features
@@ -508,4 +508,4 @@ If you find Claude Autopilot helpful, consider:
 
 **Made with ❤️ for the Claude Code community**
 
-_Claude Autopilot is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic._
+_AutoClaude is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic._

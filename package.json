@@ -1,8 +1,8 @@
 {
-  "name": "claude-autopilot",
-  "displayName": "Claude Autopilot",
-  "description": "Automated Claude Code task management with queue processing and auto-resume functionality",
-  "version": "1.1.0",
+  "name": "autoclaude",
+  "displayName": "AutoClaude",
+  "description": "Intelligent development automation with comprehensive quality checks and AI-powered assistance",
+  "version": "2.0.0",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
@@ -15,158 +15,158 @@
   "contributes": {
     "commands": [
       {
-        "command": "claude-autopilot.start",
-        "title": "Start Claude Autopilot",
-        "category": "Claude"
+        "command": "autoclaude.start",
+        "title": "Start AutoClaude",
+        "category": "AutoClaude"
       },
       {
-        "command": "claude-autopilot.stop",
-        "title": "Stop Claude Autopilot",
-        "category": "Claude"
+        "command": "autoclaude.stop",
+        "title": "Stop AutoClaude",
+        "category": "AutoClaude"
       },
       {
-        "command": "claude-autopilot.addMessage",
+        "command": "autoclaude.addMessage",
         "title": "Add Message to Queue",
-        "category": "Claude"
+        "category": "AutoClaude"
       },
       {
-        "command": "claude-autopilot.runScriptChecks",
+        "command": "autoclaude.runScriptChecks",
         "title": "Run Script Checks",
-        "category": "Claude"
+        "category": "AutoClaude"
       },
       {
-        "command": "claude-autopilot.runScriptLoop",
+        "command": "autoclaude.runScriptLoop",
         "title": "Run Script Check Loop",
-        "category": "Claude"
+        "category": "AutoClaude"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "command": "claude-autopilot.start",
+          "command": "autoclaude.start",
           "when": "true"
         },
         {
-          "command": "claude-autopilot.stop",
+          "command": "autoclaude.stop",
           "when": "true"
         },
         {
-          "command": "claude-autopilot.addMessage",
+          "command": "autoclaude.addMessage",
           "when": "true"
         },
         {
-          "command": "claude-autopilot.runScriptChecks",
+          "command": "autoclaude.runScriptChecks",
           "when": "true"
         },
         {
-          "command": "claude-autopilot.runScriptLoop",
+          "command": "autoclaude.runScriptLoop",
           "when": "true"
         }
       ]
     },
     "configuration": {
-      "title": "Claude Autopilot",
+      "title": "AutoClaude",
       "properties": {
-        "claudeAutopilot.developmentMode": {
+        "autoclaude.developmentMode": {
           "type": "boolean",
           "default": false,
           "description": "Enable development mode with debug controls and testing features"
         },
-        "claudeAutopilot.queue.maxSize": {
+        "autoclaude.queue.maxSize": {
           "type": "number",
           "default": 1000,
           "minimum": 10,
           "maximum": 10000,
           "description": "Maximum number of messages in queue before cleanup"
         },
-        "claudeAutopilot.queue.maxMessageSize": {
+        "autoclaude.queue.maxMessageSize": {
           "type": "number",
           "default": 50000,
           "minimum": 1000,
           "maximum": 1000000,
           "description": "Maximum size of individual message text (bytes)"
         },
-        "claudeAutopilot.queue.maxOutputSize": {
+        "autoclaude.queue.maxOutputSize": {
           "type": "number",
           "default": 100000,
           "minimum": 1000,
           "maximum": 1000000,
           "description": "Maximum size of message output (bytes)"
         },
-        "claudeAutopilot.queue.retentionHours": {
+        "autoclaude.queue.retentionHours": {
           "type": "number",
           "default": 24,
           "minimum": 1,
           "maximum": 168,
           "description": "Hours to keep completed messages before cleanup"
         },
-        "claudeAutopilot.session.autoStart": {
+        "autoclaude.session.autoStart": {
           "type": "boolean",
           "default": false,
           "description": "Automatically start Claude session when extension activates"
         },
-        "claudeAutopilot.session.skipPermissions": {
+        "autoclaude.session.skipPermissions": {
           "type": "boolean",
           "default": true,
           "description": "Skip Claude CLI permission prompts (use --dangerously-skip-permissions)"
         },
-        "claudeAutopilot.session.scheduledStartTime": {
+        "autoclaude.session.scheduledStartTime": {
           "type": "string",
           "default": "",
           "description": "Schedule session start at specific time (HH:MM format, e.g., '09:30'). Cannot be used with autoStart. Empty string disables scheduling.",
           "pattern": "^(([01]?[0-9]|2[0-3]):[0-5][0-9])?$"
         },
-        "claudeAutopilot.sleepPrevention.enabled": {
+        "autoclaude.sleepPrevention.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Prevent computer from sleeping while processing queue"
         },
-        "claudeAutopilot.sleepPrevention.method": {
+        "autoclaude.sleepPrevention.method": {
           "type": "string",
           "enum": ["auto", "caffeinate", "powershell", "systemd-inhibit"],
           "default": "auto",
           "description": "Method to use for sleep prevention"
         },
-        "claudeAutopilot.history.maxRuns": {
+        "autoclaude.history.maxRuns": {
           "type": "number",
           "default": 20,
           "minimum": 1,
           "maximum": 100,
           "description": "Maximum number of history runs to keep"
         },
-        "claudeAutopilot.history.autoSave": {
+        "autoclaude.history.autoSave": {
           "type": "boolean",
           "default": true,
           "description": "Automatically save workspace history"
         },
-        "claudeAutopilot.history.persistPendingQueue": {
+        "autoclaude.history.persistPendingQueue": {
           "type": "boolean",
           "default": true,
           "description": "Save pending messages to survive VS Code restart"
         },
-        "claudeAutopilot.history.showInUI": {
+        "autoclaude.history.showInUI": {
           "type": "boolean",
           "default": false,
-          "description": "Show history section in the Claude Autopilot interface"
+          "description": "Show history section in the AutoClaude interface"
         },
-        "claudeAutopilot.security.allowDangerousXssbypass": {
+        "autoclaude.security.allowDangerousXssbypass": {
           "type": "boolean",
           "default": false,
           "description": "⚠️ DANGER: Allow bypassing XSS protection in webview content. Only enable if you trust all message content and understand the security risks."
         },
-        "claudeAutopilot.scriptRunner.maxIterations": {
+        "autoclaude.scriptRunner.maxIterations": {
           "type": "number",
           "default": 5,
           "minimum": 1,
           "maximum": 20,
           "description": "Maximum number of iterations for script check loop"
         },
-        "claudeAutopilot.scriptRunner.enabled": {
+        "autoclaude.scriptRunner.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable script runner functionality"
         },
-        "claudeAutopilot.scriptRunner.autoCreateFolder": {
+        "autoclaude.scriptRunner.autoCreateFolder": {
           "type": "boolean",
           "default": true,
           "description": "Automatically create .autopilot folder when starting"

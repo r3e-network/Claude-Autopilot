@@ -1,9 +1,30 @@
 # Changelog
 
-All notable changes to the Claude Autopilot extension will be documented in this file.
+All notable changes to the AutoClaude extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.0.0] - 2025-01-28
+
+### 🎯 Major Rebrand
+
+This release introduces a complete rebrand from "Claude Autopilot" to "AutoClaude" with improved branding and naming conventions.
+
+### Changed
+
+- **Project Name**: Renamed from "Claude Autopilot" to "AutoClaude"
+- **Extension ID**: Changed from `claude-autopilot` to `autoclaude`
+- **Commands**: Updated all command IDs to use `autoclaude` prefix
+- **Configuration**: Renamed all settings from `claudeAutopilot` to `autoclaude`
+- **Folder Structure**: Changed workspace folder from `.autopilot` to `.autoclaude`
+- **UI Labels**: Updated all user-facing text to use "AutoClaude" branding
+
+### Technical
+
+- **Version**: Bumped to 2.0.0 to reflect major branding change
+- **Backward Compatibility**: Users will need to reconfigure settings due to configuration key changes
+- **Migration**: Existing `.autopilot` folders will be automatically renamed to `.autoclaude`
 
 ## [1.1.0] - 2025-01-28
 

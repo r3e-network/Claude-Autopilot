@@ -21,7 +21,7 @@ export function sendSecuritySettings(): void {
                     'Disable XSS Bypass'
                 ).then(selection => {
                     if (selection === 'Disable XSS Bypass') {
-                        const workspaceConfig = vscode.workspace.getConfiguration('claudeAutopilot');
+                        const workspaceConfig = vscode.workspace.getConfiguration('autoclaude');
                         workspaceConfig.update('security.allowDangerousXssbypass', false, vscode.ConfigurationTarget.Global);
                         vscode.window.showInformationMessage('XSS bypass has been disabled for security.');
                         // Send updated setting
@@ -36,7 +36,7 @@ export function sendSecuritySettings(): void {
 }
 
 export function toggleXssbypassSetting(enabled: boolean): void {
-    const config = vscode.workspace.getConfiguration('claudeAutopilot');
+    const config = vscode.workspace.getConfiguration('autoclaude');
     config.update('security.allowDangerousXssbypass', enabled, vscode.ConfigurationTarget.Global);
     debugLog(`🔒 XSS bypass setting updated: ${enabled}`);
     
