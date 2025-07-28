@@ -37,6 +37,17 @@
 -   **Development Mode**: Special features and debugging tools for developers
 -   **Sleep Prevention**: Keep your computer awake during long processing sessions
 
+### 🔍 **Script Runner & Quality Checks**
+
+-   **Automated Code Quality Checks**: Run predefined and custom scripts to ensure code quality
+-   **Production Readiness Check**: Automatically detect TODOs, FIXMEs, placeholders, and incomplete implementations
+-   **Multi-Language Support**: Built-in checks for JavaScript, TypeScript, Go, C++, Rust, C#, Java
+-   **Build & Test Verification**: Ensure your project builds and all tests pass
+-   **Format Checking**: Verify code formatting standards are met
+-   **GitHub Actions Validation**: Check your CI/CD workflows for errors
+-   **Fix Loop**: Automatically ask Claude to fix issues and re-run checks until all pass
+-   **Custom Scripts**: Add your own validation scripts in the `.autopilot` folder
+
 ### 📊 **Rich User Interface**
 
 -   **Interactive Webview**: Intuitive interface for managing queues and monitoring progress
@@ -67,6 +78,24 @@
 4. **Live Your Life**: Go eat dinner, play with kids, sleep, or enjoy your weekend
 5. **Return to Completed Work**: Claude Autopilot handles everything automatically, even through Claude usage limits
 
+### Using Script Runner
+
+The Script Checks section appears above the message input area with all available scripts visible.
+
+1. **Select Scripts**: Check/uncheck scripts to enable or disable them
+2. **Reorder Scripts**: Drag scripts by the handle (☰) to change execution order
+   - Scripts are numbered (1, 2, 3...) to show execution sequence
+   - Order is saved automatically
+3. **Run Script Checks**: Click "Run Checks" to validate your code once
+4. **Run Script Loop**: Click "Run Loop" to automatically fix issues
+   - Set max iterations with the input field (default: 5)
+   - Claude will be asked to fix any issues found
+   - Scripts re-run after fixes in your specified order
+   - Process continues until all checks pass or max iterations reached
+5. **Custom Scripts**: Add your own validation scripts to `.autopilot/scripts/`
+   - Scripts should output JSON with `passed`, `errors`, and optional `warnings`
+   - Custom scripts automatically appear in the list
+
 ## 📋 Commands
 
 | Command                          | Description                                      |
@@ -74,6 +103,8 @@
 | `Claude: Start Claude Autopilot` | Start the Claude Autopilot interface and session |
 | `Claude: Stop Claude Autopilot`  | Stop Claude Autopilot and close the session      |
 | `Claude: Add Message to Queue`   | Add a new message to the processing queue        |
+| `Claude: Run Script Checks`      | Run all enabled validation scripts               |
+| `Claude: Run Script Check Loop`  | Run scripts and auto-fix issues in a loop       |
 
 ## ⚙️ Configuration
 
@@ -117,6 +148,16 @@ Claude Autopilot offers extensive configuration options. Access settings via `Fi
 }
 ```
 
+### Script Runner
+
+```json
+{
+    "claudeAutopilot.scriptRunner.enabled": true,
+    "claudeAutopilot.scriptRunner.maxIterations": 5,
+    "claudeAutopilot.scriptRunner.autoCreateFolder": true
+}
+```
+
 ## 🏗️ Architecture
 
 Claude Autopilot follows a modular architecture with clear separation of concerns:
@@ -126,6 +167,7 @@ src/
 ├── core/           # Core state, types, and configuration
 ├── claude/         # Claude CLI integration and communication
 ├── queue/          # Queue management and processing
+├── scripts/        # Script runner and quality checks
 ├── services/       # External services (health, sleep, dependencies)
 ├── ui/             # User interface and webview management
 └── utils/          # Shared utilities and logging
@@ -137,6 +179,7 @@ src/
 -   **Claude Integration**: Manages Claude Code process and communication
 -   **Dependency Checker**: Validates and manages required dependencies
 -   **Configuration System**: Comprehensive settings with validation
+-   **Script Runner**: Automated quality checks with fix loop capability
 
 ## 🔒 Security & Privacy
 

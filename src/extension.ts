@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import {
     claudePanel, isRunning, setClaudePanel, setIsRunning,
     setExtensionContext, setDebugMode, isDevelopmentMode, developmentOnly,
@@ -15,6 +16,7 @@ import {
 import { recoverWaitingMessages, stopSleepPrevention, stopHealthCheck, startScheduledSession, stopScheduledSession } from './services';
 import { sendSecuritySettings, toggleXssbypassSetting } from './services/security';
 import { debugLog } from './utils';
+import { ScriptRunner } from './scripts';
 
 // Development-only imports
 let simulateUsageLimit: (() => void) | undefined;
@@ -74,7 +76,15 @@ export function activate(context: vscode.ExtensionContext) {
         addMessageToQueue();
     });
 
-    context.subscriptions.push(startCommand, stopCommand, addMessageCommand, configWatcher);
+    const runScriptChecksCommand = vscode.commands.registerCommand('claude-autopilot.runScriptChecks', async () => {
+        await runScriptChecks();
+    });
+
+    const runScriptLoopCommand = vscode.commands.registerCommand('claude-autopilot.runScriptLoop', async () => {
+        await runScriptCheckLoop();
+    });
+
+    context.subscriptions.push(startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand, configWatcher);
     
     // Auto-start or schedule Claude session based on configuration
     if (config.session.autoStart) {
@@ -271,6 +281,15 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                         });
                     });
                     break;
+                case 'runScriptChecks':
+                    runScriptChecks();
+                    break;
+                case 'runScriptLoop':
+                    runScriptLoopWithConfig(message.config);
+                    break;
+                case 'updateScriptOrder':
+                    updateScriptOrder(message.order);
+                    break;
             }
         },
         undefined,
@@ -431,6 +450,168 @@ function toggleDebugLogging(): void {
     
     // Toggle debug logging state (this would need to be implemented in core state)
     vscode.window.showInformationMessage('DEBUG: Debug logging toggled');
+}
+
+async function runScriptChecks(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+    await scriptRunner.initialize();
+    await scriptRunner.loadUserScripts();
+
+    vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'Running script checks...',
+        cancellable: false
+    }, async (progress) => {
+        const { allPassed, results } = await scriptRunner.runChecks();
+        
+        if (allPassed) {
+            vscode.window.showInformationMessage('All script checks passed!');
+        } else {
+            const failedScripts = Array.from(results.entries())
+                .filter(([_, result]) => !result.passed)
+                .map(([scriptId, _]) => scriptId);
+            
+            vscode.window.showWarningMessage(`Script checks failed: ${failedScripts.join(', ')}`);
+        }
+    });
+}
+
+
+async function runScriptCheckLoop(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    if (!isRunning || !claudePanel) {
+        vscode.window.showErrorMessage('Claude Autopilot must be running to use script check loop');
+        return;
+    }
+
+    const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+    await scriptRunner.initialize();
+    await scriptRunner.loadUserScripts();
+
+    const config = scriptRunner.getConfig();
+    const enabledScripts = config.scripts.filter(s => s.enabled);
+    
+    if (enabledScripts.length === 0) {
+        vscode.window.showWarningMessage('No scripts are enabled. Please configure scripts first.');
+        return;
+    }
+
+    vscode.window.showInformationMessage(`Starting script check loop with ${config.maxIterations} max iterations...`);
+    
+    try {
+        await scriptRunner.runCheckLoop();
+    } catch (error) {
+        vscode.window.showErrorMessage(`Script check loop failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+async function runScriptLoopWithConfig(scriptConfig: any): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    if (!isRunning || !claudePanel) {
+        vscode.window.showErrorMessage('Claude Autopilot must be running to use script check loop');
+        return;
+    }
+
+    const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+    await scriptRunner.initialize();
+    await scriptRunner.loadUserScripts();
+
+    // Update configuration based on UI selections
+    if (scriptConfig) {
+        const config = scriptRunner.getConfig();
+        
+        // Update script enabled states and order
+        if (scriptConfig.scripts) {
+            // Reorder scripts based on UI order
+            const orderedScripts: any[] = [];
+            for (const scriptUpdate of scriptConfig.scripts) {
+                const script = config.scripts.find(s => s.id === scriptUpdate.id);
+                if (script) {
+                    script.enabled = scriptUpdate.enabled;
+                    orderedScripts.push(script);
+                }
+            }
+            
+            // Add any remaining scripts that weren't in the UI (e.g., user scripts)
+            for (const script of config.scripts) {
+                if (!orderedScripts.find(s => s.id === script.id)) {
+                    orderedScripts.push(script);
+                }
+            }
+            
+            config.scripts = orderedScripts;
+        }
+        
+        // Update max iterations
+        if (scriptConfig.maxIterations) {
+            config.maxIterations = scriptConfig.maxIterations;
+        }
+        
+        await scriptRunner.updateConfig(config);
+    }
+
+    const config = scriptRunner.getConfig();
+    const enabledScripts = config.scripts.filter(s => s.enabled);
+    
+    if (enabledScripts.length === 0) {
+        vscode.window.showWarningMessage('No scripts are enabled. Please select at least one script.');
+        return;
+    }
+
+    vscode.window.showInformationMessage(`Starting script check loop with ${config.maxIterations} max iterations...`);
+    
+    try {
+        await scriptRunner.runCheckLoop();
+    } catch (error) {
+        vscode.window.showErrorMessage(`Script check loop failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+async function updateScriptOrder(order: string[]): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        return;
+    }
+
+    const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+    await scriptRunner.initialize();
+    
+    const config = scriptRunner.getConfig();
+    
+    // Reorder scripts based on the new order
+    const orderedScripts: any[] = [];
+    for (const scriptId of order) {
+        const script = config.scripts.find(s => s.id === scriptId);
+        if (script) {
+            orderedScripts.push(script);
+        }
+    }
+    
+    // Add any remaining scripts that weren't in the order array
+    for (const script of config.scripts) {
+        if (!orderedScripts.find(s => s.id === script.id)) {
+            orderedScripts.push(script);
+        }
+    }
+    
+    config.scripts = orderedScripts;
+    await scriptRunner.updateConfig(config);
 }
 
 export function deactivate(): void {

@@ -28,6 +28,16 @@
         "command": "claude-autopilot.addMessage",
         "title": "Add Message to Queue",
         "category": "Claude"
+      },
+      {
+        "command": "claude-autopilot.runScriptChecks",
+        "title": "Run Script Checks",
+        "category": "Claude"
+      },
+      {
+        "command": "claude-autopilot.runScriptLoop",
+        "title": "Run Script Check Loop",
+        "category": "Claude"
       }
     ],
     "menus": {
@@ -42,6 +52,14 @@
         },
         {
           "command": "claude-autopilot.addMessage",
+          "when": "true"
+        },
+        {
+          "command": "claude-autopilot.runScriptChecks",
+          "when": "true"
+        },
+        {
+          "command": "claude-autopilot.runScriptLoop",
           "when": "true"
         }
       ]
@@ -135,6 +153,23 @@
           "type": "boolean",
           "default": false,
           "description": "⚠️ DANGER: Allow bypassing XSS protection in webview content. Only enable if you trust all message content and understand the security risks."
+        },
+        "claudeAutopilot.scriptRunner.maxIterations": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum number of iterations for script check loop"
+        },
+        "claudeAutopilot.scriptRunner.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable script runner functionality"
+        },
+        "claudeAutopilot.scriptRunner.autoCreateFolder": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically create .autopilot folder when starting"
         }
       }
     }

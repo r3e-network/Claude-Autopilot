@@ -118,6 +118,66 @@
             </div>
         </div>
 
+        <div class="scripts-section">
+            <div class="scripts-header">
+                <h3>Script Checks</h3>
+                <div class="scripts-controls">
+                    <label style="font-size: 12px; margin-right: 10px;">
+                        Max Iterations: 
+                        <input type="number" id="maxIterations" min="1" max="20" value="5" style="width: 40px; margin-left: 5px;">
+                    </label>
+                    <button onclick="runScriptChecks()" class="btn-secondary btn-small">
+                        <span class="btn-icon">🔍</span>Run Checks
+                    </button>
+                    <button onclick="runScriptLoop()" class="btn-primary btn-small">
+                        <span class="btn-icon">🔄</span>Run Loop
+                    </button>
+                </div>
+            </div>
+            <div class="scripts-config" id="scriptsConfig">
+                <div class="script-item" draggable="true" data-script-id="production-readiness">
+                    <span class="order-number">1.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-production-readiness" checked>
+                        Production Readiness Check
+                    </label>
+                </div>
+                <div class="script-item" draggable="true" data-script-id="build-check">
+                    <span class="order-number">2.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-build-check" checked>
+                        Build Check
+                    </label>
+                </div>
+                <div class="script-item" draggable="true" data-script-id="test-check">
+                    <span class="order-number">3.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-test-check" checked>
+                        Test Check
+                    </label>
+                </div>
+                <div class="script-item" draggable="true" data-script-id="format-check">
+                    <span class="order-number">4.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-format-check" checked>
+                        Format Check
+                    </label>
+                </div>
+                <div class="script-item" draggable="true" data-script-id="github-actions">
+                    <span class="order-number">5.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-github-actions" checked>
+                        GitHub Actions Check
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <div class="queue-section">
             <div class="queue-header">
                 <h3>Message Queue</h3>

@@ -904,3 +904,110 @@ select:focus {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Script Runner Styles */
+.scripts-section {
+    background: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.scripts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.scripts-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.scripts-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.scripts-controls label {
+    display: flex;
+    align-items: center;
+}
+
+.scripts-config {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.script-item {
+    padding: 6px 8px;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: opacity 0.3s, transform 0.3s, background-color 0.2s;
+    position: relative;
+    background: var(--vscode-input-background);
+}
+
+.script-item:hover {
+    background: var(--vscode-list-hoverBackground);
+}
+
+.script-item.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.script-item.drag-over {
+    border-top: 2px solid var(--vscode-charts-blue);
+}
+
+.drag-handle {
+    cursor: move;
+    padding: 0 10px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 16px;
+    user-select: none;
+}
+
+.drag-handle:hover {
+    color: var(--vscode-foreground);
+}
+
+.order-number {
+    display: inline-block;
+    min-width: 24px;
+    text-align: right;
+    margin-right: 8px;
+    color: var(--vscode-charts-blue);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.script-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 13px;
+    flex: 1;
+}
+
+.script-item input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.scripts-controls input[type="number"] {
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    color: var(--vscode-input-foreground);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+

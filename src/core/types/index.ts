@@ -27,3 +27,12 @@ export interface QueueSortConfig {
     field: 'timestamp' | 'status' | 'text';
     direction: 'asc' | 'desc';
 }
+
+export interface ScriptCheckResult {
+    scriptId: string;
+    scriptName: string;
+    passed: boolean;
+    errors: string[];
+    warnings?: string[];
+    timestamp: string;
+}

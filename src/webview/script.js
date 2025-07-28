@@ -1878,3 +1878,133 @@ function updateDevelopmentModeUI(enabled) {
     }
 }
 
+// Script Runner Functions
+let scriptOrder = ['production-readiness', 'build-check', 'test-check', 'format-check', 'github-actions'];
+let draggedScriptElement = null;
+
+// Initialize drag-drop when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initializeScriptDragDrop();
+});
+
+function initializeScriptDragDrop() {
+    const scriptsConfig = document.getElementById('scriptsConfig');
+    if (!scriptsConfig) return;
+
+    const scriptItems = scriptsConfig.querySelectorAll('.script-item');
+    
+    scriptItems.forEach(item => {
+        item.addEventListener('dragstart', handleScriptDragStart);
+        item.addEventListener('dragend', handleScriptDragEnd);
+        item.addEventListener('dragover', handleScriptDragOver);
+        item.addEventListener('drop', handleScriptDrop);
+        item.addEventListener('dragenter', handleScriptDragEnter);
+        item.addEventListener('dragleave', handleScriptDragLeave);
+    });
+}
+
+function handleScriptDragStart(e) {
+    draggedScriptElement = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.innerHTML);
+}
+
+function handleScriptDragEnd(e) {
+    this.classList.remove('dragging');
+    
+    // Remove all drag-over classes
+    const scriptItems = document.querySelectorAll('.script-item');
+    scriptItems.forEach(item => {
+        item.classList.remove('drag-over');
+    });
+}
+
+function handleScriptDragOver(e) {
+    if (e.preventDefault) {
+        e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleScriptDragEnter(e) {
+    this.classList.add('drag-over');
+}
+
+function handleScriptDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleScriptDrop(e) {
+    if (e.stopPropagation) {
+        e.stopPropagation();
+    }
+    
+    if (draggedScriptElement !== this) {
+        const scriptsConfig = document.getElementById('scriptsConfig');
+        const allScripts = Array.from(scriptsConfig.querySelectorAll('.script-item'));
+        const draggedIndex = allScripts.indexOf(draggedScriptElement);
+        const targetIndex = allScripts.indexOf(this);
+        
+        if (draggedIndex < targetIndex) {
+            this.parentNode.insertBefore(draggedScriptElement, this.nextSibling);
+        } else {
+            this.parentNode.insertBefore(draggedScriptElement, this);
+        }
+        
+        // Update script order
+        updateScriptOrder();
+    }
+    
+    return false;
+}
+
+function updateScriptOrder() {
+    const scriptsConfig = document.getElementById('scriptsConfig');
+    const scriptItems = scriptsConfig.querySelectorAll('.script-item');
+    
+    scriptOrder = Array.from(scriptItems).map(item => item.getAttribute('data-script-id'));
+    
+    // Update order numbers
+    scriptItems.forEach((item, index) => {
+        const existingOrderSpan = item.querySelector('.order-number');
+        if (existingOrderSpan) {
+            existingOrderSpan.textContent = `${index + 1}.`;
+        } else {
+            const orderSpan = document.createElement('span');
+            orderSpan.className = 'order-number';
+            orderSpan.textContent = `${index + 1}.`;
+            item.insertBefore(orderSpan, item.firstChild);
+        }
+    });
+    
+    // Save the new order
+    vscode.postMessage({
+        command: 'updateScriptOrder',
+        order: scriptOrder
+    });
+}
+
+function runScriptChecks() {
+    vscode.postMessage({
+        command: 'runScriptChecks'
+    });
+}
+
+function runScriptLoop() {
+    // Gather script configuration from UI with order
+    const scriptConfig = {
+        scripts: scriptOrder.map(scriptId => ({
+            id: scriptId,
+            enabled: document.getElementById(`script-${scriptId}`).checked
+        })),
+        maxIterations: parseInt(document.getElementById('maxIterations').value)
+    };
+
+    vscode.postMessage({
+        command: 'runScriptLoop',
+        config: scriptConfig
+    });
+}
+
