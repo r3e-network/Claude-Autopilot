@@ -110,7 +110,7 @@ export class ScriptRunner {
                 description: 'Checks for TODO, FIXME, placeholders, and incomplete implementations',
                 enabled: true,
                 predefined: true,
-                checkFunction: this.checkProductionReadiness.bind(this)
+                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'production-readiness.js')
             },
             {
                 id: 'build-check',
@@ -118,8 +118,7 @@ export class ScriptRunner {
                 description: 'Ensures the project can build successfully',
                 enabled: true,
                 predefined: true,
-                language: ['javascript', 'typescript', 'golang', 'cpp', 'rust', 'csharp', 'java'],
-                checkFunction: this.checkBuild.bind(this)
+                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'build-check.js')
             },
             {
                 id: 'test-check',
@@ -127,8 +126,7 @@ export class ScriptRunner {
                 description: 'Runs all tests and ensures they pass',
                 enabled: true,
                 predefined: true,
-                language: ['javascript', 'typescript', 'golang', 'cpp', 'rust', 'csharp', 'java'],
-                checkFunction: this.checkTests.bind(this)
+                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'test-check.js')
             },
             {
                 id: 'format-check',
@@ -136,8 +134,7 @@ export class ScriptRunner {
                 description: 'Ensures code is properly formatted',
                 enabled: true,
                 predefined: true,
-                language: ['javascript', 'typescript', 'golang', 'cpp', 'rust', 'csharp', 'java'],
-                checkFunction: this.checkFormat.bind(this)
+                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'format-check.js')
             },
             {
                 id: 'github-actions',
@@ -145,20 +142,47 @@ export class ScriptRunner {
                 description: 'Validates GitHub Actions workflows',
                 enabled: true,
                 predefined: true,
-                checkFunction: this.checkGitHubActions.bind(this)
+                path: path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'github-actions.js')
             }
         ];
     }
 
     private async copyPredefinedScripts(): Promise<void> {
         const scriptsPath = path.join(this.workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER);
+        const extensionPath = vscode.extensions.getExtension('r3e.claude-autopilot')?.extensionPath || 
+                             vscode.extensions.getExtension('claude-autopilot')?.extensionPath;
         
+        if (!extensionPath) {
+            debugLog('Extension path not found, skipping predefined scripts copy');
+            return;
+        }
+        
+        const predefinedScriptsPath = path.join(extensionPath, '.autopilot', 'scripts');
+        
+        // If the predefined scripts don't exist in extension, generate them
+        if (!fs.existsSync(predefinedScriptsPath)) {
+            debugLog('Predefined scripts not found in extension, generating...');
+            for (const script of this.config.scripts.filter(s => s.predefined)) {
+                const scriptPath = path.join(scriptsPath, `${script.id}.js`);
+                if (!fs.existsSync(scriptPath)) {
+                    const scriptContent = this.generateScriptContent(script);
+                    fs.writeFileSync(scriptPath, scriptContent);
+                    debugLog(`Generated predefined script: ${script.id}`);
+                }
+            }
+            return;
+        }
+        
+        // Copy predefined scripts from extension
         for (const script of this.config.scripts.filter(s => s.predefined)) {
-            const scriptPath = path.join(scriptsPath, `${script.id}.js`);
-            if (!fs.existsSync(scriptPath)) {
-                const scriptContent = this.generateScriptContent(script);
-                fs.writeFileSync(scriptPath, scriptContent);
-                debugLog(`Created predefined script: ${script.id}`);
+            const sourcePath = path.join(predefinedScriptsPath, `${script.id}.js`);
+            const destPath = path.join(scriptsPath, `${script.id}.js`);
+            
+            if (!fs.existsSync(destPath) && fs.existsSync(sourcePath)) {
+                fs.copyFileSync(sourcePath, destPath);
+                // Make executable
+                fs.chmodSync(destPath, '755');
+                debugLog(`Copied predefined script: ${script.id}`);
             }
         }
     }
@@ -386,30 +410,6 @@ check().then(result => {
         return implementations[scriptId] || '// Script implementation not found';
     }
 
-    private async checkProductionReadiness(workspacePath: string): Promise<ScriptResult> {
-        const scriptPath = path.join(workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'production-readiness.js');
-        return this.runScript(scriptPath);
-    }
-
-    private async checkBuild(workspacePath: string): Promise<ScriptResult> {
-        const scriptPath = path.join(workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'build-check.js');
-        return this.runScript(scriptPath);
-    }
-
-    private async checkTests(workspacePath: string): Promise<ScriptResult> {
-        const scriptPath = path.join(workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'test-check.js');
-        return this.runScript(scriptPath);
-    }
-
-    private async checkFormat(workspacePath: string): Promise<ScriptResult> {
-        const scriptPath = path.join(workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'format-check.js');
-        return this.runScript(scriptPath);
-    }
-
-    private async checkGitHubActions(workspacePath: string): Promise<ScriptResult> {
-        const scriptPath = path.join(workspacePath, AUTOPILOT_FOLDER, SCRIPTS_FOLDER, 'github-actions.js');
-        return this.runScript(scriptPath);
-    }
 
     private async runScript(scriptPath: string): Promise<ScriptResult> {
         try {
@@ -471,9 +471,7 @@ check().then(result => {
             debugLog(`Running script: ${script.name}`);
             
             let result: ScriptResult;
-            if (script.checkFunction) {
-                result = await script.checkFunction(this.workspacePath);
-            } else if (script.path) {
+            if (script.path) {
                 result = await this.runScript(script.path);
             } else {
                 result = {

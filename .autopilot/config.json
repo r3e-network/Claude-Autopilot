@@ -1,0 +1,40 @@
+{
+  "scripts": [
+    {
+      "id": "production-readiness",
+      "name": "Production Readiness Check",
+      "description": "Checks for TODO, FIXME, placeholders, and incomplete implementations",
+      "enabled": true,
+      "order": 1
+    },
+    {
+      "id": "build-check",
+      "name": "Build Check",
+      "description": "Ensures the project can build successfully",
+      "enabled": true,
+      "order": 2
+    },
+    {
+      "id": "test-check",
+      "name": "Test Check",
+      "description": "Runs all tests and ensures they pass",
+      "enabled": true,
+      "order": 3
+    },
+    {
+      "id": "format-check",
+      "name": "Format Check",
+      "description": "Ensures code is properly formatted",
+      "enabled": true,
+      "order": 4
+    },
+    {
+      "id": "github-actions",
+      "name": "GitHub Actions Check",
+      "description": "Validates GitHub Actions workflows",
+      "enabled": true,
+      "order": 5
+    }
+  ],
+  "maxIterations": 5
+}
