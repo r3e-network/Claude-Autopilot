@@ -1,0 +1,117 @@
+name: Build and Release (CLI)
+
+on:
+  push:
+    branches:
+      - 'release/v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.0.4)'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        npm install
+        npm install -g @vscode/vsce
+        
+    - name: Extract version
+      id: extract_version
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          # Extract version from branch name (e.g., release/v0.0.3 -> 0.0.3)
+          VERSION=$(echo ${GITHUB_REF#refs/heads/release/v})
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+        
+    - name: Validate version in package.json
+      run: |
+        PACKAGE_VERSION=$(node -p "require('./package.json').version")
+        if [[ "$PACKAGE_VERSION" != "${{ steps.extract_version.outputs.VERSION }}" ]]; then
+          echo "Error: package.json version ($PACKAGE_VERSION) doesn't match expected version (${{ steps.extract_version.outputs.VERSION }})"
+          exit 1
+        fi
+        
+    - name: Build extension
+      run: npm run compile
+        
+    - name: Package extension
+      run: vsce package --no-dependencies
+        
+    - name: Get package filename
+      id: get_filename
+      run: |
+        FILENAME=$(ls *.vsix | head -1)
+        echo "FILENAME=$FILENAME" >> $GITHUB_OUTPUT
+        echo "Package: $FILENAME"
+        
+    - name: Create Release with GitHub CLI
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        VERSION="${{ steps.extract_version.outputs.VERSION }}"
+        FILENAME="${{ steps.get_filename.outputs.FILENAME }}"
+        
+        # Check if release already exists
+        if gh release view "v$VERSION" >/dev/null 2>&1; then
+          echo "Release v$VERSION already exists, uploading asset..."
+          gh release upload "v$VERSION" "$FILENAME" --clobber
+        else
+          echo "Creating new release v$VERSION..."
+          
+          # Get changelog for this version
+          CHANGELOG=$(awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d')
+          
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          fi
+          
+          # Create release
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes "## Claude Autopilot v$VERSION
+
+### Installation
+
+1. Download the \`.vsix\` file from the assets below
+2. Open VS Code
+3. Go to Extensions view (Ctrl+Shift+X)
+4. Click on the \"...\" menu and select \"Install from VSIX...\"
+5. Select the downloaded file
+
+### What's New
+
+$CHANGELOG
+
+### Features
+
+- 🚀 24/7 Automated Processing
+- 🔍 Script Runner & Quality Checks
+- 🔄 Message Loop for Individual Tasks
+- 📊 Rich User Interface" \
+            "$FILENAME"
+        fi
+        
+        echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+        echo "Download URL: https://github.com/${{ github.repository }}/releases/download/v$VERSION/$FILENAME"

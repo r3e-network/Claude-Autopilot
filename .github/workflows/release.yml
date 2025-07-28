@@ -64,9 +64,19 @@ jobs:
         echo "FILENAME=$FILENAME" >> $GITHUB_OUTPUT
         echo "Package: $FILENAME"
         
-    - name: Create Release
+    - name: Check if tag exists
+      id: check_tag
+      run: |
+        if git rev-parse "v${{ steps.extract_version.outputs.VERSION }}" >/dev/null 2>&1; then
+          echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+        else
+          echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create or Get Release
       id: create_release
       uses: actions/create-release@v1
+      if: steps.check_tag.outputs.TAG_EXISTS == 'false'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
