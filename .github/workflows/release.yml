@@ -14,10 +14,15 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
       
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -26,8 +31,10 @@ jobs:
         
     - name: Install dependencies
       run: |
-        npm install
-        npm install -g @vscode/vsce
+        npm ci
+        
+    - name: Install vsce
+      run: npm install -g @vscode/vsce
         
     - name: Extract version
       id: extract_version
@@ -64,61 +71,45 @@ jobs:
         echo "FILENAME=$FILENAME" >> $GITHUB_OUTPUT
         echo "Package: $FILENAME"
         
-    - name: Check if tag exists
-      id: check_tag
+    - name: Create Release with GitHub CLI
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if git rev-parse "v${{ steps.extract_version.outputs.VERSION }}" >/dev/null 2>&1; then
-          echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+        VERSION="${{ steps.extract_version.outputs.VERSION }}"
+        FILENAME="${{ steps.get_filename.outputs.FILENAME }}"
+        
+        # Check if release already exists
+        if gh release view "v$VERSION" >/dev/null 2>&1; then
+          echo "Release v$VERSION already exists, uploading asset..."
+          gh release upload "v$VERSION" "$FILENAME" --clobber
         else
-          echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+          echo "Creating new release v$VERSION..."
+          
+          # Create release with the VSIX file
+          gh release create "v$VERSION" \
+            --title "Release v$VERSION" \
+            --notes "## Claude Autopilot v$VERSION
+
+### Installation
+
+1. Download the \`.vsix\` file from the assets below
+2. Open VS Code
+3. Go to Extensions view (Ctrl+Shift+X)
+4. Click on the \"...\" menu and select \"Install from VSIX...\"
+5. Select the downloaded file
+
+### What's New
+
+See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+### Features
+
+- 🚀 24/7 Automated Processing
+- 🔍 Script Runner & Quality Checks
+- 🔄 Message Loop for Individual Tasks
+- 📊 Rich User Interface" \
+            "$FILENAME"
         fi
         
-    - name: Create or Get Release
-      id: create_release
-      uses: actions/create-release@v1
-      if: steps.check_tag.outputs.TAG_EXISTS == 'false'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: v${{ steps.extract_version.outputs.VERSION }}
-        release_name: Release v${{ steps.extract_version.outputs.VERSION }}
-        body: |
-          ## Claude Autopilot v${{ steps.extract_version.outputs.VERSION }}
-          
-          ### Installation
-          
-          1. Download the `.vsix` file from the assets below
-          2. Open VS Code
-          3. Go to Extensions view (Ctrl+Shift+X)
-          4. Click on the "..." menu and select "Install from VSIX..."
-          5. Select the downloaded file
-          
-          ### What's New
-          
-          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
-          
-          ### Features
-          
-          - 🚀 24/7 Automated Processing
-          - 🔍 Script Runner & Quality Checks
-          - 🔄 Message Loop for Individual Tasks
-          - 📊 Rich User Interface
-          
-        draft: false
-        prerelease: false
-        
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./${{ steps.get_filename.outputs.FILENAME }}
-        asset_name: ${{ steps.get_filename.outputs.FILENAME }}
-        asset_content_type: application/zip
-        
-    - name: Create release branch protection
-      if: github.event_name == 'push'
-      run: |
-        echo "Release created successfully!"
-        echo "Download URL: https://github.com/${{ github.repository }}/releases/download/v${{ steps.extract_version.outputs.VERSION }}/${{ steps.get_filename.outputs.FILENAME }}"
+        echo "Release URL: https://github.com/${{ github.repository }}/releases/tag/v$VERSION"
+        echo "Download URL: https://github.com/${{ github.repository }}/releases/download/v$VERSION/$FILENAME"
