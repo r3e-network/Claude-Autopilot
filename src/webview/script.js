@@ -9,6 +9,10 @@ let sessionState = {
 let historyData = [];
 let draggedIndex = -1;
 let allowDangerousXssbypass = false;
+let attachedScripts = new Set(); // Scripts attached to current message
+let availableScripts = []; // Available scripts from backend
+let scriptSuggestionsVisible = false;
+let selectedSuggestionIndex = -1;
 
 // Security utilities
 function sanitizeHtml(unsafe) {
@@ -64,13 +68,19 @@ function createSafeElement(tagName, textContent, className) {
 function addMessage() {
     try {
         const input = document.getElementById('messageInput');
-        const message = input.value.trim();
+        let message = input.value.trim();
 
         if (!message) {
             return;
         }
 
-        const validation = validateMessage(message);
+        // Parse and remove script mentions from message text
+        const { cleanText, mentionedScripts } = parseScriptMentions(message);
+        
+        // Combine mentioned scripts with manually attached scripts
+        const allAttachedScripts = [...attachedScripts, ...mentionedScripts];
+
+        const validation = validateMessage(cleanText);
         if (!validation.valid) {
             showError(validation.error);
             return;
@@ -78,10 +88,12 @@ function addMessage() {
 
         vscode.postMessage({
             command: 'addMessage',
-            text: message
+            text: cleanText,
+            attachedScripts: Array.from(new Set(allAttachedScripts)) // Remove duplicates
         });
 
         input.value = '';
+        clearAttachedScripts();
     } catch (error) {
         console.error('Error adding message:', error);
         showError('Failed to add message');
@@ -341,9 +353,31 @@ function renderQueue() {
             // Create text content - SAFELY
             const textDiv = createSafeElement('div', item.text, 'queue-item-text');
             
+            // Create script badges if message has attached scripts
+            let scriptBadges = null;
+            if (item.attachedScripts && item.attachedScripts.length > 0) {
+                scriptBadges = document.createElement('div');
+                scriptBadges.className = 'queue-item-scripts';
+                
+                item.attachedScripts.forEach(scriptId => {
+                    const script = availableScripts.find(s => s.id === scriptId);
+                    if (script) {
+                        const badge = document.createElement('span');
+                        badge.className = 'queue-script-badge';
+                        badge.textContent = `${getScriptIcon(script)} ${script.name}`;
+                        badge.title = script.description;
+                        scriptBadges.appendChild(badge);
+                    }
+                });
+            }
+            
             queueItem.appendChild(actions);
             queueItem.appendChild(header);
             queueItem.appendChild(textDiv);
+            
+            if (scriptBadges) {
+                queueItem.appendChild(scriptBadges);
+            }
             
             if (additionalContent) {
                 queueItem.appendChild(additionalContent);
@@ -925,6 +959,9 @@ window.addEventListener('message', event => {
             break;
         case 'workspaceFilesResult':
             renderFileAutocomplete(message.files, message.pagination);
+            break;
+        case 'setAvailableScripts':
+            setAvailableScripts(message.scripts);
             break;
     }
 });
@@ -2061,4 +2098,225 @@ function runMessageInLoop(messageId) {
         });
     }
 }
+
+// Script mentions functionality
+function initializeScriptMentions() {
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.addEventListener('input', handleMessageInput);
+        messageInput.addEventListener('keydown', handleMessageKeydown);
+        
+        // Request available scripts from backend
+        vscode.postMessage({ command: 'getAvailableScripts' });
+    }
+}
+
+function handleMessageInput(event) {
+    const input = event.target;
+    const text = input.value;
+    const cursorPos = input.selectionStart;
+    
+    // Check if we're typing after an @ symbol
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (atMatch) {
+        const query = atMatch[1].toLowerCase();
+        showScriptSuggestions(query, cursorPos - atMatch[0].length);
+    } else {
+        hideScriptSuggestions();
+    }
+}
+
+function handleMessageKeydown(event) {
+    if (!scriptSuggestionsVisible) {
+        // Handle Ctrl+Enter or Cmd+Enter for adding message
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            addMessage();
+        }
+        return;
+    }
+    
+    const suggestions = document.querySelectorAll('.script-suggestion-item');
+    
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+            updateSuggestionSelection();
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, -1);
+            updateSuggestionSelection();
+            break;
+        case 'Enter':
+        case 'Tab':
+            event.preventDefault();
+            if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+                selectScript(suggestions[selectedSuggestionIndex].dataset.scriptId);
+            }
+            break;
+        case 'Escape':
+            event.preventDefault();
+            hideScriptSuggestions();
+            break;
+    }
+}
+
+function showScriptSuggestions(query, atPosition) {
+    const suggestions = availableScripts.filter(script => 
+        script.name.toLowerCase().includes(query) || 
+        script.id.toLowerCase().includes(query)
+    );
+    
+    if (suggestions.length === 0) {
+        hideScriptSuggestions();
+        return;
+    }
+    
+    const container = document.getElementById('scriptSuggestions');
+    container.innerHTML = '';
+    
+    suggestions.forEach((script, index) => {
+        const item = document.createElement('div');
+        item.className = 'script-suggestion-item';
+        item.dataset.scriptId = script.id;
+        
+        item.innerHTML = `
+            <span class="script-suggestion-icon">${getScriptIcon(script)}</span>
+            <div>
+                <div class="script-suggestion-name">${script.name}</div>
+                <div class="script-suggestion-description">${script.description}</div>
+            </div>
+        `;
+        
+        item.addEventListener('click', () => selectScript(script.id));
+        container.appendChild(item);
+    });
+    
+    container.style.display = 'block';
+    scriptSuggestionsVisible = true;
+    selectedSuggestionIndex = 0;
+    updateSuggestionSelection();
+}
+
+function hideScriptSuggestions() {
+    const container = document.getElementById('scriptSuggestions');
+    container.style.display = 'none';
+    scriptSuggestionsVisible = false;
+    selectedSuggestionIndex = -1;
+}
+
+function updateSuggestionSelection() {
+    const suggestions = document.querySelectorAll('.script-suggestion-item');
+    suggestions.forEach((item, index) => {
+        item.classList.toggle('active', index === selectedSuggestionIndex);
+    });
+}
+
+function selectScript(scriptId) {
+    const input = document.getElementById('messageInput');
+    const text = input.value;
+    const cursorPos = input.selectionStart;
+    
+    // Find the @ mention to replace
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (atMatch) {
+        const script = availableScripts.find(s => s.id === scriptId);
+        if (script) {
+            // Replace the @ mention with the script name
+            const beforeAt = text.substring(0, cursorPos - atMatch[0].length);
+            const afterCursor = text.substring(cursorPos);
+            const newText = beforeAt + `@${script.id} ` + afterCursor;
+            
+            input.value = newText;
+            input.setSelectionRange(
+                cursorPos - atMatch[0].length + script.id.length + 2,
+                cursorPos - atMatch[0].length + script.id.length + 2
+            );
+            
+            // Add to attached scripts
+            attachedScripts.add(scriptId);
+            updateAttachedScriptsDisplay();
+        }
+    }
+    
+    hideScriptSuggestions();
+    input.focus();
+}
+
+function getScriptIcon(script) {
+    if (script.id.includes('automation') || script.id.includes('ai-') || script.id.includes('tdd-') || script.id.includes('doc-')) {
+        return '🤖';
+    }
+    return '🔍';
+}
+
+function updateAttachedScriptsDisplay() {
+    const container = document.getElementById('attachedScripts');
+    const list = document.getElementById('attachedScriptsList');
+    
+    if (attachedScripts.size === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    list.innerHTML = '';
+    
+    attachedScripts.forEach(scriptId => {
+        const script = availableScripts.find(s => s.id === scriptId);
+        if (script) {
+            const tag = document.createElement('span');
+            tag.className = 'attached-script-tag';
+            tag.innerHTML = `
+                ${getScriptIcon(script)} ${script.name}
+                <button class="attached-script-remove" onclick="removeAttachedScript('${scriptId}')" title="Remove script">×</button>
+            `;
+            list.appendChild(tag);
+        }
+    });
+}
+
+function removeAttachedScript(scriptId) {
+    attachedScripts.delete(scriptId);
+    updateAttachedScriptsDisplay();
+}
+
+function clearAttachedScripts() {
+    attachedScripts.clear();
+    updateAttachedScriptsDisplay();
+}
+
+function parseScriptMentions(text) {
+    const mentionedScripts = [];
+    let cleanText = text;
+    
+    // Find all @script mentions
+    const mentions = text.match(/@(\w+)/g);
+    if (mentions) {
+        mentions.forEach(mention => {
+            const scriptId = mention.substring(1); // Remove @
+            const script = availableScripts.find(s => s.id === scriptId);
+            if (script) {
+                mentionedScripts.push(scriptId);
+                // Remove the mention from clean text
+                cleanText = cleanText.replace(new RegExp(`@${scriptId}\\s*`, 'g'), '');
+            }
+        });
+    }
+    
+    return { cleanText: cleanText.trim(), mentionedScripts };
+}
+
+function setAvailableScripts(scripts) {
+    availableScripts = scripts;
+}
+
+// Initialize script mentions when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeScriptMentions);
 

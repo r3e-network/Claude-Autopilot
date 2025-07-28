@@ -25,7 +25,8 @@ export function duplicateMessageInQueue(messageId: string): void {
             id: generateMessageId(),
             text: message.text,
             timestamp: new Date().toISOString(),
-            status: 'pending'
+            status: 'pending',
+            attachedScripts: message.attachedScripts
         };
         
         const originalIndex = messageQueue.findIndex(msg => msg.id === messageId);
@@ -111,12 +112,13 @@ export function clearMessageQueue(): void {
     vscode.window.showInformationMessage('Message queue cleared');
 }
 
-export function addMessageToQueueFromWebview(message: string): void {
+export function addMessageToQueueFromWebview(message: string, attachedScripts?: string[]): void {
     const messageItem: MessageItem = {
         id: generateMessageId(),
         text: message,
         timestamp: new Date().toISOString(),
-        status: 'pending'
+        status: 'pending',
+        attachedScripts: attachedScripts && attachedScripts.length > 0 ? attachedScripts : undefined
     };
 
     // Apply size limits to the new message

@@ -5,6 +5,50 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-28
+
+### 🎯 @Script Mentions Feature
+
+This release introduces a powerful new way to attach quality checks to specific messages using @mentions.
+
+### Added
+
+- **@Script Mentions**: Type `@` in the message input to see a dropdown of available scripts
+  - Auto-completion with arrow key navigation
+  - Visual script categories (🔍 Basic checks, 🤖 Automation features)
+  - Real-time filtering as you type
+  - Keyboard shortcuts: Enter/Tab to select, Escape to cancel
+
+- **Script Attachment UI**: 
+  - Attached scripts shown as removable tags below message input
+  - Clear visual indicators with script icons and names
+  - Easy removal with × button on each tag
+
+- **Queue Script Badges**: 
+  - Messages display blue badges for attached scripts
+  - Hover tooltips show script descriptions
+  - Visual distinction in queue for messages with scripts
+
+- **Automatic Script Execution**:
+  - Scripts run automatically after message completion
+  - Sequential execution with detailed logging
+  - Results shown in VS Code notifications
+  - Non-blocking: script failures don't interrupt message flow
+
+### Improved
+
+- **Message Processing**: Enhanced to support script execution after completion
+- **UI/UX**: Professional dropdown interface with smooth animations
+- **Error Handling**: Robust error handling for script execution
+- **TypeScript Types**: Extended MessageItem type to support attachedScripts
+
+### Technical
+
+- **Frontend**: New script mention system with dropdown and tag management
+- **Backend**: Updated message queue and processing logic
+- **Integration**: Seamless integration with existing script runner
+- **Performance**: Efficient script execution without blocking main flow
+
 ## [2.0.0] - 2025-01-28
 
 ### 🎯 Major Rebrand

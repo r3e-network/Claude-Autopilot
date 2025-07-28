@@ -6,6 +6,7 @@ import { updateWebviewContent, updateSessionState } from '../../ui/webview';
 import { saveWorkspaceHistory, ensureHistoryRun, updateMessageStatusInHistory } from '../../queue/processor/history';
 import { TIMEOUT_MS, ANSI_CLEAR_SCREEN_PATTERNS } from '../../core/constants';
 import { startClaudeSession } from '../../claude/session';
+import { ScriptRunner } from '../../scripts';
 
 export async function processNextMessage(): Promise<void> {
     debugLog('--- PROCESSING NEXT MESSAGE ---');
@@ -71,6 +72,16 @@ export async function processNextMessage(): Promise<void> {
         updateMessageStatusInHistory(message.id, 'completed');
         updateWebviewContent();
         saveWorkspaceHistory();
+        
+        // Run attached scripts if any
+        if (message.attachedScripts && message.attachedScripts.length > 0) {
+            try {
+                await runAttachedScripts(message);
+            } catch (scriptError) {
+                debugLog(`⚠️ Script execution failed for message #${message.id}: ${scriptError}`);
+                // Don't fail the entire message for script errors, just log them
+            }
+        }
         
         setTimeout(() => {
             debugLog('Processing next message after delay...');
@@ -394,4 +405,80 @@ export function stopProcessingQueue(): void {
     updateWebviewContent();
     updateSessionState();
     vscode.window.showInformationMessage('Processing stopped. Claude session remains active.');
+}
+
+async function runAttachedScripts(message: MessageItem): Promise<void> {
+    if (!message.attachedScripts || message.attachedScripts.length === 0) {
+        return;
+    }
+    
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        debugLog('⚠️ No workspace folder found, skipping script execution');
+        return;
+    }
+    
+    debugLog(`🔧 Running ${message.attachedScripts.length} attached scripts for message #${message.id}`);
+    
+    try {
+        const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+        await scriptRunner.initialize();
+        await scriptRunner.loadUserScripts();
+        
+        const results: { [scriptId: string]: any } = {};
+        let allPassed = true;
+        
+        // Run each attached script
+        for (const scriptId of message.attachedScripts) {
+            debugLog(`🔧 Running attached script: ${scriptId}`);
+            
+            try {
+                const result = await scriptRunner.runSingleCheck(scriptId);
+                if (result) {
+                    results[scriptId] = result;
+                    if (!result.passed) {
+                        allPassed = false;
+                    }
+                    
+                    debugLog(`${result.passed ? '✅' : '❌'} Script ${scriptId}: ${result.passed ? 'PASSED' : 'FAILED'}`);
+                    if (!result.passed && result.errors.length > 0) {
+                        debugLog(`   Errors: ${result.errors.join(', ')}`);
+                    }
+                } else {
+                    debugLog(`⚠️ Script ${scriptId} not found or failed to execute`);
+                }
+            } catch (scriptError) {
+                debugLog(`❌ Error running script ${scriptId}: ${scriptError}`);
+                allPassed = false;
+            }
+        }
+        
+        // Show summary notification
+        const scriptNames = message.attachedScripts
+            .map(id => {
+                const config = scriptRunner.getConfig();
+                const script = config.scripts.find(s => s.id === id);
+                return script?.name || id;
+            })
+            .join(', ');
+            
+        if (allPassed) {
+            vscode.window.showInformationMessage(`✅ All attached scripts passed: ${scriptNames}`);
+        } else {
+            const failedScripts = Object.entries(results)
+                .filter(([_, result]) => !result.passed)
+                .map(([scriptId, _]) => {
+                    const config = scriptRunner.getConfig();
+                    const script = config.scripts.find(s => s.id === scriptId);
+                    return script?.name || scriptId;
+                })
+                .join(', ');
+                
+            vscode.window.showWarningMessage(`❌ Some attached scripts failed: ${failedScripts}`);
+        }
+        
+    } catch (error) {
+        debugLog(`❌ Error running attached scripts: ${error}`);
+        vscode.window.showErrorMessage(`Failed to run attached scripts: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }

@@ -8,6 +8,7 @@ export interface MessageItem {
     completedAt?: string;
     waitUntil?: number;
     waitSeconds?: number;
+    attachedScripts?: string[]; // Array of script IDs to run with this message
 }
 
 export interface HistoryRun {

@@ -170,7 +170,10 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
         (message: any) => {
             switch (message.command) {
                 case 'addMessage':
-                    addMessageToQueueFromWebview(message.text);
+                    addMessageToQueueFromWebview(message.text, message.attachedScripts);
+                    break;
+                case 'getAvailableScripts':
+                    sendAvailableScriptsToWebview();
                     break;
                 case 'getWorkspaceFiles':
                     getWorkspaceFiles(message.query || '', message.page || 0);
@@ -468,6 +471,34 @@ function toggleDebugLogging(): void {
     
     // Toggle debug logging state (this would need to be implemented in core state)
     vscode.window.showInformationMessage('DEBUG: Debug logging toggled');
+}
+
+async function sendAvailableScriptsToWebview(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder || !claudePanel) {
+        return;
+    }
+
+    try {
+        const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+        await scriptRunner.initialize();
+        await scriptRunner.loadUserScripts();
+        
+        const config = scriptRunner.getConfig();
+        const availableScripts = config.scripts.map(script => ({
+            id: script.id,
+            name: script.name,
+            description: script.description,
+            enabled: script.enabled
+        }));
+
+        claudePanel.webview.postMessage({
+            command: 'setAvailableScripts',
+            scripts: availableScripts
+        });
+    } catch (error) {
+        debugLog(`Error getting available scripts: ${error}`);
+    }
 }
 
 async function runSingleScript(scriptId: string): Promise<void> {

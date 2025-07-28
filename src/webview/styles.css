@@ -1122,3 +1122,126 @@ select:focus {
     background: #7b1fa2;
 }
 
+/* Script suggestions and mentions */
+.message-input-container {
+    position: relative;
+}
+
+.script-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-widget-border);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.script-suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    transition: background-color 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.script-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.script-suggestion-item:hover,
+.script-suggestion-item.selected {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.script-suggestion-item.active {
+    background: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.script-suggestion-icon {
+    font-size: 14px;
+}
+
+.script-suggestion-name {
+    font-weight: 500;
+    font-size: 13px;
+}
+
+.script-suggestion-description {
+    font-size: 11px;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.8;
+}
+
+.attached-scripts {
+    margin-top: 8px;
+    padding: 8px;
+    background: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 4px;
+}
+
+.attached-scripts-header {
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    margin-bottom: 6px;
+}
+
+.attached-scripts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.attached-script-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--vscode-charts-blue);
+    color: var(--vscode-editor-background);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.attached-script-remove {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0;
+    margin-left: 2px;
+    opacity: 0.8;
+    transition: opacity 0.15s ease;
+}
+
+.attached-script-remove:hover {
+    opacity: 1;
+}
+
+/* Queue item script badges */
+.queue-item-scripts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.queue-script-badge {
+    background: var(--vscode-charts-blue);
+    color: var(--vscode-editor-background);
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 500;
+}
+

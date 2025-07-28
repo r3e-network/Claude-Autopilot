@@ -24,11 +24,24 @@
 
         <div class="input-section">
             <h3>Add Message to Queue</h3>
-            <textarea id="messageInput" placeholder="Enter your message for Claude..."></textarea>
+            <div class="message-input-container">
+                <textarea id="messageInput" placeholder="Enter your message for Claude... (Type @ to mention scripts)"></textarea>
+                <div id="scriptSuggestions" class="script-suggestions" style="display: none;">
+                    <!-- Script suggestions will be populated dynamically -->
+                </div>
+            </div>
+            <div class="attached-scripts" id="attachedScripts" style="display: none;">
+                <div class="attached-scripts-header">
+                    <span>📎 Scripts attached to this message:</span>
+                </div>
+                <div class="attached-scripts-list" id="attachedScriptsList">
+                    <!-- Attached scripts will be shown here -->
+                </div>
+            </div>
             <div class="controls"
                 style="justify-content: flex-end; margin-top: 5px; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 20px;">
                 <small style="color: var(--vscode-descriptionForeground); margin-left: 12px; opacity: 0.8;">
-                    Press Cmd+Enter (Mac) or Ctrl+Enter to add message
+                    Press Cmd+Enter (Mac) or Ctrl+Enter to add message • Type @ to attach scripts
                 </small>
                 <button onclick="addMessage()" class="btn-primary">
                     <span class="btn-icon">➕</span>Add Message
