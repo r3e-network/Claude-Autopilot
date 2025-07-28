@@ -283,6 +283,11 @@ Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md)
 -   Issue reporting
 -   Development environment setup
 
+## 👥 Credits
+
+-   **Original Author**: [Ben Basha](https://github.com/benbasha) - Created the foundational Claude Autopilot extension
+-   **Current Maintainer**: [Jimmy](https://github.com/r3e-network) (jimmy@r3e.network) - Added script runner, quality checks, and message loop features
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

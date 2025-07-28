@@ -201,7 +201,18 @@
     "batch-processing",
     "workflow"
   ],
-  "author": "Ben Basha",
+  "author": "Jimmy <jimmy@r3e.network> (based on original work by Ben Basha)",
+  "contributors": [
+    {
+      "name": "Ben Basha",
+      "url": "https://github.com/benbasha"
+    },
+    {
+      "name": "Jimmy",
+      "email": "jimmy@r3e.network",
+      "url": "https://github.com/r3e-network"
+    }
+  ],
   "license": "MIT",
   "publisher": "benbasha",
   "repository": {
