@@ -9,6 +9,45 @@ body {
 .container {
     max-width: 800px;
     margin: 0 auto;
+    padding: 0 10px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 5px;
+    }
+    
+    .controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .scripts-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .scripts-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .script-item {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .queue-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .queue-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
 }
 
 .header {
@@ -916,14 +955,18 @@ select:focus {
 .scripts-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+    align-items: flex-start;
+    margin-bottom: 15px;
 }
 
 .scripts-header h3 {
-    margin: 0;
+    margin: 0 0 4px 0;
     font-size: 14px;
     font-weight: 600;
+}
+
+.scripts-header > div:first-child {
+    flex: 1;
 }
 
 .scripts-controls {
@@ -995,6 +1038,64 @@ select:focus {
     cursor: pointer;
     font-size: 13px;
     flex: 1;
+    gap: 8px;
+}
+
+.script-name {
+    flex: 1;
+}
+
+.script-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.basic-badge {
+    background: var(--vscode-charts-green);
+    color: var(--vscode-editor-background);
+}
+
+.automation-badge {
+    background: var(--vscode-charts-blue);
+    color: var(--vscode-editor-background);
+    animation: subtle-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes subtle-glow {
+    from {
+        box-shadow: 0 0 3px var(--vscode-charts-blue);
+    }
+    to {
+        box-shadow: 0 0 6px var(--vscode-charts-blue);
+    }
+}
+
+.automation-script {
+    border-left: 3px solid var(--vscode-charts-blue);
+}
+
+.automation-script:hover {
+    background: rgba(var(--vscode-charts-blue-rgb, 100, 150, 255), 0.1);
+}
+
+.script-run-btn {
+    background: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: background 0.2s;
+}
+
+.script-run-btn:hover {
+    background: var(--vscode-button-hoverBackground);
 }
 
 .script-item input[type="checkbox"] {

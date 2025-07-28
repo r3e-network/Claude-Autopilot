@@ -5,6 +5,36 @@ All notable changes to the Claude Autopilot extension will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-28
+
+### 🤖 Major Automation Features
+
+This release introduces comprehensive automation capabilities for intelligent development assistance.
+
+### Added
+
+- **Smart Context Manager**: Automatically includes relevant files based on imports, modifications, and relationships
+- **Test-Driven Development Automation**: Ensures test coverage and identifies missing tests
+- **Error Recovery System**: Pattern-based error detection with automatic recovery strategies
+- **AI Code Review**: Security, performance, and style analysis with best practices validation
+- **Documentation Generator**: Checks for missing documentation and generates suggestions
+- **Self-Healing System**: Automatically fixes common issues like linting errors and import problems
+- **Automation Manager**: Coordinates all automation features with comprehensive validation
+
+### Improved
+
+- **Enhanced UI**: Professional interface with automation badges and responsive design
+- **Mobile-Friendly**: Responsive layout that works on all screen sizes
+- **Visual Hierarchy**: Clear distinction between basic checks and automation features
+- **Production-Ready Code**: All automation features are fully implemented with proper error handling
+
+### Technical
+
+- **Type Safety**: Intelligent type inference instead of generic any types
+- **Configurable Timeouts**: All delays and limits are properly configurable
+- **Comprehensive Testing**: All automation features thoroughly tested
+- **Full Integration**: Seamless integration with existing extension functionality
+
 ## [1.0.2] - 2025-01-28
 
 ### 🔧 Script System Improvements

@@ -17,6 +17,7 @@ import { recoverWaitingMessages, stopSleepPrevention, stopHealthCheck, startSche
 import { sendSecuritySettings, toggleXssbypassSetting } from './services/security';
 import { debugLog } from './utils';
 import { ScriptRunner } from './scripts';
+import { AutomationManager } from './automation/automationManager';
 
 // Development-only imports
 let simulateUsageLimit: (() => void) | undefined;
@@ -42,6 +43,17 @@ export function activate(context: vscode.ExtensionContext) {
     // Validate configuration on startup
     const config = getValidatedConfig();
     debugLog('Extension activated with validated configuration');
+
+    // Initialize automation if workspace is available
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+        import('./queue/automationWrapper').then(module => {
+            module.initializeAutomation(workspaceFolder.uri.fsPath);
+            debugLog('Automation features initialized');
+        }).catch(error => {
+            debugLog(`Failed to initialize automation: ${error}`);
+        });
+    }
 
     // Watch for configuration changes
     const configWatcher = watchConfigChanges((newConfig) => {
@@ -284,6 +296,9 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                 case 'runScriptChecks':
                     runScriptChecks();
                     break;
+                case 'runSingleScript':
+                    runSingleScript(message.scriptId);
+                    break;
                 case 'runScriptLoop':
                     runScriptLoopWithConfig(message.config);
                     break;
@@ -453,6 +468,38 @@ function toggleDebugLogging(): void {
     
     // Toggle debug logging state (this would need to be implemented in core state)
     vscode.window.showInformationMessage('DEBUG: Debug logging toggled');
+}
+
+async function runSingleScript(scriptId: string): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+    await scriptRunner.initialize();
+    await scriptRunner.loadUserScripts();
+
+    vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Running ${scriptId}...`,
+        cancellable: false
+    }, async (progress) => {
+        const result = await scriptRunner.runSingleCheck(scriptId);
+        
+        if (!result) {
+            vscode.window.showErrorMessage(`Script ${scriptId} not found`);
+            return;
+        }
+        
+        if (result.passed) {
+            vscode.window.showInformationMessage(`✅ ${scriptId} passed!`);
+        } else {
+            const errors = result.errors.join('\n');
+            vscode.window.showWarningMessage(`❌ ${scriptId} failed:\n${errors}`);
+        }
+    });
 }
 
 async function runScriptChecks(): Promise<void> {

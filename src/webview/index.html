@@ -120,7 +120,12 @@
 
         <div class="scripts-section">
             <div class="scripts-header">
-                <h3>Script Checks</h3>
+                <div>
+                    <h3>Quality Checks & Automation</h3>
+                    <small style="color: var(--vscode-descriptionForeground); font-size: 11px;">
+                        🔍 Basic checks validate code • 🤖 Automation features provide intelligent assistance
+                    </small>
+                </div>
                 <div class="scripts-controls">
                     <label style="font-size: 12px; margin-right: 10px;">
                         Max Iterations: 
@@ -140,40 +145,80 @@
                     <span class="drag-handle">☰</span>
                     <label>
                         <input type="checkbox" id="script-production-readiness" checked>
-                        Production Readiness Check
+                        <span class="script-name">Production Readiness Check</span>
+                        <span class="script-badge basic-badge">🔍 BASIC</span>
                     </label>
+                    <button class="script-run-btn" onclick="runSingleScript('production-readiness')" title="Run this script only">▶</button>
                 </div>
                 <div class="script-item" draggable="true" data-script-id="build-check">
                     <span class="order-number">2.</span>
                     <span class="drag-handle">☰</span>
                     <label>
                         <input type="checkbox" id="script-build-check" checked>
-                        Build Check
+                        <span class="script-name">Build Check</span>
+                        <span class="script-badge basic-badge">🔍 BASIC</span>
                     </label>
+                    <button class="script-run-btn" onclick="runSingleScript('build-check')" title="Run this script only">▶</button>
                 </div>
                 <div class="script-item" draggable="true" data-script-id="test-check">
                     <span class="order-number">3.</span>
                     <span class="drag-handle">☰</span>
                     <label>
                         <input type="checkbox" id="script-test-check" checked>
-                        Test Check
+                        <span class="script-name">Test Check</span>
+                        <span class="script-badge basic-badge">🔍 BASIC</span>
                     </label>
+                    <button class="script-run-btn" onclick="runSingleScript('test-check')" title="Run this script only">▶</button>
                 </div>
                 <div class="script-item" draggable="true" data-script-id="format-check">
                     <span class="order-number">4.</span>
                     <span class="drag-handle">☰</span>
                     <label>
                         <input type="checkbox" id="script-format-check" checked>
-                        Format Check
+                        <span class="script-name">Format Check</span>
+                        <span class="script-badge basic-badge">🔍 BASIC</span>
                     </label>
+                    <button class="script-run-btn" onclick="runSingleScript('format-check')" title="Run this script only">▶</button>
                 </div>
                 <div class="script-item" draggable="true" data-script-id="github-actions">
                     <span class="order-number">5.</span>
                     <span class="drag-handle">☰</span>
                     <label>
                         <input type="checkbox" id="script-github-actions" checked>
-                        GitHub Actions Check
+                        <span class="script-name">GitHub Actions Check</span>
+                        <span class="script-badge basic-badge">🔍 BASIC</span>
                     </label>
+                    <button class="script-run-btn" onclick="runSingleScript('github-actions')" title="Run this script only">▶</button>
+                </div>
+                <div class="script-item automation-script" draggable="true" data-script-id="tdd-automation">
+                    <span class="order-number">6.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-tdd-automation" checked>
+                        <span class="script-name">TDD Automation</span>
+                        <span class="script-badge automation-badge">🤖 AUTO</span>
+                    </label>
+                    <button class="script-run-btn" onclick="runSingleScript('tdd-automation')" title="Run this script only">▶</button>
+                </div>
+                <div class="script-item automation-script" draggable="true" data-script-id="ai-code-review">
+                    <span class="order-number">7.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-ai-code-review" checked>
+                        <span class="script-name">AI Code Review</span>
+                        <span class="script-badge automation-badge">🤖 AUTO</span>
+                    </label>
+                    <button class="script-run-btn" onclick="runSingleScript('ai-code-review')" title="Run this script only">▶</button>
+                </div>
+                <div class="script-item automation-script" draggable="true" data-script-id="doc-generator">
+                    <span class="order-number">8.</span>
+                    <span class="drag-handle">☰</span>
+                    <label>
+                        <input type="checkbox" id="script-doc-generator" checked>
+                        <span class="script-name">Documentation Check</span>
+                        <span class="script-badge automation-badge">🤖 AUTO</span>
+                    </label>
+                    <button class="script-run-btn" onclick="runSingleScript('doc-generator')" title="Run this script only">▶</button>
                 </div>
             </div>
         </div>

@@ -1888,7 +1888,7 @@ function updateDevelopmentModeUI(enabled) {
 }
 
 // Script Runner Functions
-let scriptOrder = ['production-readiness', 'build-check', 'test-check', 'format-check', 'github-actions'];
+let scriptOrder = ['production-readiness', 'build-check', 'test-check', 'format-check', 'github-actions', 'tdd-automation', 'ai-code-review', 'doc-generator'];
 let draggedScriptElement = null;
 
 // Initialize drag-drop when DOM is ready
@@ -1992,6 +1992,20 @@ function updateScriptOrder() {
     vscode.postMessage({
         command: 'updateScriptOrder',
         order: scriptOrder
+    });
+}
+
+function runSingleScript(scriptId) {
+    // Show script results
+    const scriptResultsSection = document.getElementById('scriptResults');
+    if (scriptResultsSection) {
+        scriptResultsSection.style.display = 'block';
+        scriptResultsSection.innerHTML = '<div style="padding: 10px;">Running ' + scriptId + '...</div>';
+    }
+    
+    vscode.postMessage({
+        command: 'runSingleScript',
+        scriptId: scriptId
     });
 }
 

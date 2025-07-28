@@ -126,20 +126,26 @@ The Script Checks section appears directly above the message input area, providi
    - Numbers (1, 2, 3...) show execution order
    - Order affects fix priority - earlier scripts are fixed first
 
-3. **Run Once - "Run Checks"** 🔍
+3. **Run Individual Scripts** ▶️
+   - Each script has its own run button (▶️) on the right
+   - Click to run just that specific script
+   - Useful for debugging or checking specific aspects
+   - Results shown via VS Code notifications
+
+4. **Run All - "Run Checks"** 🔍
    - Executes all enabled scripts once
    - Shows results with ✅ pass or ❌ fail status
    - Displays specific errors found
    - No automatic fixing - just validation
 
-4. **Fix Loop - "Run Loop"** 🔄
+5. **Fix Loop - "Run Loop"** 🔄
    - Runs all enabled scripts
    - If any fail, asks Claude to fix the issues
    - Re-runs scripts after fixes
    - Continues until all pass or max iterations reached
    - Set max iterations (1-20, default: 5)
 
-5. **Custom Scripts** 📝
+6. **Custom Scripts** 📝
    - Add your own validation scripts to `.autopilot/scripts/`
    - Scripts automatically appear in the UI
    - Must output JSON format:
@@ -203,7 +209,7 @@ The **"Run Loop"** button runs all enabled scripts repeatedly until they pass:
 
 #### 2. Message Loop (Individual Tasks)
 
-The **🔄 button** on each message runs that specific task in a quality loop:
+The **🔄 button** on each message runs that specific task in a quality loop. **Note: Hover over a pending message to see the action buttons including the loop button (🔄).**
 
 **How it works:**
 1. Processes the individual message/task

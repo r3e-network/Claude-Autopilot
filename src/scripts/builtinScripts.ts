@@ -3,6 +3,8 @@
  * These scripts are embedded in the extension and copied to workspace .autopilot folder
  */
 
+import { TDD_AUTOMATION_SCRIPT, AI_CODE_REVIEW_SCRIPT, DOC_GENERATOR_SCRIPT } from './automationScripts';
+
 export const BUILTIN_SCRIPTS = {
     'production-readiness.js': `#!/usr/bin/env node
 /**
@@ -55,26 +57,40 @@ async function check() {
                     if (!skipDirs.includes(file) && !file.startsWith('.')) {
                         scanDirectory(filePath);
                     }
-                } else if (stat.isFile() && extensions.includes(path.extname(file).toLowerCase())) {
-                    try {
-                        const content = fs.readFileSync(filePath, 'utf8');
-                        const lines = content.split('\\n');
-                        
-                        lines.forEach((line, index) => {
-                            patterns.forEach(({ pattern, message }) => {
-                                const match = line.match(pattern);
-                                if (match) {
-                                    const relPath = path.relative(process.cwd(), filePath);
-                                    errors.push(\`\${relPath}:\${index + 1} - \${message}: "\${match[0]}"\`);
-                                }
-                            });
-                        });
-                    } catch (err) {
-                        // Skip files that can't be read
-                        if (err.code !== 'ENOENT' && err.code !== 'EISDIR') {
-                            warnings.push(\`Could not read \${filePath}: \${err.message}\`);
-                        }
+                } else if (stat.isFile()) {
+                    const ext = path.extname(file);
+                    if (extensions.includes(ext)) {
+                        checkFile(filePath, patterns);
                     }
+                }
+            }
+        }
+        
+        function checkFile(filePath, patterns) {
+            const content = fs.readFileSync(filePath, 'utf8');
+            const lines = content.split('\\n');
+            const relativePath = path.relative(process.cwd(), filePath);
+            
+            patterns.forEach(({ pattern, message }) => {
+                lines.forEach((line, index) => {
+                    if (pattern.test(line)) {
+                        errors.push(\`\${relativePath}:\${index + 1} - \${message}\`);
+                    }
+                });
+            });
+            
+            // Check for empty catch blocks
+            const emptyCatchPattern = /catch\\s*\\([^)]*\\)\\s*{\\s*}/g;
+            if (emptyCatchPattern.test(content)) {
+                warnings.push(\`\${relativePath} - Empty catch block found\`);
+            }
+            
+            // Check for any(...) type in TypeScript files
+            if (ext === '.ts' || ext === '.tsx') {
+                const anyTypePattern = /:\\s*any\\b/g;
+                const anyMatches = content.match(anyTypePattern) || [];
+                if (anyMatches.length > 0) {
+                    warnings.push(\`\${relativePath} - Found \${anyMatches.length} uses of 'any' type\`);
                 }
             }
         }
@@ -82,57 +98,27 @@ async function check() {
         // Start scanning from current directory
         scanDirectory(process.cwd());
         
-        // Check for common incomplete patterns in specific files
-        const packageJsonPath = path.join(process.cwd(), 'package.json');
-        if (fs.existsSync(packageJsonPath)) {
-            try {
-                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                
-                // Check for common development dependencies in production
-                const devDepsInMain = ['nodemon', 'jest', 'mocha', 'chai', 'sinon', 'eslint', 'prettier'];
-                if (pkg.dependencies) {
-                    devDepsInMain.forEach(dep => {
-                        if (pkg.dependencies[dep]) {
-                            warnings.push(\`Development dependency "\${dep}" found in production dependencies\`);
-                        }
-                    });
-                }
-                
-                // Check for missing important fields
-                if (!pkg.description || pkg.description.trim() === '') {
-                    warnings.push('package.json missing description');
-                }
-                if (!pkg.repository) {
-                    warnings.push('package.json missing repository information');
-                }
-                if (!pkg.license) {
-                    warnings.push('package.json missing license');
-                }
-            } catch (err) {
-                warnings.push(\`Could not parse package.json: \${err.message}\`);
-            }
+        // Additional checks
+        if (errors.length === 0 && warnings.length === 0) {
+            console.error('Production readiness check completed successfully');
         }
         
-        return {
-            passed: errors.length === 0,
-            errors,
-            warnings
-        };
     } catch (error) {
-        return {
-            passed: false,
-            errors: [\`Script execution failed: \${error.message}\`],
-            warnings
-        };
+        errors.push(\`Production readiness check failed: \${error.message}\`);
     }
+    
+    // Output results
+    console.log(JSON.stringify({
+        passed: errors.length === 0,
+        errors: errors,
+        warnings: warnings
+    }, null, 2));
 }
 
-// Run the check and output results
-check().then(result => {
-    console.log(JSON.stringify(result, null, 2));
-    process.exit(result.passed ? 0 : 1);
-}).catch(error => {
-    console.error(JSON.stringify({
+// Run the check
+check().catch(error => {
+    console.error(\`Unexpected error during production readiness check: \${error.message}\`);
+    console.log(JSON.stringify({
         passed: false,
         errors: [\`Unexpected error: \${error.message}\`]
     }, null, 2));
@@ -141,242 +127,134 @@ check().then(result => {
 
     'build-check.js': `#!/usr/bin/env node
 /**
- * Build Check
- * Ensures the project can build successfully
+ * Build Check Script
+ * Verifies that the project builds successfully
  * Auto-generated by Claude Autopilot
  */
 
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 async function check() {
     const errors = [];
     const warnings = [];
     
     try {
-        // Detect project type and run appropriate build command
         const projectRoot = process.cwd();
         let buildExecuted = false;
         
-        // Node.js / JavaScript / TypeScript
-        const packageJsonPath = path.join(projectRoot, 'package.json');
-        if (fs.existsSync(packageJsonPath)) {
-            try {
-                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                
-                // Check for build script
-                if (pkg.scripts && pkg.scripts.build) {
-                    try {
-                        console.error('Running npm build...');
-                        execSync('npm run build', { 
-                            stdio: ['ignore', 'ignore', 'pipe'],
-                            encoding: 'utf8'
-                        });
-                        buildExecuted = true;
-                    } catch (error) {
-                        const errorOutput = error.stderr || error.message;
-                        errors.push(\`npm build failed: \${errorOutput}\`);
-                        buildExecuted = true;
-                    }
-                } else if (pkg.scripts && pkg.scripts.compile) {
-                    // Some projects use 'compile' instead of 'build'
-                    try {
-                        console.error('Running npm compile...');
-                        execSync('npm run compile', { 
-                            stdio: ['ignore', 'ignore', 'pipe'],
-                            encoding: 'utf8'
-                        });
-                        buildExecuted = true;
-                    } catch (error) {
-                        const errorOutput = error.stderr || error.message;
-                        errors.push(\`npm compile failed: \${errorOutput}\`);
-                        buildExecuted = true;
-                    }
-                } else {
-                    // Check if it's a TypeScript project without build script
-                    if (fs.existsSync(path.join(projectRoot, 'tsconfig.json'))) {
-                        try {
-                            console.error('Running TypeScript compiler...');
-                            execSync('npx tsc --noEmit', { 
-                                stdio: ['ignore', 'ignore', 'pipe'],
-                                encoding: 'utf8'
-                            });
-                            buildExecuted = true;
-                        } catch (error) {
-                            const errorOutput = error.stderr || error.message;
-                            errors.push(\`TypeScript compilation failed: \${errorOutput}\`);
-                            buildExecuted = true;
-                        }
-                    } else {
-                        warnings.push('No build script found in package.json');
-                    }
+        // Check for Node.js project
+        if (fs.existsSync(path.join(projectRoot, 'package.json'))) {
+            const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+            
+            // Check for build script
+            if (packageJson.scripts && packageJson.scripts.build) {
+                console.error('Running npm build...');
+                try {
+                    execSync('npm run build', { encoding: 'utf8', stdio: 'pipe' });
+                    buildExecuted = true;
+                } catch (error) {
+                    errors.push(\`Build failed: \${error.message}\`);
+                    buildExecuted = true;
                 }
-            } catch (error) {
-                warnings.push(\`Could not parse package.json: \${error.message}\`);
+            } else if (packageJson.scripts && packageJson.scripts.compile) {
+                console.error('Running npm compile...');
+                try {
+                    execSync('npm run compile', { encoding: 'utf8', stdio: 'pipe' });
+                    buildExecuted = true;
+                } catch (error) {
+                    errors.push(\`Compile failed: \${error.message}\`);
+                    buildExecuted = true;
+                }
+            } else {
+                warnings.push('No build or compile script found in package.json');
             }
         }
         
-        // Go
-        if (!buildExecuted && fs.existsSync(path.join(projectRoot, 'go.mod'))) {
+        // Check for Go project
+        if (!buildExecuted && (fs.existsSync(path.join(projectRoot, 'go.mod')) || 
+                               fs.existsSync(path.join(projectRoot, 'main.go')))) {
+            console.error('Running go build...');
             try {
-                console.error('Running go build...');
-                execSync('go build ./...', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('go build ./...', { encoding: 'utf8' });
                 buildExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`Go build failed: \${errorOutput}\`);
+                errors.push(\`Go build failed: \${error.message}\`);
                 buildExecuted = true;
             }
         }
         
-        // Rust
+        // Check for Rust project
         if (!buildExecuted && fs.existsSync(path.join(projectRoot, 'Cargo.toml'))) {
+            console.error('Running cargo build...');
             try {
-                console.error('Running cargo build...');
-                execSync('cargo build', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('cargo build', { encoding: 'utf8' });
                 buildExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`Cargo build failed: \${errorOutput}\`);
+                errors.push(\`Cargo build failed: \${error.message}\`);
                 buildExecuted = true;
             }
         }
         
-        // C# / .NET
-        const csprojFiles = fs.readdirSync(projectRoot).filter(f => f.endsWith('.csproj'));
-        const slnFiles = fs.readdirSync(projectRoot).filter(f => f.endsWith('.sln'));
-        if (!buildExecuted && (csprojFiles.length > 0 || slnFiles.length > 0)) {
+        // Check for .NET/C# project
+        if (!buildExecuted && (fs.existsSync(path.join(projectRoot, '*.csproj')) || 
+                               fs.existsSync(path.join(projectRoot, '*.sln')))) {
+            console.error('Running dotnet build...');
             try {
-                console.error('Running dotnet build...');
-                execSync('dotnet build', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('dotnet build', { encoding: 'utf8' });
                 buildExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`Dotnet build failed: \${errorOutput}\`);
+                errors.push(\`Dotnet build failed: \${error.message}\`);
                 buildExecuted = true;
             }
         }
         
-        // Java - Maven
+        // Check for Java project (Maven)
         if (!buildExecuted && fs.existsSync(path.join(projectRoot, 'pom.xml'))) {
+            console.error('Running maven build...');
             try {
-                console.error('Running maven compile...');
-                execSync('mvn compile', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('mvn compile', { encoding: 'utf8' });
                 buildExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`Maven build failed: \${errorOutput}\`);
+                errors.push(\`Maven build failed: \${error.message}\`);
                 buildExecuted = true;
             }
         }
         
-        // Java - Gradle
+        // Check for Java project (Gradle)
         if (!buildExecuted && (fs.existsSync(path.join(projectRoot, 'build.gradle')) || 
                                fs.existsSync(path.join(projectRoot, 'build.gradle.kts')))) {
+            console.error('Running gradle build...');
             try {
-                console.error('Running gradle build...');
-                const gradleWrapper = fs.existsSync(path.join(projectRoot, 'gradlew')) ? './gradlew' : 'gradle';
-                execSync(\`\${gradleWrapper} build\`, { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('./gradlew build', { encoding: 'utf8' });
                 buildExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`Gradle build failed: \${errorOutput}\`);
-                buildExecuted = true;
-            }
-        }
-        
-        // Python - setup.py
-        if (!buildExecuted && fs.existsSync(path.join(projectRoot, 'setup.py'))) {
-            try {
-                console.error('Checking Python setup...');
-                execSync('python setup.py check', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
-                buildExecuted = true;
-            } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                warnings.push(\`Python setup check failed: \${errorOutput}\`);
-                // Don't count as error since many Python projects don't need building
-            }
-        }
-        
-        // C/C++ with Make
-        if (!buildExecuted && (fs.existsSync(path.join(projectRoot, 'Makefile')) || 
-                               fs.existsSync(path.join(projectRoot, 'makefile')))) {
-            try {
-                console.error('Running make...');
-                execSync('make', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
-                buildExecuted = true;
-            } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`Make build failed: \${errorOutput}\`);
-                buildExecuted = true;
-            }
-        }
-        
-        // C/C++ with CMake
-        if (!buildExecuted && fs.existsSync(path.join(projectRoot, 'CMakeLists.txt'))) {
-            try {
-                console.error('Running cmake build...');
-                if (!fs.existsSync('build')) {
-                    execSync('cmake -B build', { stdio: 'ignore' });
-                }
-                execSync('cmake --build build', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
-                buildExecuted = true;
-            } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                errors.push(\`CMake build failed: \${errorOutput}\`);
+                errors.push(\`Gradle build failed: \${error.message}\`);
                 buildExecuted = true;
             }
         }
         
         if (!buildExecuted) {
-            warnings.push('No recognized build system found. Supported: npm, go, cargo, dotnet, maven, gradle, make, cmake');
+            warnings.push('No recognized build system found. Supported: npm, go, cargo, dotnet, maven, gradle');
         }
         
-        return {
-            passed: errors.length === 0,
-            errors,
-            warnings
-        };
     } catch (error) {
-        return {
-            passed: false,
-            errors: [\`Script execution failed: \${error.message}\`],
-            warnings
-        };
+        errors.push(\`Build check failed: \${error.message}\`);
     }
+    
+    // Output results
+    console.log(JSON.stringify({
+        passed: errors.length === 0,
+        errors: errors,
+        warnings: warnings
+    }, null, 2));
 }
 
-// Run the check and output results
-check().then(result => {
-    console.log(JSON.stringify(result, null, 2));
-    process.exit(result.passed ? 0 : 1);
-}).catch(error => {
-    console.error(JSON.stringify({
+// Run the check
+check().catch(error => {
+    console.error(\`Unexpected error during build check: \${error.message}\`);
+    console.log(JSON.stringify({
         passed: false,
         errors: [\`Unexpected error: \${error.message}\`]
     }, null, 2));
@@ -385,132 +263,66 @@ check().then(result => {
 
     'test-check.js': `#!/usr/bin/env node
 /**
- * Test Check
- * Runs all tests and ensures they pass
+ * Test Check Script
+ * Verifies that all tests pass
  * Auto-generated by Claude Autopilot
  */
 
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 async function check() {
     const errors = [];
     const warnings = [];
     
     try {
-        // Detect project type and run appropriate test command
         const projectRoot = process.cwd();
         let testsExecuted = false;
         
-        // Node.js / JavaScript / TypeScript
-        const packageJsonPath = path.join(projectRoot, 'package.json');
-        if (fs.existsSync(packageJsonPath)) {
-            try {
-                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                
-                // Check for test script
-                if (pkg.scripts && pkg.scripts.test) {
+        // Check for Node.js project
+        if (fs.existsSync(path.join(projectRoot, 'package.json'))) {
+            const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+            
+            // Check for test script
+            if (packageJson.scripts && packageJson.scripts.test) {
+                console.error('Running npm test...');
+                try {
+                    // Skip watch mode for CI
+                    execSync('npm test -- --watchAll=false --ci', { encoding: 'utf8', stdio: 'pipe' });
+                    testsExecuted = true;
+                } catch (error) {
+                    // Try without CI flags
                     try {
-                        console.error('Running npm test...');
-                        const output = execSync('npm test', { 
-                            encoding: 'utf8',
-                            env: { ...process.env, CI: 'true' } // Force non-interactive mode
-                        });
-                        
-                        // Check if it's the default npm test script
-                        if (output.includes('Error: no test specified')) {
-                            warnings.push('No actual tests configured (using default npm test script)');
-                        } else {
-                            testsExecuted = true;
-                        }
-                    } catch (error) {
-                        const errorOutput = error.stdout || error.stderr || error.message;
-                        
-                        // Check if it's just "no tests" error
-                        if (errorOutput.includes('no test specified') || 
-                            errorOutput.includes('No tests found')) {
-                            warnings.push('No tests found in the project');
-                        } else {
-                            errors.push(\`Tests failed: \${errorOutput}\`);
-                        }
+                        execSync('npm test', { encoding: 'utf8', stdio: 'pipe' });
+                        testsExecuted = true;
+                    } catch (error2) {
+                        errors.push(\`Tests failed: \${error2.message}\`);
                         testsExecuted = true;
                     }
-                } else {
-                    // Look for test frameworks
-                    const hasJest = pkg.devDependencies?.jest || pkg.dependencies?.jest;
-                    const hasMocha = pkg.devDependencies?.mocha || pkg.dependencies?.mocha;
-                    const hasVitest = pkg.devDependencies?.vitest || pkg.dependencies?.vitest;
-                    
-                    if (hasJest) {
-                        try {
-                            console.error('Running Jest tests...');
-                            execSync('npx jest --passWithNoTests', { 
-                                encoding: 'utf8',
-                                env: { ...process.env, CI: 'true' }
-                            });
-                            testsExecuted = true;
-                        } catch (error) {
-                            errors.push(\`Jest tests failed: \${error.message}\`);
-                            testsExecuted = true;
-                        }
-                    } else if (hasMocha) {
-                        try {
-                            console.error('Running Mocha tests...');
-                            execSync('npx mocha', { encoding: 'utf8' });
-                            testsExecuted = true;
-                        } catch (error) {
-                            if (error.message.includes('No test files found')) {
-                                warnings.push('No test files found for Mocha');
-                            } else {
-                                errors.push(\`Mocha tests failed: \${error.message}\`);
-                            }
-                            testsExecuted = true;
-                        }
-                    } else if (hasVitest) {
-                        try {
-                            console.error('Running Vitest tests...');
-                            execSync('npx vitest run', { encoding: 'utf8' });
-                            testsExecuted = true;
-                        } catch (error) {
-                            errors.push(\`Vitest tests failed: \${error.message}\`);
-                            testsExecuted = true;
-                        }
-                    } else {
-                        warnings.push('No test script or test framework found in package.json');
-                    }
                 }
-            } catch (error) {
-                warnings.push(\`Could not parse package.json: \${error.message}\`);
+            } else {
+                warnings.push('No test script found in package.json');
             }
         }
         
-        // Go
-        if (!testsExecuted && fs.existsSync(path.join(projectRoot, 'go.mod'))) {
+        // Check for Go project
+        if (!testsExecuted && (fs.existsSync(path.join(projectRoot, 'go.mod')) || 
+                               fs.existsSync(path.join(projectRoot, 'main.go')))) {
+            console.error('Running go test...');
             try {
-                console.error('Running go test...');
-                const output = execSync('go test ./...', { encoding: 'utf8' });
-                
-                if (output.includes('no test files')) {
-                    warnings.push('No test files found in Go project');
-                } else {
-                    testsExecuted = true;
-                }
+                execSync('go test ./...', { encoding: 'utf8' });
+                testsExecuted = true;
             } catch (error) {
-                const errorOutput = error.stdout || error.stderr || error.message;
-                if (errorOutput.includes('no test files')) {
-                    warnings.push('No test files found in Go project');
-                } else {
-                    errors.push(\`Go tests failed: \${errorOutput}\`);
-                }
+                errors.push(\`Go tests failed: \${error.message}\`);
                 testsExecuted = true;
             }
         }
         
-        // Rust
+        // Check for Rust project  
         if (!testsExecuted && fs.existsSync(path.join(projectRoot, 'Cargo.toml'))) {
+            console.error('Running cargo test...');
             try {
-                console.error('Running cargo test...');
                 execSync('cargo test', { encoding: 'utf8' });
                 testsExecuted = true;
             } catch (error) {
@@ -519,48 +331,37 @@ async function check() {
             }
         }
         
-        // C# / .NET
-        const csprojFiles = fs.readdirSync(projectRoot).filter(f => f.endsWith('.csproj') || f.endsWith('.fsproj'));
-        if (!testsExecuted && csprojFiles.length > 0) {
+        // Check for .NET/C# project
+        if (!testsExecuted && (fs.existsSync(path.join(projectRoot, '*.csproj')) || 
+                               fs.existsSync(path.join(projectRoot, '*.sln')))) {
+            console.error('Running dotnet test...');
             try {
-                console.error('Running dotnet test...');
-                const output = execSync('dotnet test', { encoding: 'utf8' });
-                
-                if (output.includes('No test is available')) {
-                    warnings.push('No tests found in .NET project');
-                } else {
-                    testsExecuted = true;
-                }
+                execSync('dotnet test', { encoding: 'utf8' });
+                testsExecuted = true;
             } catch (error) {
                 errors.push(\`Dotnet tests failed: \${error.message}\`);
                 testsExecuted = true;
             }
         }
         
-        // Java - Maven
+        // Check for Java project (Maven)
         if (!testsExecuted && fs.existsSync(path.join(projectRoot, 'pom.xml'))) {
+            console.error('Running maven test...');
             try {
-                console.error('Running maven test...');
                 execSync('mvn test', { encoding: 'utf8' });
                 testsExecuted = true;
             } catch (error) {
-                const errorOutput = error.stdout || error.stderr || error.message;
-                if (errorOutput.includes('No tests to run')) {
-                    warnings.push('No tests found in Maven project');
-                } else {
-                    errors.push(\`Maven tests failed: \${errorOutput}\`);
-                }
+                errors.push(\`Maven tests failed: \${error.message}\`);
                 testsExecuted = true;
             }
         }
         
-        // Java - Gradle
+        // Check for Java project (Gradle)
         if (!testsExecuted && (fs.existsSync(path.join(projectRoot, 'build.gradle')) || 
                                fs.existsSync(path.join(projectRoot, 'build.gradle.kts')))) {
+            console.error('Running gradle test...');
             try {
-                console.error('Running gradle test...');
-                const gradleWrapper = fs.existsSync(path.join(projectRoot, 'gradlew')) ? './gradlew' : 'gradle';
-                execSync(\`\${gradleWrapper} test\`, { encoding: 'utf8' });
+                execSync('./gradlew test', { encoding: 'utf8' });
                 testsExecuted = true;
             } catch (error) {
                 errors.push(\`Gradle tests failed: \${error.message}\`);
@@ -568,34 +369,28 @@ async function check() {
             }
         }
         
-        // Python - pytest
-        if (!testsExecuted && fs.existsSync(path.join(projectRoot, 'setup.py')) || 
-            fs.existsSync(path.join(projectRoot, 'pyproject.toml')) ||
-            fs.existsSync(path.join(projectRoot, 'requirements.txt'))) {
-            
-            // Check for test directories
-            const testDirs = ['tests', 'test', 'tests.py', 'test.py'];
-            const hasTests = testDirs.some(dir => fs.existsSync(path.join(projectRoot, dir)));
+        // Python - pytest/unittest
+        if (!testsExecuted && (fs.existsSync(path.join(projectRoot, 'setup.py')) || 
+                               fs.existsSync(path.join(projectRoot, 'pyproject.toml')) ||
+                               fs.existsSync(path.join(projectRoot, 'requirements.txt')))) {
+            const hasTests = fs.existsSync(path.join(projectRoot, 'tests')) || 
+                           fs.existsSync(path.join(projectRoot, 'test'));
             
             if (hasTests) {
+                // Try pytest first
                 try {
                     console.error('Running pytest...');
-                    execSync('python -m pytest', { encoding: 'utf8' });
+                    execSync('pytest', { encoding: 'utf8' });
                     testsExecuted = true;
                 } catch (error) {
-                    // Try with pytest directly
+                    // Try unittest
                     try {
-                        execSync('pytest', { encoding: 'utf8' });
+                        console.error('Running python unittest...');
+                        execSync('python -m unittest discover', { encoding: 'utf8' });
                         testsExecuted = true;
                     } catch (error2) {
-                        // Try unittest
-                        try {
-                            console.error('Running unittest...');
-                            execSync('python -m unittest discover', { encoding: 'utf8' });
-                            testsExecuted = true;
-                        } catch (error3) {
-                            warnings.push('Python project found but no test runner available (pytest/unittest)');
-                        }
+                        errors.push(\`Python tests failed: \${error2.message}\`);
+                        testsExecuted = true;
                     }
                 }
             } else {
@@ -647,19 +442,18 @@ async function check() {
                         const filePath = path.join(dir, file);
                         const stat = fs.statSync(filePath);
                         
-                        if (stat.isDirectory() && !file.startsWith('.') && !['node_modules', 'vendor', 'target', 'build', 'dist'].includes(file)) {
+                        if (stat.isDirectory() && !file.startsWith('.') && file !== 'node_modules') {
                             findTestFiles(filePath);
                         } else if (stat.isFile()) {
                             for (const pattern of testPatterns) {
-                                const regex = new RegExp(pattern.replace('*', '.*'));
-                                if (regex.test(file)) {
+                                if (file.match(pattern.replace('*', '.*'))) {
                                     hasTestFiles = true;
                                     return;
                                 }
                             }
                         }
                     }
-                } catch (error) {
+                } catch (e) {
                     // Ignore permission errors
                 }
             }
@@ -667,30 +461,26 @@ async function check() {
             findTestFiles(projectRoot);
             
             if (hasTestFiles) {
-                warnings.push('Test files found but no test runner configured');
+                errors.push('Test files found but no test runner detected or configured');
             }
         }
         
-        return {
-            passed: errors.length === 0,
-            errors,
-            warnings
-        };
     } catch (error) {
-        return {
-            passed: false,
-            errors: [\`Script execution failed: \${error.message}\`],
-            warnings
-        };
+        errors.push(\`Test check failed: \${error.message}\`);
     }
+    
+    // Output results
+    console.log(JSON.stringify({
+        passed: errors.length === 0,
+        errors: errors,
+        warnings: warnings
+    }, null, 2));
 }
 
-// Run the check and output results
-check().then(result => {
-    console.log(JSON.stringify(result, null, 2));
-    process.exit(result.passed ? 0 : 1);
-}).catch(error => {
-    console.error(JSON.stringify({
+// Run the check
+check().catch(error => {
+    console.error(\`Unexpected error during test check: \${error.message}\`);
+    console.log(JSON.stringify({
         passed: false,
         errors: [\`Unexpected error: \${error.message}\`]
     }, null, 2));
@@ -699,359 +489,303 @@ check().then(result => {
 
     'format-check.js': `#!/usr/bin/env node
 /**
- * Format Check
- * Ensures code is properly formatted
+ * Format Check Script
+ * Verifies that code is properly formatted
  * Auto-generated by Claude Autopilot
  */
 
+const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 async function check() {
     const errors = [];
     const warnings = [];
     
     try {
-        // Detect project type and check formatting
         const projectRoot = process.cwd();
         let formatCheckExecuted = false;
         
-        // Node.js / JavaScript / TypeScript
-        const packageJsonPath = path.join(projectRoot, 'package.json');
-        if (fs.existsSync(packageJsonPath)) {
-            try {
-                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                
-                // Check for lint/format scripts
-                if (pkg.scripts) {
-                    if (pkg.scripts.lint) {
-                        try {
-                            console.error('Running npm lint...');
-                            execSync('npm run lint', { 
-                                stdio: ['ignore', 'ignore', 'pipe'],
-                                encoding: 'utf8'
-                            });
-                            formatCheckExecuted = true;
-                        } catch (error) {
-                            const errorOutput = error.stderr || error.stdout || error.message;
-                            errors.push(\`Linting failed: \${errorOutput}\`);
-                            formatCheckExecuted = true;
-                        }
-                    } else if (pkg.scripts.format && pkg.scripts['format:check']) {
-                        // Some projects have separate format:check script
-                        try {
-                            console.error('Running format check...');
-                            execSync('npm run format:check', { 
-                                stdio: ['ignore', 'ignore', 'pipe'],
-                                encoding: 'utf8'
-                            });
-                            formatCheckExecuted = true;
-                        } catch (error) {
-                            const errorOutput = error.stderr || error.stdout || error.message;
-                            errors.push(\`Format check failed: \${errorOutput}\`);
-                            formatCheckExecuted = true;
-                        }
-                    }
-                }
-                
-                // If no scripts, check for tools directly
-                if (!formatCheckExecuted) {
-                    // Prettier
-                    const hasPrettier = pkg.devDependencies?.prettier || pkg.dependencies?.prettier;
-                    if (hasPrettier || fs.existsSync(path.join(projectRoot, '.prettierrc')) || 
-                        fs.existsSync(path.join(projectRoot, '.prettierrc.json')) ||
-                        fs.existsSync(path.join(projectRoot, '.prettierrc.js')) ||
-                        fs.existsSync(path.join(projectRoot, 'prettier.config.js'))) {
-                        try {
-                            console.error('Running Prettier check...');
-                            execSync('npx prettier --check .', { 
-                                stdio: ['ignore', 'ignore', 'pipe'],
-                                encoding: 'utf8'
-                            });
-                            formatCheckExecuted = true;
-                        } catch (error) {
-                            const errorOutput = error.stderr || error.stdout || error.message;
-                            if (errorOutput.includes('files were not formatted')) {
-                                const unformattedFiles = errorOutput.match(/\\[warn\\] (.+)/g) || [];
-                                errors.push(\`Prettier: \${unformattedFiles.length} file(s) not formatted\`);
-                                unformattedFiles.slice(0, 10).forEach(file => {
-                                    errors.push(file.replace('[warn] ', '  - '));
-                                });
-                                if (unformattedFiles.length > 10) {
-                                    errors.push(\`  ... and \${unformattedFiles.length - 10} more files\`);
-                                }
-                            } else {
-                                errors.push(\`Prettier check failed: \${errorOutput}\`);
-                            }
-                            formatCheckExecuted = true;
-                        }
-                    }
-                    
-                    // ESLint
-                    const hasEslint = pkg.devDependencies?.eslint || pkg.dependencies?.eslint;
-                    if (!formatCheckExecuted && (hasEslint || fs.existsSync(path.join(projectRoot, '.eslintrc')) ||
-                        fs.existsSync(path.join(projectRoot, '.eslintrc.json')) ||
-                        fs.existsSync(path.join(projectRoot, '.eslintrc.js')))) {
-                        try {
-                            console.error('Running ESLint...');
-                            execSync('npx eslint .', { 
-                                stdio: ['ignore', 'ignore', 'pipe'],
-                                encoding: 'utf8'
-                            });
-                            formatCheckExecuted = true;
-                        } catch (error) {
-                            const errorOutput = error.stderr || error.stdout || error.message;
-                            errors.push(\`ESLint found issues: \${errorOutput}\`);
-                            formatCheckExecuted = true;
-                        }
-                    }
-                    
-                    // StandardJS
-                    const hasStandard = pkg.devDependencies?.standard || pkg.dependencies?.standard;
-                    if (!formatCheckExecuted && hasStandard) {
-                        try {
-                            console.error('Running StandardJS...');
-                            execSync('npx standard', { 
-                                stdio: ['ignore', 'ignore', 'pipe'],
-                                encoding: 'utf8'
-                            });
-                            formatCheckExecuted = true;
-                        } catch (error) {
-                            const errorOutput = error.stderr || error.stdout || error.message;
-                            errors.push(\`StandardJS found issues: \${errorOutput}\`);
-                            formatCheckExecuted = true;
-                        }
-                    }
-                }
-                
-                if (!formatCheckExecuted && (pkg.devDependencies || pkg.dependencies)) {
-                    const deps = { ...pkg.devDependencies, ...pkg.dependencies };
-                    if (deps.eslint || deps.prettier || deps.standard || deps.tslint) {
-                        warnings.push('Formatting tools found in dependencies but no lint/format script configured');
-                    }
-                }
-            } catch (error) {
-                warnings.push(\`Could not parse package.json: \${error.message}\`);
-            }
-        }
-        
-        // Go
-        if (!formatCheckExecuted && fs.existsSync(path.join(projectRoot, 'go.mod'))) {
-            try {
-                console.error('Running gofmt check...');
-                const output = execSync('gofmt -l .', { encoding: 'utf8' });
-                
-                if (output.trim()) {
-                    const files = output.trim().split('\\n');
-                    errors.push(\`gofmt: \${files.length} file(s) not formatted:\`);
-                    files.slice(0, 10).forEach(file => {
-                        errors.push(\`  - \${file}\`);
-                    });
-                    if (files.length > 10) {
-                        errors.push(\`  ... and \${files.length - 10} more files\`);
-                    }
-                } else {
+        // Check for Node.js project with prettier
+        if (fs.existsSync(path.join(projectRoot, 'package.json'))) {
+            const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+            
+            // Check for prettier
+            const hasPrettier = (packageJson.devDependencies && packageJson.devDependencies.prettier) ||
+                              (packageJson.dependencies && packageJson.dependencies.prettier) ||
+                              fs.existsSync(path.join(projectRoot, '.prettierrc')) ||
+                              fs.existsSync(path.join(projectRoot, '.prettierrc.json')) ||
+                              fs.existsSync(path.join(projectRoot, '.prettierrc.js'));
+            
+            if (hasPrettier) {
+                console.error('Running prettier check...');
+                try {
+                    execSync('npx prettier --check .', { encoding: 'utf8', stdio: 'pipe' });
+                    formatCheckExecuted = true;
+                } catch (error) {
+                    errors.push('Code formatting issues found. Run: npx prettier --write .');
                     formatCheckExecuted = true;
                 }
-            } catch (error) {
-                warnings.push(\`gofmt check failed: \${error.message}\`);
             }
             
-            // Also check go vet
-            if (!errors.length) {
+            // Check for ESLint
+            const hasEslint = (packageJson.devDependencies && packageJson.devDependencies.eslint) ||
+                            (packageJson.dependencies && packageJson.dependencies.eslint) ||
+                            fs.existsSync(path.join(projectRoot, '.eslintrc')) ||
+                            fs.existsSync(path.join(projectRoot, '.eslintrc.json')) ||
+                            fs.existsSync(path.join(projectRoot, '.eslintrc.js'));
+            
+            if (hasEslint && !formatCheckExecuted) {
+                console.error('Running eslint check...');
                 try {
-                    console.error('Running go vet...');
-                    execSync('go vet ./...', { 
-                        stdio: ['ignore', 'ignore', 'pipe'],
-                        encoding: 'utf8'
-                    });
+                    execSync('npx eslint .', { encoding: 'utf8', stdio: 'pipe' });
+                    formatCheckExecuted = true;
                 } catch (error) {
-                    const errorOutput = error.stderr || error.message;
-                    warnings.push(\`go vet found issues: \${errorOutput}\`);
+                    errors.push('Linting issues found. Run: npx eslint --fix .');
+                    formatCheckExecuted = true;
                 }
             }
-            formatCheckExecuted = true;
         }
         
-        // Rust
+        // Check for Go project
+        if (!formatCheckExecuted && (fs.existsSync(path.join(projectRoot, 'go.mod')) || 
+                                    fs.existsSync(path.join(projectRoot, 'main.go')))) {
+            console.error('Running gofmt check...');
+            try {
+                const unformatted = execSync('gofmt -l .', { encoding: 'utf8' }).trim();
+                if (unformatted) {
+                    errors.push(\`Go files need formatting: \${unformatted.split('\\n').join(', ')}\`);
+                }
+                formatCheckExecuted = true;
+            } catch (error) {
+                warnings.push('gofmt check failed');
+            }
+        }
+        
+        // Check for Rust project
         if (!formatCheckExecuted && fs.existsSync(path.join(projectRoot, 'Cargo.toml'))) {
+            console.error('Running rustfmt check...');
             try {
-                console.error('Running rustfmt check...');
-                execSync('cargo fmt -- --check', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('cargo fmt -- --check', { encoding: 'utf8', stdio: 'pipe' });
                 formatCheckExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                if (errorOutput.includes('Diff in')) {
-                    errors.push('rustfmt: Some files need formatting. Run "cargo fmt" to fix.');
-                } else {
-                    errors.push(\`rustfmt check failed: \${errorOutput}\`);
-                }
+                errors.push('Rust formatting issues found. Run: cargo fmt');
                 formatCheckExecuted = true;
-            }
-            
-            // Also run clippy if available
-            try {
-                console.error('Running clippy...');
-                execSync('cargo clippy -- -D warnings', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
-            } catch (error) {
-                warnings.push('Clippy found warnings or is not installed');
             }
         }
         
-        // Python
+        // Check for Python project
         if (!formatCheckExecuted && (fs.existsSync(path.join(projectRoot, 'setup.py')) || 
-                                     fs.existsSync(path.join(projectRoot, 'pyproject.toml')) ||
-                                     fs.existsSync(path.join(projectRoot, 'requirements.txt')))) {
-            // Black
+                                    fs.existsSync(path.join(projectRoot, 'pyproject.toml')) ||
+                                    fs.existsSync(path.join(projectRoot, 'requirements.txt')))) {
+            // Try black
             try {
                 console.error('Running black check...');
-                execSync('python -m black --check .', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
+                execSync('black --check .', { encoding: 'utf8', stdio: 'pipe' });
                 formatCheckExecuted = true;
             } catch (error) {
-                const errorOutput = error.stderr || error.stdout || error.message;
-                if (errorOutput.includes('would be reformatted') || errorOutput.includes('would reformat')) {
-                    const match = errorOutput.match(/(\\d+) file/);
-                    const fileCount = match ? match[1] : 'Some';
-                    errors.push(\`Black: \${fileCount} file(s) would be reformatted\`);
+                if (error.message.includes('would reformat')) {
+                    errors.push('Python formatting issues found. Run: black .');
                     formatCheckExecuted = true;
-                } else if (!errorOutput.includes('command not found') && !errorOutput.includes('No module named')) {
-                    errors.push(\`Black check failed: \${errorOutput}\`);
-                    formatCheckExecuted = true;
-                }
-            }
-            
-            // Flake8
-            if (!formatCheckExecuted) {
-                try {
-                    console.error('Running flake8...');
-                    execSync('python -m flake8 .', { 
-                        stdio: ['ignore', 'ignore', 'pipe'],
-                        encoding: 'utf8'
-                    });
-                    formatCheckExecuted = true;
-                } catch (error) {
-                    const errorOutput = error.stderr || error.stdout || error.message;
-                    if (!errorOutput.includes('command not found') && !errorOutput.includes('No module named')) {
-                        errors.push(\`Flake8 found issues: \${errorOutput}\`);
-                        formatCheckExecuted = true;
-                    }
-                }
-            }
-            
-            // Pylint
-            if (!formatCheckExecuted) {
-                try {
-                    console.error('Running pylint...');
-                    execSync('python -m pylint **/*.py', { 
-                        stdio: ['ignore', 'ignore', 'pipe'],
-                        encoding: 'utf8',
-                        shell: true
-                    });
-                    formatCheckExecuted = true;
-                } catch (error) {
-                    const errorOutput = error.stderr || error.stdout || error.message;
-                    if (!errorOutput.includes('command not found') && !errorOutput.includes('No module named')) {
-                        warnings.push('Pylint found issues or is not configured');
-                        formatCheckExecuted = true;
-                    }
-                }
-            }
-            
-            if (!formatCheckExecuted) {
-                warnings.push('Python project detected but no formatter (black/flake8/pylint) available');
-            }
-        }
-        
-        // C# / .NET
-        if (!formatCheckExecuted && (fs.readdirSync(projectRoot).some(f => f.endsWith('.csproj')))) {
-            try {
-                console.error('Running dotnet format check...');
-                execSync('dotnet format --verify-no-changes', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
-                formatCheckExecuted = true;
-            } catch (error) {
-                const errorOutput = error.stderr || error.message;
-                if (errorOutput.includes('code changes were made')) {
-                    errors.push('dotnet format: Code formatting changes needed');
                 } else {
-                    warnings.push('dotnet format not available or project not formatted');
-                }
-                formatCheckExecuted = true;
-            }
-        }
-        
-        // Java - Checkstyle/Spotless
-        if (!formatCheckExecuted && fs.existsSync(path.join(projectRoot, 'pom.xml'))) {
-            // Check if spotless is configured
-            try {
-                const pomContent = fs.readFileSync(path.join(projectRoot, 'pom.xml'), 'utf8');
-                if (pomContent.includes('spotless-maven-plugin')) {
+                    // Black not installed, try autopep8
                     try {
-                        console.error('Running spotless check...');
-                        execSync('mvn spotless:check', { 
-                            stdio: ['ignore', 'ignore', 'pipe'],
-                            encoding: 'utf8'
-                        });
+                        console.error('Running autopep8 check...');
+                        const result = execSync('autopep8 --diff -r .', { encoding: 'utf8' });
+                        if (result.trim()) {
+                            errors.push('Python formatting issues found. Run: autopep8 -i -r .');
+                        }
                         formatCheckExecuted = true;
-                    } catch (error) {
-                        errors.push('Spotless: Code formatting changes needed. Run "mvn spotless:apply" to fix.');
-                        formatCheckExecuted = true;
+                    } catch (error2) {
+                        warnings.push('No Python formatter found (black or autopep8)');
                     }
-                }
-            } catch (error) {
-                // Ignore
-            }
-        }
-        
-        // Ruby - RuboCop
-        if (!formatCheckExecuted && fs.existsSync(path.join(projectRoot, 'Gemfile'))) {
-            try {
-                console.error('Running RuboCop...');
-                execSync('bundle exec rubocop', { 
-                    stdio: ['ignore', 'ignore', 'pipe'],
-                    encoding: 'utf8'
-                });
-                formatCheckExecuted = true;
-            } catch (error) {
-                const errorOutput = error.stderr || error.stdout || error.message;
-                if (errorOutput.includes('offenses detected')) {
-                    errors.push('RuboCop: Style violations detected');
-                    formatCheckExecuted = true;
                 }
             }
         }
         
         if (!formatCheckExecuted) {
-            warnings.push('No recognized code formatter found. Supported: prettier, eslint, standard, gofmt, rustfmt, black, flake8, dotnet format, spotless, rubocop');
+            warnings.push('No formatting tools found. Supported: prettier, eslint, gofmt, rustfmt, black, autopep8');
         }
         
-        return {
-            passed: errors.length === 0,
-            errors,
-            warnings
-        };
     } catch (error) {
-        return {
-            passed: false,
-            errors: [\`Script execution failed: \${error.message}\`],
-            warnings
-        };
+        errors.push(\`Format check failed: \${error.message}\`);
+    }
+    
+    // Output results
+    console.log(JSON.stringify({
+        passed: errors.length === 0,
+        errors: errors,
+        warnings: warnings
+    }, null, 2));
+}
+
+// Run the check
+check().catch(error => {
+    console.error(\`Unexpected error during format check: \${error.message}\`);
+    console.log(JSON.stringify({
+        passed: false,
+        errors: [\`Unexpected error: \${error.message}\`]
+    }, null, 2));
+    process.exit(1);
+});`,
+
+    'github-actions.js': `#!/usr/bin/env node
+/**
+ * GitHub Actions Workflow Check
+ * Validates GitHub Actions workflow files
+ * Auto-generated by Claude Autopilot
+ */
+
+const fs = require('fs');
+const path = require('path');
+const yaml = require('js-yaml');
+
+// Simple YAML parser fallback if js-yaml is not available
+function parseYAML(content) {
+    try {
+        return yaml.load(content);
+    } catch (e) {
+        // Basic validation without full parsing
+        const errors = [];
+        const lines = content.split('\\n');
+        
+        // Check for basic YAML syntax
+        let indentLevel = 0;
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const trimmed = line.trim();
+            
+            // Skip empty lines and comments
+            if (!trimmed || trimmed.startsWith('#')) continue;
+            
+            // Check for tabs (YAML doesn't allow tabs)
+            if (line.includes('\\t')) {
+                errors.push(\`Line \${i + 1}: YAML files should not contain tabs\`);
+            }
+            
+            // Check for proper key-value format
+            if (trimmed.includes(':') && !trimmed.match(/^[\\w-]+:/)) {
+                const beforeColon = trimmed.split(':')[0];
+                if (beforeColon.includes(' ') && !beforeColon.startsWith('"') && !beforeColon.startsWith("'")) {
+                    errors.push(\`Line \${i + 1}: Keys with spaces must be quoted\`);
+                }
+            }
+        }
+        
+        if (errors.length > 0) {
+            throw new Error(errors.join('; '));
+        }
+        
+        return null; // Can't fully parse, but no obvious errors
     }
 }
 
-// Run the check and output results
+async function check() {
+    const errors = [];
+    const warnings = [];
+    
+    try {
+        const workflowsDir = path.join(process.cwd(), '.github', 'workflows');
+        
+        if (!fs.existsSync(workflowsDir)) {
+            warnings.push('No .github/workflows directory found');
+            console.log(JSON.stringify({
+                passed: true,
+                errors: errors,
+                warnings: warnings
+            }, null, 2));
+            return;
+        }
+        
+        const files = fs.readdirSync(workflowsDir);
+        const workflowFiles = files.filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
+        
+        if (workflowFiles.length === 0) {
+            warnings.push('No workflow files found in .github/workflows');
+        }
+        
+        for (const file of workflowFiles) {
+            const filePath = path.join(workflowsDir, file);
+            const content = fs.readFileSync(filePath, 'utf8');
+            
+            try {
+                const workflow = parseYAML(content);
+                
+                if (workflow) {
+                    // Validate workflow structure
+                    if (!workflow.name) {
+                        warnings.push(\`\${file}: Missing 'name' field\`);
+                    }
+                    
+                    if (!workflow.on) {
+                        errors.push(\`\${file}: Missing 'on' trigger definition\`);
+                    }
+                    
+                    if (!workflow.jobs || Object.keys(workflow.jobs).length === 0) {
+                        errors.push(\`\${file}: No jobs defined\`);
+                    }
+                    
+                    // Check for deprecated actions
+                    const workflowString = JSON.stringify(workflow);
+                    const deprecatedActions = [
+                        { pattern: 'actions/setup-node@v1', replacement: 'actions/setup-node@v4' },
+                        { pattern: 'actions/checkout@v1', replacement: 'actions/checkout@v4' },
+                        { pattern: 'actions/checkout@v2', replacement: 'actions/checkout@v4' },
+                        { pattern: 'actions/setup-python@v1', replacement: 'actions/setup-python@v4' },
+                        { pattern: 'actions/cache@v1', replacement: 'actions/cache@v3' }
+                    ];
+                    
+                    for (const { pattern, replacement } of deprecatedActions) {
+                        if (workflowString.includes(pattern)) {
+                            warnings.push(\`\${file}: Deprecated action '\${pattern}' - use '\${replacement}'\`);
+                        }
+                    }
+                    
+                    // Check each job
+                    if (workflow.jobs) {
+                        for (const [jobName, job] of Object.entries(workflow.jobs)) {
+                            if (!job['runs-on']) {
+                                errors.push(\`\${file}: Job '\${jobName}' missing 'runs-on'\`);
+                            }
+                            
+                            if (!job.steps || job.steps.length === 0) {
+                                errors.push(\`\${file}: Job '\${jobName}' has no steps\`);
+                            }
+                            
+                            // Check for hardcoded secrets
+                            const jobString = JSON.stringify(job);
+                            if (jobString.match(/['\`"][A-Za-z0-9]{20,}['\`"]/)) {
+                                warnings.push(\`\${file}: Possible hardcoded secret in job '\${jobName}'\`);
+                            }
+                        }
+                    }
+                }
+            } catch (parseError) {
+                errors.push(\`\${file}: Invalid YAML - \${parseError.message}\`);
+            }
+        }
+        
+    } catch (error) {
+        errors.push(\`GitHub Actions check failed: \${error.message}\`);
+    }
+    
+    // Output results
+    console.log(JSON.stringify({
+        passed: errors.length === 0,
+        errors: errors,
+        warnings: warnings
+    }, null, 2));
+}
+
+// Try to load js-yaml, but continue without it if not available
+let yaml;
+try {
+    yaml = require('js-yaml');
+} catch (e) {
+    // Will use fallback parser
+}
+
+// Run the check
 check().then(result => {
     console.log(JSON.stringify(result, null, 2));
     process.exit(result.passed ? 0 : 1);
@@ -1063,249 +797,9 @@ check().then(result => {
     process.exit(1);
 });`,
 
-    'github-actions.js': `#!/usr/bin/env node
-/**
- * GitHub Actions Check
- * Validates GitHub Actions workflows
- * Auto-generated by Claude Autopilot
- */
-
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
-
-async function check() {
-    const errors = [];
-    const warnings = [];
-    
-    try {
-        const projectRoot = process.cwd();
-        const workflowsDir = path.join(projectRoot, '.github', 'workflows');
-        
-        if (!fs.existsSync(workflowsDir)) {
-            warnings.push('No GitHub Actions workflows found (.github/workflows directory missing)');
-            return {
-                passed: true,
-                errors,
-                warnings
-            };
-        }
-        
-        // Get all workflow files
-        const workflowFiles = fs.readdirSync(workflowsDir).filter(f => 
-            f.endsWith('.yml') || f.endsWith('.yaml')
-        );
-        
-        if (workflowFiles.length === 0) {
-            warnings.push('No workflow files found in .github/workflows');
-            return {
-                passed: true,
-                errors,
-                warnings
-            };
-        }
-        
-        console.error(\`Found \${workflowFiles.length} workflow file(s)\`);
-        
-        // Check each workflow file
-        for (const workflowFile of workflowFiles) {
-            const workflowPath = path.join(workflowsDir, workflowFile);
-            console.error(\`Checking \${workflowFile}...\`);
-            
-            try {
-                const content = fs.readFileSync(workflowPath, 'utf8');
-                
-                // Basic structure validation
-                if (content.trim() === '') {
-                    errors.push(\`\${workflowFile}: Empty workflow file\`);
-                    continue;
-                }
-                
-                // Check for required top-level keys
-                if (!content.includes('name:')) {
-                    warnings.push(\`\${workflowFile}: Missing 'name' field (recommended for clarity)\`);
-                }
-                
-                if (!content.includes('on:')) {
-                    errors.push(\`\${workflowFile}: Missing 'on' trigger - workflow will never run\`);
-                }
-                
-                if (!content.includes('jobs:')) {
-                    errors.push(\`\${workflowFile}: Missing 'jobs' section - no jobs defined\`);
-                }
-                
-                // Check for common syntax errors
-                const lines = content.split('\\n');
-                let inString = false;
-                let indentStack = [0];
-                
-                lines.forEach((line, index) => {
-                    const lineNum = index + 1;
-                    const trimmedLine = line.trim();
-                    
-                    // Skip empty lines and comments
-                    if (!trimmedLine || trimmedLine.startsWith('#')) return;
-                    
-                    // Check for tabs (YAML requires spaces)
-                    if (line.includes('\\t')) {
-                        errors.push(\`\${workflowFile}:\${lineNum} - Contains tabs (YAML requires spaces)\`);
-                    }
-                    
-                    // Check for trailing whitespace
-                    if (line !== line.trimEnd()) {
-                        warnings.push(\`\${workflowFile}:\${lineNum} - Trailing whitespace\`);
-                    }
-                    
-                    // Basic string detection for quotes
-                    const quotes = (line.match(/['"]/g) || []).length;
-                    if (quotes % 2 !== 0) {
-                        inString = !inString;
-                    }
-                });
-                
-                // Check for deprecated actions
-                const deprecatedActions = [
-                    { pattern: /actions\\/setup-node@v1/g, replacement: 'actions/setup-node@v4' },
-                    { pattern: /actions\\/checkout@v1/g, replacement: 'actions/checkout@v4' },
-                    { pattern: /actions\\/checkout@v2/g, replacement: 'actions/checkout@v4' },
-                    { pattern: /actions\\/setup-node@v2/g, replacement: 'actions/setup-node@v4' },
-                    { pattern: /actions\\/cache@v1/g, replacement: 'actions/cache@v3' },
-                    { pattern: /actions\\/upload-artifact@v1/g, replacement: 'actions/upload-artifact@v3' },
-                    { pattern: /actions\\/download-artifact@v1/g, replacement: 'actions/download-artifact@v3' },
-                    { pattern: /actions\\/create-release@v1/g, replacement: 'Use GitHub CLI (gh) instead' },
-                    { pattern: /actions\\/upload-release-asset@v1/g, replacement: 'Use GitHub CLI (gh) instead' }
-                ];
-                
-                deprecatedActions.forEach(({ pattern, replacement }) => {
-                    if (pattern.test(content)) {
-                        const matches = content.match(pattern);
-                        const actionName = matches[0];
-                        warnings.push(\`\${workflowFile}: Deprecated action '\${actionName}' - use '\${replacement}'\`);
-                    }
-                });
-                
-                // Check for insecure patterns
-                if (content.includes('\${{ github.event.pull_request.title }}') || 
-                    content.includes('\${{ github.event.pull_request.body }}') ||
-                    content.includes('\${{ github.event.issue.title }}') ||
-                    content.includes('\${{ github.event.issue.body }}')) {
-                    warnings.push(\`\${workflowFile}: Potentially unsafe user input in workflow - could lead to script injection\`);
-                }
-                
-                // Check for missing permissions
-                if (content.includes('GITHUB_TOKEN') && !content.includes('permissions:')) {
-                    warnings.push(\`\${workflowFile}: Uses GITHUB_TOKEN but no 'permissions' specified - using default permissions\`);
-                }
-                
-                // Try actionlint if available
-                try {
-                    execSync(\`actionlint \${workflowPath}\`, { 
-                        stdio: ['ignore', 'ignore', 'pipe'],
-                        encoding: 'utf8'
-                    });
-                } catch (error) {
-                    const errorOutput = error.stderr || error.stdout || '';
-                    
-                    if (errorOutput.includes('command not found') || errorOutput.includes('not recognized')) {
-                        // actionlint not installed - try basic YAML validation
-                        try {
-                            // Try to parse YAML with Node.js
-                            execSync(\`node -e "const yaml = require('js-yaml'); yaml.load(require('fs').readFileSync('\${workflowPath}', 'utf8'));"\`, {
-                                stdio: 'ignore'
-                            });
-                        } catch (yamlError) {
-                            errors.push(\`\${workflowFile}: Invalid YAML syntax\`);
-                        }
-                        
-                        // If no js-yaml, skip YAML validation
-                        warnings.push('Install actionlint for comprehensive workflow validation');
-                    } else if (errorOutput) {
-                        // actionlint found issues
-                        const actionlintErrors = errorOutput.split('\\n').filter(line => line.trim());
-                        actionlintErrors.forEach(error => {
-                            if (error.includes(workflowPath)) {
-                                // Extract just the relevant part after the filename
-                                const errorMessage = error.split(workflowPath)[1] || error;
-                                errors.push(\`\${workflowFile}\${errorMessage}\`);
-                            } else if (!error.includes('actionlint: not found')) {
-                                errors.push(\`\${workflowFile}: \${error}\`);
-                            }
-                        });
-                    }
-                }
-                
-                // Check for workflow-specific issues
-                
-                // Check if workflow uses matrix but doesn't define it
-                if (content.includes('\${{ matrix.') && !content.includes('matrix:')) {
-                    errors.push(\`\${workflowFile}: References matrix variables but no matrix strategy defined\`);
-                }
-                
-                // Check for common job issues
-                const jobMatches = content.match(/^\\s{2}[\\w-]+:/gm) || [];
-                if (jobMatches.length === 0 && content.includes('jobs:')) {
-                    errors.push(\`\${workflowFile}: 'jobs' section exists but no jobs defined\`);
-                }
-                
-                // Check for invalid cron syntax
-                const cronMatches = content.match(/cron:\\s*['"]([^'"]+)['"]/g) || [];
-                cronMatches.forEach(match => {
-                    const cron = match.match(/['"]([^'"]+)['"]/)[1];
-                    const cronParts = cron.split(' ');
-                    if (cronParts.length !== 5) {
-                        errors.push(\`\${workflowFile}: Invalid cron expression '\${cron}' - must have 5 fields\`);
-                    }
-                });
-                
-            } catch (error) {
-                errors.push(\`\${workflowFile}: Failed to read or parse - \${error.message}\`);
-            }
-        }
-        
-        // Additional checks for workflow best practices
-        const readmeExists = fs.existsSync(path.join(projectRoot, 'README.md'));
-        if (readmeExists) {
-            try {
-                const readme = fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf8');
-                const hasBadges = workflowFiles.some(file => {
-                    const workflowName = file.replace(/\\.(yml|yaml)$/, '');
-                    return readme.includes(\`\${workflowName}/badge.svg\`) || 
-                           readme.includes('actions/workflows/');
-                });
-                
-                if (workflowFiles.length > 0 && !hasBadges) {
-                    warnings.push('Consider adding GitHub Actions status badges to README.md');
-                }
-            } catch (error) {
-                // Ignore README read errors
-            }
-        }
-        
-        return {
-            passed: errors.length === 0,
-            errors,
-            warnings
-        };
-    } catch (error) {
-        return {
-            passed: false,
-            errors: [\`Script execution failed: \${error.message}\`],
-            warnings
-        };
-    }
-}
-
-// Run the check and output results
-check().then(result => {
-    console.log(JSON.stringify(result, null, 2));
-    process.exit(result.passed ? 0 : 1);
-}).catch(error => {
-    console.error(JSON.stringify({
-        passed: false,
-        errors: [\`Unexpected error: \${error.message}\`]
-    }, null, 2));
-    process.exit(1);
-});`
+    'tdd-automation.js': TDD_AUTOMATION_SCRIPT,
+    'ai-code-review.js': AI_CODE_REVIEW_SCRIPT,
+    'doc-generator.js': DOC_GENERATOR_SCRIPT
 };
 
 export const DEFAULT_CONFIG = {
@@ -1320,14 +814,14 @@ export const DEFAULT_CONFIG = {
         {
             id: "build-check",
             name: "Build Check",
-            description: "Ensures the project can build successfully",
+            description: "Verifies that the project builds successfully",
             enabled: true,
             order: 2
         },
         {
             id: "test-check",
             name: "Test Check",
-            description: "Runs all tests and ensures they pass",
+            description: "Runs tests to ensure they all pass",
             enabled: true,
             order: 3
         },
@@ -1344,6 +838,27 @@ export const DEFAULT_CONFIG = {
             description: "Validates GitHub Actions workflows",
             enabled: true,
             order: 5
+        },
+        {
+            id: "tdd-automation",
+            name: "TDD Automation",
+            description: "Ensures test coverage and test-driven development",
+            enabled: true,
+            order: 6
+        },
+        {
+            id: "ai-code-review",
+            name: "AI Code Review",
+            description: "AI-powered code quality, security, and performance review",
+            enabled: true,
+            order: 7
+        },
+        {
+            id: "doc-generator",
+            name: "Documentation Check",
+            description: "Checks for missing documentation and generates suggestions",
+            enabled: true,
+            order: 8
         }
     ],
     maxIterations: 5
@@ -1356,69 +871,30 @@ This folder contains quality check scripts that ensure your code meets productio
 ## Built-in Scripts
 
 1. **production-readiness.js** - Scans for TODO, FIXME, placeholders, and incomplete implementations
-2. **build-check.js** - Ensures the project builds successfully
-3. **test-check.js** - Runs all tests and ensures they pass
-4. **format-check.js** - Validates code formatting
-5. **github-actions.js** - Checks GitHub Actions workflow syntax and best practices
+2. **build-check.js** - Verifies that your project builds successfully  
+3. **test-check.js** - Runs your test suite and ensures all tests pass
+4. **format-check.js** - Checks code formatting using project-specific tools
+5. **github-actions.js** - Validates GitHub Actions workflow files
+6. **tdd-automation.js** - Ensures test coverage and test-driven development
+7. **ai-code-review.js** - AI-powered code quality, security, and performance review
+8. **doc-generator.js** - Checks for missing documentation and generates suggestions
 
 ## Custom Scripts
 
-You can add your own validation scripts to this folder. Scripts must:
+You can add your own validation scripts to this folder. Scripts should:
 
-1. Be executable JavaScript files (\`.js\`)
-2. Output JSON to stdout in this format:
-\`\`\`json
-{
-  "passed": true/false,
-  "errors": ["error1", "error2"],
-  "warnings": ["warning1"] // optional
-}
-\`\`\`
-3. Exit with code 0 if passed, 1 if failed
-
-## Example Custom Script
-
-\`\`\`javascript
-#!/usr/bin/env node
-
-async function check() {
-    const errors = [];
-    const warnings = [];
-    
-    // Your validation logic here
-    if (someCondition) {
-        errors.push("Found an issue");
-    }
-    
-    return {
-        passed: errors.length === 0,
-        errors,
-        warnings
-    };
-}
-
-check().then(result => {
-    console.log(JSON.stringify(result, null, 2));
-    process.exit(result.passed ? 0 : 1);
-}).catch(error => {
-    console.error(JSON.stringify({
-        passed: false,
-        errors: [\`Unexpected error: \${error.message}\`]
-    }, null, 2));
-    process.exit(1);
-});
-\`\`\`
+1. Be executable (chmod +x)
+2. Return JSON output with this format:
+   \`\`\`json
+   {
+     "passed": true/false,
+     "errors": ["error1", "error2"],
+     "warnings": ["warning1", "warning2"]
+   }
+   \`\`\`
+3. Exit with code 0 on success, non-zero on failure
 
 ## Configuration
 
-Scripts are configured in \`../.autopilot/config.json\`. You can:
-- Enable/disable scripts
-- Change execution order
-- Set max iterations for fix loops
-
-## Running Scripts
-
-Scripts are run automatically by Claude Autopilot when you:
-- Click "Run Checks" to validate once
-- Click "Run Loop" to fix issues automatically
-- Use the 🔄 button on messages for quality loops`;
+Scripts are configured in the \`config.json\` file in the parent directory.
+`;

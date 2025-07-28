@@ -230,6 +230,35 @@ export class ScriptRunner {
         await this.saveConfig();
     }
 
+    async runSingleCheck(scriptId: string): Promise<ScriptResult | null> {
+        const script = this.config.scripts.find(s => s.id === scriptId);
+        if (!script) {
+            return null;
+        }
+        
+        debugLog(`Running single script: ${script.name}`);
+        
+        let result: ScriptResult;
+        if (script.path) {
+            result = await this.runScript(script.path);
+        } else {
+            result = {
+                passed: false,
+                errors: ['Script has no implementation']
+            };
+        }
+        
+        // Log results
+        if (result.passed) {
+            debugLog(`✅ ${script.name}: Passed`);
+        } else {
+            debugLog(`❌ ${script.name}: Failed`);
+            debugLog(`   Errors: ${result.errors.join(', ')}`);
+        }
+        
+        return result;
+    }
+
     async runChecks(): Promise<{ allPassed: boolean; results: Map<string, ScriptResult> }> {
         const results = new Map<string, ScriptResult>();
         let allPassed = true;
