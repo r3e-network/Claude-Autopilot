@@ -1,6 +1,6 @@
 # Claude Autopilot - Automated Claude Code Task Management
 
-[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
+[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.claude-autopilot)
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/r3e-network/Claude-Autopilot/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
@@ -66,7 +66,7 @@
 
 ### Installation
 
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
+1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=r3e.claude-autopilot)
 2. Or install via command palette: `Extensions: Install Extensions` → Search "Claude Autopilot"
 3. Or install from VSIX: `code --install-extension claude-autopilot-1.0.0.vsix`
 4. **Cursor**: Claude Autopilot works seamlessly in Cursor with the same installation process
@@ -79,28 +79,178 @@
 4. **Live Your Life**: Go eat dinner, play with kids, sleep, or enjoy your weekend
 5. **Return to Completed Work**: Claude Autopilot handles everything automatically, even through Claude usage limits
 
-### Using Script Runner
+### 🔍 Script Runner - Automated Quality Checks
 
-The Script Checks section appears above the message input area with all available scripts visible.
+The Script Runner is a powerful feature that ensures your code meets production standards by running automated checks and fixing issues automatically.
 
-1. **Select Scripts**: Check/uncheck scripts to enable or disable them
-2. **Reorder Scripts**: Drag scripts by the handle (☰) to change execution order
-   - Scripts are numbered (1, 2, 3...) to show execution sequence
-   - Order is saved automatically
-3. **Run Script Checks**: Click "Run Checks" to validate your code once
-4. **Run Script Loop**: Click "Run Loop" to automatically fix all issues
-   - Set max iterations with the input field (default: 5)
-   - Claude will be asked to fix any issues found
-   - Scripts re-run after fixes in your specified order
-   - Process continues until all checks pass or max iterations reached
-5. **Run Message in Loop**: Click the 🔄 button on any pending message
-   - Processes the message first
-   - Then runs script checks
-   - If checks fail, asks Claude to fix issues
-   - Continues until all checks pass or max iterations reached
-6. **Custom Scripts**: Add your own validation scripts to `.autopilot/scripts/`
-   - Scripts should output JSON with `passed`, `errors`, and optional `warnings`
-   - Custom scripts automatically appear in the list
+#### Overview
+
+The Script Checks section appears directly above the message input area, providing instant access to quality validation tools. All scripts are visible and can be enabled/disabled with checkboxes.
+
+#### Built-in Scripts
+
+1. **Production Readiness Check** 🏭
+   - Scans for TODOs, FIXMEs, placeholders, and incomplete implementations
+   - Ensures no debug code or temporary solutions remain
+   - Validates error handling and edge cases
+
+2. **Build Check** 🔨
+   - Automatically detects your project's build system (npm, go, cargo, dotnet, etc.)
+   - Runs the appropriate build command
+   - Ensures code compiles without errors
+
+3. **Test Check** ✅
+   - Detects and runs your test suite
+   - Supports multiple test frameworks across languages
+   - Ensures all tests pass before proceeding
+
+4. **Format Check** 💅
+   - Validates code formatting standards
+   - Detects formatters (prettier, gofmt, rustfmt, etc.)
+   - Ensures consistent code style
+
+5. **GitHub Actions Check** 🚀
+   - Validates workflow YAML syntax
+   - Checks for deprecated actions
+   - Ensures CI/CD pipelines are correctly configured
+
+#### Using Script Runner
+
+1. **Enable/Disable Scripts**
+   - Click checkboxes to select which scripts to run
+   - Scripts only run when enabled
+   - Your selection is saved automatically
+
+2. **Reorder Scripts** 
+   - Drag scripts using the handle icon (☰)
+   - Numbers (1, 2, 3...) show execution order
+   - Order affects fix priority - earlier scripts are fixed first
+
+3. **Run Once - "Run Checks"** 🔍
+   - Executes all enabled scripts once
+   - Shows results with ✅ pass or ❌ fail status
+   - Displays specific errors found
+   - No automatic fixing - just validation
+
+4. **Fix Loop - "Run Loop"** 🔄
+   - Runs all enabled scripts
+   - If any fail, asks Claude to fix the issues
+   - Re-runs scripts after fixes
+   - Continues until all pass or max iterations reached
+   - Set max iterations (1-20, default: 5)
+
+5. **Custom Scripts** 📝
+   - Add your own validation scripts to `.autopilot/scripts/`
+   - Scripts automatically appear in the UI
+   - Must output JSON format:
+   ```json
+   {
+     "passed": true/false,
+     "errors": ["error1", "error2"],
+     "warnings": ["warning1"] // optional
+   }
+   ```
+   - Support any language (bash, python, node, etc.)
+   - Examples provided in `.autopilot/scripts/examples/`
+
+#### Script Configuration
+
+Scripts are configured in `.autopilot/config.json`:
+```json
+{
+  "scripts": {
+    "production-check": {
+      "enabled": true,
+      "order": 1
+    },
+    "build": {
+      "enabled": true,
+      "order": 2
+    }
+  },
+  "maxIterations": 5
+}
+```
+
+### 🔄 Loop Features - Intelligent Task Refinement
+
+Claude Autopilot provides two powerful loop features that ensure your tasks are completed to perfection.
+
+#### 1. Script Fix Loop (Global)
+
+The **"Run Loop"** button runs all enabled scripts repeatedly until they pass:
+
+**How it works:**
+1. Runs all enabled script checks
+2. If any fail, sends errors to Claude with fix request
+3. Claude implements fixes based on error messages
+4. Scripts run again to verify fixes
+5. Continues until all pass or max iterations reached
+
+**Best for:**
+- Preparing code for production deployment
+- Ensuring all quality standards are met
+- Automated code cleanup and refactoring
+- Pre-commit quality assurance
+
+**Example workflow:**
+```
+1. Enable: Production Check, Build, Test, Format
+2. Click "Run Loop" with max iterations = 5
+3. Claude fixes TODOs → Build errors → Test failures → Formatting
+4. All scripts pass → Code is production-ready!
+```
+
+#### 2. Message Loop (Individual Tasks)
+
+The **🔄 button** on each message runs that specific task in a quality loop:
+
+**How it works:**
+1. Processes the individual message/task
+2. Runs enabled script checks on the changes
+3. If checks fail, asks Claude to fix while maintaining task completion
+4. Re-runs scripts after fixes
+5. Ensures task is both complete AND high quality
+
+**Best for:**
+- Complex features that need refinement
+- Tasks requiring multiple iterations
+- Ensuring individual changes meet standards
+- Focused quality improvement
+
+**Example workflow:**
+```
+Message: "Add user authentication with JWT"
+1. Click 🔄 on the message
+2. Claude implements authentication
+3. Scripts find: missing error handling, no tests
+4. Claude adds error handling and tests
+5. All checks pass → Feature is complete and production-ready!
+```
+
+#### Loop Configuration
+
+Control loop behavior with these settings:
+
+- **Max Iterations**: 1-20 (default: 5)
+  - Lower for quick fixes
+  - Higher for complex refactoring
+  
+- **Script Selection**: Enable only relevant scripts
+  - Faster loops with fewer scripts
+  - More thorough with all scripts
+
+- **Smart Ordering**: Drag scripts to prioritize
+  - Put critical checks first
+  - Format checks last
+
+#### Pro Tips
+
+1. **Start Simple**: Begin with 1-2 scripts, add more as needed
+2. **Watch Progress**: Each iteration shows what was fixed
+3. **Trust the Process**: Let Claude handle the fixes
+4. **Custom Standards**: Add your own scripts for team standards
+5. **Combine Features**: Queue messages + loops = fully automated development
 
 ## 📋 Commands
 
@@ -334,10 +484,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 
--   🐛 [Bug Reports](https://github.com/benbasha/Claude-Autopilot/issues/new?template=bug_report.md)
--   💡 [Feature Requests](https://github.com/benbasha/Claude-Autopilot/issues/new?template=feature_request.md)
--   💬 [Discussions](https://github.com/benbasha/Claude-Autopilot/discussions)
--   📖 [Wiki Documentation](https://github.com/benbasha/Claude-Autopilot/wiki)
+-   🐛 [Bug Reports](https://github.com/r3e-network/Claude-Autopilot/issues/new?template=bug_report.md)
+-   💡 [Feature Requests](https://github.com/r3e-network/Claude-Autopilot/issues/new?template=feature_request.md)
+-   💬 [Discussions](https://github.com/r3e-network/Claude-Autopilot/discussions)
+-   📖 [Wiki Documentation](https://github.com/r3e-network/Claude-Autopilot/wiki)
 
 ### Support
 

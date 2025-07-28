@@ -216,14 +216,14 @@
     }
   ],
   "license": "MIT",
-  "publisher": "benbasha",
+  "publisher": "r3e",
   "repository": {
     "type": "git",
-    "url": "https://github.com/benbasha/Claude-Autopilot"
+    "url": "https://github.com/r3e-network/Claude-Autopilot"
   },
-  "homepage": "https://github.com/benbasha/Claude-Autopilot#readme",
+  "homepage": "https://github.com/r3e-network/Claude-Autopilot#readme",
   "bugs": {
-    "url": "https://github.com/benbasha/Claude-Autopilot/discussions"
+    "url": "https://github.com/r3e-network/Claude-Autopilot/discussions"
   },
   "galleryBanner": {
     "color": "#1e1e1e",
