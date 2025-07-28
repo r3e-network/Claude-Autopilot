@@ -216,6 +216,24 @@ npm run watch
 vsce package
 ```
 
+### Creating a Release
+
+To create a new release:
+
+1. Update version in `package.json`
+2. Update version badge in `README.md`
+3. Add changelog entry in `CHANGELOG.md`
+4. Commit changes: `git commit -m "chore: bump version to X.X.X"`
+5. Push to main: `git push origin main`
+6. Create release branch: `git checkout -b vX.X.X`
+7. Push release branch: `git push origin vX.X.X`
+
+The GitHub Actions workflow will automatically:
+- Build the extension
+- Create a `.vsix` package
+- Create a GitHub release with the package as an asset
+- Tag the release
+
 ### Development Mode
 
 Enable development mode for additional debugging features:

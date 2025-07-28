@@ -178,9 +178,11 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./ && cp src/claude_pty_wrapper.py out/claude/session/ && cp -r src/webview out/",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package",
+    "package": "vsce package --no-dependencies",
+    "package:pre-release": "vsce package --no-dependencies --pre-release",
     "publish": "vsce publish",
-    "prepackage": "npm run compile"
+    "prepackage": "npm run compile",
+    "release": "npm run compile && npm run package"
   },
   "devDependencies": {
     "@types/node": "16.x",

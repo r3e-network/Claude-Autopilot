@@ -8,12 +8,15 @@ tsconfig.json
 
 # Development and configuration files
 .git/**
+.github/**
 .gitignore
 .editorconfig
 .eslintrc*
 .prettierrc*
 .yarnrc
 vsc-extension-quickstart.md
+COLLABORATION.md
+DEPLOYMENT.md
 
 # Node modules and package files
 node_modules/**
