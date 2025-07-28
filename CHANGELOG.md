@@ -5,6 +5,38 @@ All notable changes to the Claude Autopilot extension will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-01-28
+
+### 🔧 Script System Improvements
+
+This release completely revamps the script system for better reliability and workspace isolation.
+
+### Changed
+
+-   **Script Deployment**: Built-in scripts are now embedded in the extension and deployed to each workspace
+-   **Workspace Isolation**: Scripts run exclusively from the workspace `.autopilot` folder
+-   **No Extension Dependencies**: Removed fallback to extension directory - everything runs from workspace
+
+### Added
+
+-   **Embedded Scripts**: All 5 built-in scripts are embedded as TypeScript constants
+-   **Automatic Deployment**: Scripts are automatically written to `.autopilot/scripts/` on startup
+-   **Complete Scripts**: Each script is self-contained with comprehensive error handling
+
+### Improved
+
+-   **Reliability**: Scripts are always available and consistent across installations
+-   **Portability**: Workspace `.autopilot` folders are completely self-contained
+-   **Customization**: Users can modify scripts in their workspace without affecting the extension
+-   **Visibility**: Scripts are visible in the project for easy inspection and modification
+
+### Technical Details
+
+-   Scripts are stored in `src/scripts/builtinScripts.ts`
+-   Scripts are written with executable permissions (755)
+-   Includes README.md and default config.json in `.autopilot` folder
+-   Removed 200+ lines of unused script generation code
+
 ## [1.0.1] - 2025-01-28
 
 ### 📚 Documentation & Publisher Update
