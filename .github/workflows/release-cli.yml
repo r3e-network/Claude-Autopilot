@@ -81,35 +81,43 @@ jobs:
           echo "Creating new release v$VERSION..."
           
           # Get changelog for this version
-          CHANGELOG=$(awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d')
+          CHANGELOG=$(awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md | sed '/^$/d' || true)
           
           if [ -z "$CHANGELOG" ]; then
-            CHANGELOG="See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+            CHANGELOG="See CHANGELOG.md for details."
           fi
+          
+          # Create release notes file
+          cat > release_notes.md << 'ENDOFNOTES'
+        ## Claude Autopilot v$VERSION
+        
+        ### Installation
+        
+        1. Download the .vsix file from the assets below
+        2. Open VS Code
+        3. Go to Extensions view (Ctrl+Shift+X)
+        4. Click on the "..." menu and select "Install from VSIX..."
+        5. Select the downloaded file
+        
+        ### What's New
+        
+        $CHANGELOG
+        
+        ### Features
+        
+        - 🚀 24/7 Automated Processing
+        - 🔍 Script Runner & Quality Checks
+        - 🔄 Message Loop for Individual Tasks
+        - 📊 Rich User Interface
+        ENDOFNOTES
+          
+          # Substitute variables in release notes
+          envsubst '$VERSION $CHANGELOG' < release_notes.md > release_notes_final.md
           
           # Create release
           gh release create "v$VERSION" \
             --title "Release v$VERSION" \
-            --notes "## Claude Autopilot v$VERSION
-
-### Installation
-
-1. Download the \`.vsix\` file from the assets below
-2. Open VS Code
-3. Go to Extensions view (Ctrl+Shift+X)
-4. Click on the \"...\" menu and select \"Install from VSIX...\"
-5. Select the downloaded file
-
-### What's New
-
-$CHANGELOG
-
-### Features
-
-- 🚀 24/7 Automated Processing
-- 🔍 Script Runner & Quality Checks
-- 🔄 Message Loop for Individual Tasks
-- 📊 Rich User Interface" \
+            --notes-file release_notes_final.md \
             "$FILENAME"
         fi
         
