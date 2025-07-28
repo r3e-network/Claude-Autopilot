@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - 'release/v[0-9]+.[0-9]+.[0-9]+'
-    # Explicitly exclude main and other branches
-    branches-ignore:
-      - 'main'
-      - 'master'
-      - 'develop'
-      - 'dev'
   workflow_dispatch:
     inputs:
       version:
@@ -22,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # Only run on release branches or manual dispatch
+    if: startsWith(github.ref, 'refs/heads/release/v') || github.event_name == 'workflow_dispatch'
     
     steps:
     - name: Checkout code
