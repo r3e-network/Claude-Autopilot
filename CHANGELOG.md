@@ -5,6 +5,31 @@ All notable changes to the Claude Autopilot extension will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-01-28
+
+### 🎉 First Stable Release
+
+Claude Autopilot is now production-ready! This release marks the first stable version with all core features fully implemented and tested.
+
+### ✨ Key Features
+
+-   **24/7 Automated Processing**: Queue tasks and let Claude work while you sleep
+-   **Script Runner & Quality Checks**: Ensure code quality with automated validation
+-   **Message Loop**: Run individual messages with quality checks until they pass
+-   **Auto-Resume**: Automatically handles Claude usage limits
+-   **Rich UI**: Intuitive webview interface with real-time updates
+-   **Cross-Platform**: Full support for Windows, macOS, and Linux
+-   **GitHub Actions**: Automated release workflow for easy distribution
+-   **Drag-and-Drop**: Reorder scripts with visual interface
+-   **Custom Scripts**: Extensible validation system
+
+### 🔧 Infrastructure
+
+-   **Automated Releases**: GitHub Actions workflow for building and releasing
+-   **VSIX Packaging**: Direct download and installation from GitHub releases
+-   **Comprehensive Documentation**: Complete README with use cases and examples
+-   **Author Attribution**: Credits both original and current maintainers
+
 ## [0.0.3] - 2025-01-28
 
 ### ✨ Added

@@ -1,7 +1,7 @@
 # Claude Autopilot - Automated Claude Code Task Management
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
-[![Version](https://img.shields.io/badge/version-0.0.3-blue)](https://github.com/benbasha/Claude-Autopilot/releases/tag/v0.0.3)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)](https://github.com/r3e-network/Claude-Autopilot/releases/tag/v1.0.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Claude Autopilot** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
@@ -68,7 +68,7 @@
 
 1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
 2. Or install via command palette: `Extensions: Install Extensions` → Search "Claude Autopilot"
-3. Or install from VSIX: `code --install-extension claude-autopilot-0.0.1.vsix`
+3. Or install from VSIX: `code --install-extension claude-autopilot-1.0.0.vsix`
 4. **Cursor**: Claude Autopilot works seamlessly in Cursor with the same installation process
 
 ### Basic Usage
