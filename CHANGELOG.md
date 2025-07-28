@@ -5,6 +5,38 @@ All notable changes to the Claude Autopilot extension will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-01-28
+
+### 📚 Documentation & Publisher Update
+
+This release updates the extension publisher and significantly improves documentation for the Script Runner and Loop features.
+
+### Changed
+
+-   **Publisher Update**: Changed publisher from `benbasha` to `r3e`
+-   **Extension ID**: Now published as `r3e.claude-autopilot` on VS Code Marketplace
+-   **Repository URLs**: Updated all references to `r3e-network` organization
+
+### Added
+
+-   **Comprehensive Script Runner Documentation**
+    -   Detailed explanation of all 5 built-in scripts
+    -   Step-by-step usage instructions
+    -   Configuration examples with JSON format
+    -   Custom script creation guidelines
+    
+-   **Loop Features Documentation**
+    -   Script Fix Loop (global quality checks) explanation
+    -   Message Loop (individual task refinement) guide
+    -   Real-world workflow examples
+    -   Configuration tips and pro tips
+
+### Improved
+
+-   **README Structure**: Better organization with clear sections for Script Runner and Loop features
+-   **Examples**: Added practical examples for both loop types
+-   **Visual Indicators**: Used emojis to make documentation more scannable
+
 ## [1.0.0] - 2025-01-28
 
 ### 🎉 First Stable Release
