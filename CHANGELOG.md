@@ -5,6 +5,24 @@ All notable changes to the Claude Autopilot extension will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2025-01-28
+
+### ✨ Added
+
+-   **Script Runner System**: Automated quality checks with predefined scripts for production readiness, build, test, format, and GitHub Actions validation
+-   **Fix Loop Functionality**: Automatically requests fixes for identified issues and re-runs checks until all pass or max iterations reached
+-   **Drag-and-Drop Script Ordering**: Reorder script execution with visual drag-and-drop interface
+-   **Custom Script Support**: Add custom validation scripts to `.autopilot/scripts/` folder
+-   **Multi-Language Detection**: Automatic support for JavaScript, TypeScript, Go, C++, Rust, C#, and Java
+-   **Integrated Script UI**: Scripts always visible above message input with checkboxes and order numbers
+-   **Configurable Max Iterations**: Set maximum fix loop iterations (default: 5)
+
+### 🔧 Improved
+
+-   **Simplified Interface**: Removed separate configuration step - scripts are always visible
+-   **Better Visual Feedback**: Order numbers and drag indicators for script management
+-   **Automatic Folder Creation**: `.autopilot` folder structure created automatically when needed
+
 ## [0.1.1] - 2025-01-15
 
 ### ✨ Added
