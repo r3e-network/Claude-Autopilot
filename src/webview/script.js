@@ -296,6 +296,15 @@ function renderQueue() {
                 };
                 actions.appendChild(editBtn);
                 
+                const loopBtn = document.createElement('button');
+                loopBtn.textContent = '🔄';
+                loopBtn.className = 'queue-item-action loop';
+                loopBtn.title = 'Run in loop with script checks';
+                loopBtn.onclick = () => {
+                    runMessageInLoop(item.id);
+                };
+                actions.appendChild(loopBtn);
+                
                 const removeBtn = document.createElement('button');
                 removeBtn.textContent = '✕';
                 removeBtn.className = 'queue-item-action remove';
@@ -2006,5 +2015,36 @@ function runScriptLoop() {
         command: 'runScriptLoop',
         config: scriptConfig
     });
+}
+
+function runMessageInLoop(messageId) {
+    // Check if any scripts are enabled
+    const enabledScripts = scriptOrder.filter(scriptId => 
+        document.getElementById(`script-${scriptId}`).checked
+    );
+    
+    if (enabledScripts.length === 0) {
+        showError('Please enable at least one script check before running message in loop');
+        return;
+    }
+    
+    // Gather script configuration
+    const scriptConfig = {
+        scripts: scriptOrder.map(scriptId => ({
+            id: scriptId,
+            enabled: document.getElementById(`script-${scriptId}`).checked
+        })),
+        maxIterations: parseInt(document.getElementById('maxIterations').value)
+    };
+    
+    // Confirm with user
+    const confirmMsg = `Run this message in a loop with ${enabledScripts.length} script checks until all pass (max ${scriptConfig.maxIterations} iterations)?`;
+    if (confirm(confirmMsg)) {
+        vscode.postMessage({
+            command: 'runMessageInLoop',
+            messageId: messageId,
+            config: scriptConfig
+        });
+    }
 }
 

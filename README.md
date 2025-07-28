@@ -1,7 +1,7 @@
 # Claude Autopilot - Automated Claude Code Task Management
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=benbasha.claude-autopilot)
-[![Version](https://img.shields.io/badge/version-0.0.2-blue)](https://github.com/benbasha/Claude-Autopilot/releases/tag/v0.0.2)
+[![Version](https://img.shields.io/badge/version-0.0.3-blue)](https://github.com/benbasha/Claude-Autopilot/releases/tag/v0.0.3)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Claude Autopilot** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
@@ -46,6 +46,7 @@
 -   **Format Checking**: Verify code formatting standards are met
 -   **GitHub Actions Validation**: Check your CI/CD workflows for errors
 -   **Fix Loop**: Automatically ask Claude to fix issues and re-run checks until all pass
+-   **Message Loop**: Run individual messages in a loop with script checks until they pass
 -   **Custom Scripts**: Add your own validation scripts in the `.autopilot` folder
 
 ### 📊 **Rich User Interface**
@@ -87,12 +88,17 @@ The Script Checks section appears above the message input area with all availabl
    - Scripts are numbered (1, 2, 3...) to show execution sequence
    - Order is saved automatically
 3. **Run Script Checks**: Click "Run Checks" to validate your code once
-4. **Run Script Loop**: Click "Run Loop" to automatically fix issues
+4. **Run Script Loop**: Click "Run Loop" to automatically fix all issues
    - Set max iterations with the input field (default: 5)
    - Claude will be asked to fix any issues found
    - Scripts re-run after fixes in your specified order
    - Process continues until all checks pass or max iterations reached
-5. **Custom Scripts**: Add your own validation scripts to `.autopilot/scripts/`
+5. **Run Message in Loop**: Click the 🔄 button on any pending message
+   - Processes the message first
+   - Then runs script checks
+   - If checks fail, asks Claude to fix issues
+   - Continues until all checks pass or max iterations reached
+6. **Custom Scripts**: Add your own validation scripts to `.autopilot/scripts/`
    - Scripts should output JSON with `passed`, `errors`, and optional `warnings`
    - Custom scripts automatically appear in the list
 

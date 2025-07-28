@@ -290,6 +290,9 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                 case 'updateScriptOrder':
                     updateScriptOrder(message.order);
                     break;
+                case 'runMessageInLoop':
+                    runMessageInLoopWithConfig(message.messageId, message.config);
+                    break;
             }
         },
         undefined,
@@ -612,6 +615,79 @@ async function updateScriptOrder(order: string[]): Promise<void> {
     
     config.scripts = orderedScripts;
     await scriptRunner.updateConfig(config);
+}
+
+async function runMessageInLoopWithConfig(messageId: string, scriptConfig: any): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    if (!isRunning || !claudePanel) {
+        vscode.window.showErrorMessage('Claude Autopilot must be running to use message loop');
+        return;
+    }
+
+    // Find the message in the queue
+    const { messageQueue } = await import('./core/state');
+    const message = messageQueue.find(m => m.id === messageId);
+    
+    if (!message) {
+        vscode.window.showErrorMessage('Message not found in queue');
+        return;
+    }
+
+    if (message.status !== 'pending') {
+        vscode.window.showErrorMessage('Only pending messages can be run in loop');
+        return;
+    }
+
+    const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
+    await scriptRunner.initialize();
+    await scriptRunner.loadUserScripts();
+
+    // Update configuration based on UI selections
+    if (scriptConfig) {
+        const config = scriptRunner.getConfig();
+        
+        // Update script enabled states and order
+        if (scriptConfig.scripts) {
+            // Reorder scripts based on UI order
+            const orderedScripts: any[] = [];
+            for (const scriptUpdate of scriptConfig.scripts) {
+                const script = config.scripts.find(s => s.id === scriptUpdate.id);
+                if (script) {
+                    script.enabled = scriptUpdate.enabled;
+                    orderedScripts.push(script);
+                }
+            }
+            
+            // Add any remaining scripts that weren't in the UI (e.g., user scripts)
+            for (const script of config.scripts) {
+                if (!orderedScripts.find(s => s.id === script.id)) {
+                    orderedScripts.push(script);
+                }
+            }
+            
+            config.scripts = orderedScripts;
+        }
+        
+        // Update max iterations
+        if (scriptConfig.maxIterations) {
+            config.maxIterations = scriptConfig.maxIterations;
+        }
+        
+        await scriptRunner.updateConfig(config);
+    }
+
+    vscode.window.showInformationMessage(`Starting message loop with ${scriptConfig.maxIterations} max iterations...`);
+    
+    try {
+        await scriptRunner.runMessageLoop(message);
+    } catch (error) {
+        vscode.window.showErrorMessage(`Message loop failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 export function deactivate(): void {

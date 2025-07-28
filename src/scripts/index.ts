@@ -570,6 +570,127 @@ check().then(result => {
         await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
+    async runMessageLoop(message: MessageItem): Promise<void> {
+        this.iteration = 0;
+        
+        debugLog(`\n=== Starting Message Loop for: ${message.text.substring(0, 50)}... ===`);
+        
+        // Process the message first
+        vscode.window.showInformationMessage('Processing message before running checks...');
+        
+        // Add the message to be processed
+        try {
+            // Import necessary functions
+            const { startProcessingQueue } = await import('../claude');
+            const { messageQueue, processingQueue } = await import('../core/state');
+            
+            // Ensure the message is at the front of the queue
+            const messageIndex = messageQueue.findIndex(m => m.id === message.id);
+            if (messageIndex > 0) {
+                // Move to front
+                const [movedMessage] = messageQueue.splice(messageIndex, 1);
+                messageQueue.unshift(movedMessage);
+            }
+            
+            // Start processing if not already
+            if (!processingQueue) {
+                await startProcessingQueue(true);
+            }
+            
+            // Wait for the message to be processed
+            await this.waitForMessageCompletion(message.id);
+            
+        } catch (error) {
+            debugLog(`Error processing message: ${error}`);
+            throw new Error(`Failed to process message: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        
+        // Now run the check loop
+        while (this.iteration < this.config.maxIterations) {
+            this.iteration++;
+            debugLog(`\n=== Message Loop Iteration ${this.iteration}/${this.config.maxIterations} ===`);
+            
+            // Run checks
+            const { allPassed, results } = await this.runChecks();
+            
+            if (allPassed) {
+                vscode.window.showInformationMessage(`✅ All checks passed after ${this.iteration} iteration(s)!`);
+                return;
+            }
+            
+            // Generate fix instructions
+            const fixInstructions = this.generateFixInstructions(results);
+            
+            // Create fix message
+            const fixMessage = `Please fix the following issues found by automated checks (Message Loop Iteration ${this.iteration}/${this.config.maxIterations}):\n\n${fixInstructions}\n\nIMPORTANT: Make sure all changes are complete and production-ready. Fix all issues mentioned above.`;
+            
+            try {
+                addMessageToQueueFromWebview(fixMessage);
+                debugLog('Added fix instructions to Claude queue');
+                
+                // Show progress
+                vscode.window.showInformationMessage(`Message loop iteration ${this.iteration}: Waiting for Claude to fix issues...`);
+                
+                // Wait for Claude to process the fix
+                await this.waitForClaudeProcessing();
+                
+            } catch (error) {
+                debugLog(`Error in message loop: ${error}`);
+                vscode.window.showErrorMessage(`Message loop error: ${error instanceof Error ? error.message : String(error)}`);
+                return;
+            }
+        }
+        
+        vscode.window.showWarningMessage(`⚠️ Maximum iterations (${this.config.maxIterations}) reached. Some checks still failing.`);
+        
+        // Show final failing checks
+        const { results: finalResults } = await this.runChecks();
+        const finalFailures = Array.from(finalResults.entries())
+            .filter(([_, result]) => !result.passed)
+            .map(([scriptId, _]) => {
+                const script = this.config.scripts.find(s => s.id === scriptId);
+                return script?.name || scriptId;
+            });
+        
+        vscode.window.showErrorMessage(`Failed checks: ${finalFailures.join(', ')}`);
+    }
+
+    private async waitForMessageCompletion(messageId: string): Promise<void> {
+        const { messageQueue } = await import('../core/state');
+        const timeout = 300000; // 5 minutes timeout
+        const startTime = Date.now();
+        
+        return new Promise((resolve, reject) => {
+            const checkInterval = setInterval(() => {
+                const message = messageQueue.find(m => m.id === messageId);
+                
+                if (!message) {
+                    clearInterval(checkInterval);
+                    reject(new Error('Message no longer in queue'));
+                    return;
+                }
+                
+                if (message.status === 'completed') {
+                    clearInterval(checkInterval);
+                    resolve();
+                    return;
+                }
+                
+                if (message.status === 'error') {
+                    clearInterval(checkInterval);
+                    reject(new Error(`Message processing failed: ${message.error}`));
+                    return;
+                }
+                
+                if (Date.now() - startTime > timeout) {
+                    clearInterval(checkInterval);
+                    reject(new Error('Timeout waiting for message completion'));
+                    return;
+                }
+            }, 1000);
+        });
+    }
+
     private generateFixInstructions(results: Map<string, ScriptResult>): string {
         const instructions: string[] = [];
         

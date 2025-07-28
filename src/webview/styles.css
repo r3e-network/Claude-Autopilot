@@ -1011,3 +1011,13 @@ select:focus {
     font-size: 12px;
 }
 
+/* Loop button styling */
+.queue-item-action.loop {
+    background: var(--vscode-charts-purple);
+    color: white;
+}
+
+.queue-item-action.loop:hover {
+    background: #7b1fa2;
+}
+
