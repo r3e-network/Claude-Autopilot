@@ -5,7 +5,11 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2025-01-29
+
+### 🚀 Major Improvements
+
+This release brings significant enhancements to AutoClaude's reliability, automation capabilities, and script execution system.
 
 ### Added
 - **Automatic Task Resumption**: Claude now automatically detects and continues unfinished tasks
@@ -40,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Queue Processing**: Resolved Claude session disconnection issues
 - **Output Buffer**: Fixed memory leaks in output handling
 - **Error Handling**: Improved error messages and recovery mechanisms
+- **Dynamic Imports**: Fixed TypeScript compatibility issues with proper dynamic imports
 
 ## [2.1.0] - 2025-01-28
 
