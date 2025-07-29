@@ -5,6 +5,42 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Automatic Task Resumption**: Claude now automatically detects and continues unfinished tasks
+  - Analyzes output for TODOs, incomplete steps, and mid-task interruptions
+  - Automatically generates continuation messages with context
+  - Configurable via `autoclaude.session.autoResumeUnfinishedTasks` setting
+  - Smart detection with confidence levels (high/medium/low)
+
+- **Sequential Script Execution**: Scripts now run one after another, stopping on first failure
+  - Output limiting: Max 10 errors per script, 500 chars per line
+  - Clear feedback on which scripts passed/failed
+  - Improved error messages with context
+
+- **Shell Script Support**: All quality check scripts converted to shell scripts
+  - Better cross-platform compatibility
+  - No Node.js dependency for script execution
+  - Direct access to system commands
+  - Production-ready with proper JSON output
+
+### Improved
+- **Claude Output Handling**: Fixed issue where output wouldn't show after clearing queue
+  - Auto-restart unhealthy Claude sessions
+  - Clear output buffers when clearing queue
+  - Health check before processing messages
+
+- **Script Analysis Integration**: 
+  - Scripts can now send results to Claude for analysis
+  - Option to analyze code even when all checks pass
+  - Continuous improvement loop capability
+
+### Fixed
+- **Queue Processing**: Resolved Claude session disconnection issues
+- **Output Buffer**: Fixed memory leaks in output handling
+- **Error Handling**: Improved error messages and recovery mechanisms
+
 ## [2.1.0] - 2025-01-28
 
 ### 🎯 @Script Mentions Feature
