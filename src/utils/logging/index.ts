@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { claudePanel, debugMode } from '../../core/state';
+import { claudePanel, debugMode, setDebugMode as coreSetDebugMode } from '../../core/state';
 
 export function debugLog(message: string): void {
     if (debugMode) {
@@ -53,4 +53,12 @@ export function getHistoryStorageKey(): string {
 
 export function getPendingQueueStorageKey(): string {
     return `claudeautopilot_pending_${getWorkspacePath().replace(/[^a-zA-Z0-9]/g, '_')}`;
+}
+
+export function setDebugMode(enabled: boolean): void {
+    coreSetDebugMode(enabled);
+}
+
+export function getDebugMode(): boolean {
+    return debugMode;
 }

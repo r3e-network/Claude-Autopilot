@@ -18,6 +18,10 @@ import { sendSecuritySettings, toggleXssbypassSetting } from './services/securit
 import { debugLog } from './utils';
 import { ScriptRunner } from './scripts';
 import { AutomationManager } from './automation/automationManager';
+import { QuickStartManager } from './ui/quickStart';
+import { WorkflowOrchestrator } from './automation/workflowOrchestrator';
+import { TaskCompletionEngine } from './automation/taskCompletion';
+import { ErrorRecoverySystem } from './automation/errorRecovery';
 
 // Development-only imports
 let simulateUsageLimit: (() => void) | undefined;
@@ -52,6 +56,18 @@ export function activate(context: vscode.ExtensionContext) {
             debugLog('Automation features initialized');
         }).catch(error => {
             debugLog(`Failed to initialize automation: ${error}`);
+        });
+
+        // Initialize error recovery system
+        import('./automation/contextManager').then(module => {
+            const contextManager = new module.ContextManager(workspaceFolder.uri.fsPath);
+            const errorRecovery = new ErrorRecoverySystem(contextManager, workspaceFolder.uri.fsPath);
+            
+            // Store globally for access by other modules
+            (global as any).errorRecovery = errorRecovery;
+            debugLog('Error recovery system initialized');
+        }).catch(error => {
+            debugLog(`Failed to initialize error recovery: ${error}`);
         });
     }
 
@@ -96,7 +112,27 @@ export function activate(context: vscode.ExtensionContext) {
         await runScriptCheckLoop();
     });
 
-    context.subscriptions.push(startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand, configWatcher);
+    const quickStartCommand = vscode.commands.registerCommand('autoclaude.quickStart', async () => {
+        await showQuickStart();
+    });
+
+    const runSubAgentsCommand = vscode.commands.registerCommand('autoclaude.runSubAgents', async () => {
+        await runSubAgents();
+    });
+
+    const autoCompleteCommand = vscode.commands.registerCommand('autoclaude.autoComplete', async () => {
+        await autoCompleteCurrentTask();
+    });
+
+    const workflowWizardCommand = vscode.commands.registerCommand('autoclaude.workflowWizard', async () => {
+        await showWorkflowWizard();
+    });
+
+    context.subscriptions.push(
+        startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
+        quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
+        configWatcher
+    );
     
     // Auto-start or schedule Claude session based on configuration
     if (config.session.autoStart) {
@@ -209,7 +245,6 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                     duplicateMessageInQueue(message.messageId);
                     break;
                 case 'editMessage':
-                    console.log('Extension received editMessage command:', message);
                     editMessageInQueue(message.messageId, message.newText);
                     break;
                 case 'reorderQueue':
@@ -235,6 +270,9 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                     break;
                 case 'getDevelopmentModeSetting':
                     sendDevelopmentModeSetting();
+                    break;
+                case 'getSubAgentData':
+                    sendSubAgentData();
                     break;
                 case 'simulateUsageLimit':
                     developmentOnly(() => {
@@ -457,6 +495,46 @@ function sendDevelopmentModeSetting(): void {
             command: 'setDevelopmentModeSetting',
             enabled: isDevelopmentMode
         });
+    }
+}
+
+async function sendSubAgentData(): Promise<void> {
+    if (claudePanel) {
+        const config = vscode.workspace.getConfiguration('autoclaude');
+        const subAgentsEnabled = config.get<boolean>('subAgents.enabled', false);
+        const showCapabilities = config.get<boolean>('subAgents.showCapabilities', true);
+        
+        if (subAgentsEnabled) {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (workspaceFolder) {
+                const { SubAgentRunner } = await import('./subagents');
+                const runner = new SubAgentRunner(workspaceFolder.uri.fsPath);
+                await runner.initialize();
+                
+                const registry = runner.getRegistry();
+                const agents = registry.getAllAgents().map(agent => ({
+                    id: agent.id,
+                    name: agent.id,
+                    capabilities: showCapabilities ? agent.getCapabilities() : []
+                }));
+                
+                claudePanel.webview.postMessage({
+                    command: 'updateSubAgents',
+                    subAgents: {
+                        enabled: true,
+                        agents
+                    }
+                });
+            }
+        } else {
+            claudePanel.webview.postMessage({
+                command: 'updateSubAgents',
+                subAgents: {
+                    enabled: false,
+                    agents: []
+                }
+            });
+        }
     }
 }
 
@@ -720,6 +798,101 @@ async function updateScriptOrder(order: string[]): Promise<void> {
     
     config.scripts = orderedScripts;
     await scriptRunner.updateConfig(config);
+}
+
+async function showQuickStart(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const quickStartManager = new QuickStartManager(workspaceFolder.uri.fsPath);
+    await quickStartManager.initialize();
+    await quickStartManager.showQuickStart();
+}
+
+async function runSubAgents(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const { SubAgentRunner } = await import('./subagents');
+    const runner = new SubAgentRunner(workspaceFolder.uri.fsPath);
+    await runner.initialize();
+
+    const enabledAgents = runner.getConfig().enabledAgents;
+    const choices = enabledAgents.map(agentId => ({
+        label: `🤖 ${agentId}`,
+        description: `Run ${agentId} analysis`,
+        agentId
+    }));
+
+    choices.push({
+        label: '🚀 Run All Agents',
+        description: 'Execute all enabled sub-agents',
+        agentId: 'all'
+    });
+
+    const selected = await vscode.window.showQuickPick(choices, {
+        placeHolder: 'Select sub-agents to run'
+    });
+
+    if (selected) {
+        if (selected.agentId === 'all') {
+            await runner.runAgentLoop();
+        } else {
+            const result = await runner.runSingleAgent(selected.agentId);
+            if (result && !result.passed) {
+                await runner.runAgentAnalysis(selected.agentId, result);
+            }
+        }
+    }
+}
+
+async function autoCompleteCurrentTask(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const taskEngine = new TaskCompletionEngine(workspaceFolder.uri.fsPath);
+    await taskEngine.initialize();
+
+    const context = await taskEngine.analyzeCurrentContext();
+    await taskEngine.autoCompleteTask(context);
+}
+
+async function showWorkflowWizard(): Promise<void> {
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('No workspace folder open');
+        return;
+    }
+
+    const orchestrator = new WorkflowOrchestrator(workspaceFolder.uri.fsPath);
+    await orchestrator.initialize();
+
+    const templates = orchestrator.getWorkflowTemplates();
+    const choices = templates.map(template => ({
+        label: template.name,
+        description: template.description,
+        detail: `⏱️ ${template.estimatedTime} | 🎯 ${template.difficulty} | 📂 ${template.category}`,
+        template
+    }));
+
+    const selected = await vscode.window.showQuickPick(choices, {
+        placeHolder: 'Select a workflow to execute',
+        matchOnDescription: true,
+        matchOnDetail: true
+    });
+
+    if (selected) {
+        await orchestrator.executeWorkflow(selected.template.id);
+    }
 }
 
 async function runMessageInLoopWithConfig(messageId: string, scriptConfig: any): Promise<void> {

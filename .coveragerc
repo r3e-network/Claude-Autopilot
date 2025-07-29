@@ -1,0 +1,21 @@
+# Coverage configuration for Claude-Autopilot
+[run]
+source = src/
+omit = 
+    src/webview/*
+    src/claude_pty_wrapper.py
+    */tests/*
+    */node_modules/*
+    */coverage/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+
+[html]
+directory = coverage/html-report

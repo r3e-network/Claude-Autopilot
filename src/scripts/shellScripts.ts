@@ -3,7 +3,11 @@
  * These scripts are embedded in the extension and copied to workspace .autoclaude folder
  */
 
+import { ADVANCED_SHELL_SCRIPTS } from './advancedScripts';
+
 export const SHELL_SCRIPTS = {
+    // Advanced automation scripts
+    ...ADVANCED_SHELL_SCRIPTS,
     'production-readiness.sh': `#!/bin/bash
 # Production Readiness Check
 # Checks for TODO, FIXME, placeholders, and incomplete implementations

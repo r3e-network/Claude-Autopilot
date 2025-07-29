@@ -2320,3 +2320,48 @@ function setAvailableScripts(scripts) {
 // Initialize script mentions when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializeScriptMentions);
 
+// Sub-agent functionality
+function updateSubAgentDisplay(subAgentData) {
+    if (!subAgentData || !subAgentData.enabled) {
+        // Hide all sub-agent indicators if not enabled
+        document.querySelectorAll('.subagent-indicator').forEach(el => {
+            el.style.display = 'none';
+        });
+        document.querySelectorAll('.subagent-capabilities').forEach(el => {
+            el.style.display = 'none';
+        });
+        return;
+    }
+    
+    // Update each script item with sub-agent data
+    subAgentData.agents.forEach(agent => {
+        const scriptItem = document.querySelector(`[data-script-id="${agent.id}"]`);
+        if (scriptItem) {
+            // Show sub-agent indicator
+            const indicator = scriptItem.querySelector('.subagent-indicator');
+            if (indicator) {
+                indicator.style.display = 'inline';
+                indicator.title = agent.name;
+            }
+            
+            // Update capabilities list
+            const capabilitiesDiv = scriptItem.querySelector('.subagent-capabilities');
+            if (capabilitiesDiv) {
+                const capsList = capabilitiesDiv.querySelector('.capabilities-list');
+                if (capsList) {
+                    capsList.innerHTML = agent.capabilities
+                        .map(cap => `<li>• ${cap.name}</li>`)
+                        .join('');
+                }
+            }
+        }
+    });
+}
+
+// Request sub-agent data on load if enabled
+document.addEventListener('DOMContentLoaded', () => {
+    vscode.postMessage({
+        command: 'getSubAgentData'
+    });
+});
+

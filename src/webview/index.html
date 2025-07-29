@@ -160,8 +160,18 @@
                         <input type="checkbox" id="script-production-readiness" checked>
                         <span class="script-name">Production Readiness Check</span>
                         <span class="script-badge basic-badge">🔍 BASIC</span>
+                        <span class="subagent-indicator" style="display: none;" title="Claude Sub-Agent">🤖</span>
                     </label>
                     <button class="script-run-btn" onclick="runSingleScript('production-readiness')" title="Run this script only">▶</button>
+                    <div class="subagent-capabilities" style="display: none;">
+                        <div class="capabilities-header">🤖 Sub-Agent Capabilities:</div>
+                        <ul class="capabilities-list">
+                            <li>• Analyze TODOs and FIXMEs</li>
+                            <li>• Fix placeholders</li>
+                            <li>• Complete implementations</li>
+                            <li>• Suggest improvements</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="script-item" draggable="true" data-script-id="build-check">
                     <span class="order-number">2.</span>

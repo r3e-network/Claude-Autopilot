@@ -112,8 +112,13 @@ export async function processNextMessage(): Promise<void> {
         // Check for unfinished tasks and auto-resume if needed
         const config = vscode.workspace.getConfiguration('autoclaude');
         const autoResumeEnabled = config.get<boolean>('session.autoResumeUnfinishedTasks', true);
+        const resumeDelay = config.get<number>('session.autoResumeDelay', 2000);
         
         if (autoResumeEnabled) {
+            // Wait a bit to ensure Claude has fully stopped outputting
+            debugLog(`⏳ Waiting ${resumeDelay}ms before checking for unfinished tasks...`);
+            await new Promise(resolve => setTimeout(resolve, resumeDelay));
+            
             debugLog('🔍 Checking for unfinished tasks...');
             const hasResumed = await checkAndResumeTasks();
             

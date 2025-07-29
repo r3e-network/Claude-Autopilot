@@ -1,8 +1,8 @@
 {
   "name": "autoclaude",
   "displayName": "AutoClaude",
-  "description": "Intelligent development automation with comprehensive quality checks and AI-powered assistance",
-  "version": "2.2.0",
+  "description": "Intelligent AI-powered development assistant with automated workflows, smart task completion, and user-friendly Claude integration",
+  "version": "2.3.0",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
@@ -19,28 +19,57 @@
     "commands": [
       {
         "command": "autoclaude.start",
-        "title": "Start AutoClaude",
-        "category": "AutoClaude"
+        "title": "🚀 Start AutoClaude Assistant",
+        "category": "AutoClaude",
+        "icon": "$(play)"
       },
       {
         "command": "autoclaude.stop",
-        "title": "Stop AutoClaude",
-        "category": "AutoClaude"
+        "title": "⏹️ Stop AutoClaude",
+        "category": "AutoClaude",
+        "icon": "$(stop)"
       },
       {
         "command": "autoclaude.addMessage",
-        "title": "Add Message to Queue",
-        "category": "AutoClaude"
+        "title": "💬 Ask Claude Something...",
+        "category": "AutoClaude",
+        "icon": "$(comment-add)"
       },
       {
         "command": "autoclaude.runScriptChecks",
-        "title": "Run Script Checks",
-        "category": "AutoClaude"
+        "title": "🔍 Run Quality Checks",
+        "category": "AutoClaude",
+        "icon": "$(check-all)"
       },
       {
         "command": "autoclaude.runScriptLoop",
-        "title": "Run Script Check Loop",
-        "category": "AutoClaude"
+        "title": "🔄 Auto-Fix Issues (Loop Mode)",
+        "category": "AutoClaude",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "autoclaude.quickStart",
+        "title": "⚡ Quick Start Guide",
+        "category": "AutoClaude",
+        "icon": "$(getting-started)"
+      },
+      {
+        "command": "autoclaude.runSubAgents",
+        "title": "🤖 Run AI Analysis Agents",
+        "category": "AutoClaude",
+        "icon": "$(robot)"
+      },
+      {
+        "command": "autoclaude.autoComplete",
+        "title": "✨ Auto-Complete Current Task",
+        "category": "AutoClaude",
+        "icon": "$(wand)"
+      },
+      {
+        "command": "autoclaude.workflowWizard",
+        "title": "🧙 Workflow Wizard",
+        "category": "AutoClaude",
+        "icon": "$(list-tree)"
       }
     ],
     "menus": {
@@ -64,6 +93,41 @@
         {
           "command": "autoclaude.runScriptLoop",
           "when": "true"
+        },
+        {
+          "command": "autoclaude.quickStart",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.runSubAgents",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.autoComplete",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.workflowWizard",
+          "when": "true"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "autoclaude.runScriptChecks",
+          "when": "explorerResourceIsFolder",
+          "group": "autoclaude"
+        },
+        {
+          "command": "autoclaude.autoComplete",
+          "when": "explorerResourceIsFolder",
+          "group": "autoclaude"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "autoclaude.addMessage",
+          "when": "editorTextFocus",
+          "group": "autoclaude"
         }
       ]
     },
@@ -124,6 +188,18 @@
           "default": true,
           "description": "Automatically detect and continue unfinished tasks when Claude stops working. Analyzes output for TODOs, incomplete steps, and mid-task interruptions."
         },
+        "autoclaude.session.aggressiveTaskDetection": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable aggressive task detection mode. This will attempt to resume work even with low confidence indicators like partial TODO mentions or incomplete sentences. May result in more false positives."
+        },
+        "autoclaude.session.autoResumeDelay": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Delay in milliseconds before checking for unfinished tasks after Claude stops. Increase if Claude's output is being cut off during analysis."
+        },
         "autoclaude.sleepPrevention.enabled": {
           "type": "boolean",
           "default": true,
@@ -178,6 +254,16 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically create .autopilot folder when starting"
+        },
+        "autoclaude.subAgents.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the intelligent sub-agent system for script checks. When enabled, scripts become Claude-powered sub-agents that can analyze, fix, and improve code intelligently."
+        },
+        "autoclaude.subAgents.showCapabilities": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show sub-agent capabilities in the UI when hovering over scripts"
         }
       }
     }
@@ -186,6 +272,11 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./ && cp src/claude_pty_wrapper.py out/claude/session/ && cp -r src/webview out/",
     "watch": "tsc -watch -p ./",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --testPathPattern=integration",
+    "test:unit": "jest --testPathPattern=unit",
     "package": "vsce package --no-dependencies",
     "package:pre-release": "vsce package --no-dependencies --pre-release",
     "publish": "vsce publish",
@@ -195,7 +286,11 @@
   "devDependencies": {
     "@types/node": "16.x",
     "@types/vscode": "^1.74.0",
-    "typescript": "^4.9.4"
+    "typescript": "^4.9.4",
+    "@types/jest": "^29.5.5",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "@jest/globals": "^29.7.0"
   },
   "keywords": [
     "claude",
@@ -209,7 +304,15 @@
     "anthropic",
     "machine-learning",
     "batch-processing",
-    "workflow"
+    "workflow",
+    "user-friendly",
+    "intelligent-assistant",
+    "code-quality",
+    "error-recovery",
+    "workflow-automation",
+    "smart-completion",
+    "guided-setup",
+    "interactive-help"
   ],
   "author": "Jimmy <jimmy@r3e.network> (based on original work by Ben Basha)",
   "contributors": [

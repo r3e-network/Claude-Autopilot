@@ -1098,6 +1098,54 @@ select:focus {
     background: var(--vscode-button-hoverBackground);
 }
 
+/* Sub-agent styles */
+.subagent-indicator {
+    margin-left: 8px;
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.subagent-capabilities {
+    position: absolute;
+    background: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 8px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.capabilities-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--vscode-foreground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 6px;
+}
+
+.capabilities-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.capabilities-list li {
+    padding: 4px 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+}
+
+.script-item {
+    position: relative;
+}
+
+.script-item:hover .subagent-capabilities {
+    display: block;
+}
+
 .script-item input[type="checkbox"] {
     margin-right: 8px;
     cursor: pointer;

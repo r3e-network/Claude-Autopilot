@@ -92,3 +92,16 @@ export function sendHistoryVisibilitySettings(): void {
         }
     }
 }
+
+export function sendSubAgentData(subAgentData: any): void {
+    if (claudePanel) {
+        try {
+            claudePanel.webview.postMessage({
+                command: 'updateSubAgents',
+                subAgents: subAgentData
+            });
+        } catch (error) {
+            debugLog(`❌ Failed to send sub-agent data to webview: ${error}`);
+        }
+    }
+}

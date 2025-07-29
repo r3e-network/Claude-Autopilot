@@ -7,6 +7,7 @@ import { debugLog } from '../utils/logging';
 import { MessageItem } from '../core/types';
 import { addMessageToQueueFromWebview } from '../queue';
 import { SHELL_SCRIPTS as BUILTIN_SCRIPTS, DEFAULT_CONFIG, SCRIPTS_README } from './shellScripts';
+import { SubAgentRunner } from '../subagents';
 
 const execAsync = promisify(exec);
 
@@ -43,6 +44,8 @@ export class ScriptRunner {
     private workspacePath: string;
     private config: ScriptRunnerConfig;
     private iteration: number = 0;
+    private subAgentRunner?: SubAgentRunner;
+    private useSubAgents: boolean = false;
 
     constructor(workspacePath: string) {
         this.workspacePath = workspacePath;
@@ -51,12 +54,24 @@ export class ScriptRunner {
             maxIterations: 5,
             continueOnError: false
         };
+        
+        // Check if sub-agents are enabled
+        const vscodeConfig = vscode.workspace.getConfiguration('autoclaude');
+        this.useSubAgents = vscodeConfig.get<boolean>('subAgents.enabled', false);
+        
+        if (this.useSubAgents) {
+            this.subAgentRunner = new SubAgentRunner(workspacePath);
+        }
     }
 
     async initialize(): Promise<void> {
         await this.ensureAutopilotFolder();
         await this.loadConfig();
         await this.copyPredefinedScripts();
+        
+        if (this.subAgentRunner) {
+            await this.subAgentRunner.initialize();
+        }
     }
 
     private async ensureAutopilotFolder(): Promise<void> {
@@ -273,6 +288,12 @@ export class ScriptRunner {
     }
 
     async runSingleCheck(scriptId: string): Promise<ScriptResult | null> {
+        // Use sub-agent if enabled
+        if (this.useSubAgents && this.subAgentRunner) {
+            return await this.subAgentRunner.runSingleAgent(scriptId);
+        }
+        
+        // Legacy script runner
         const script = this.config.scripts.find(s => s.id === scriptId);
         if (!script) {
             return null;
@@ -302,6 +323,12 @@ export class ScriptRunner {
     }
 
     async runChecks(stopOnFailure: boolean = false): Promise<{ allPassed: boolean; results: Map<string, ScriptResult> }> {
+        // Use sub-agents if enabled
+        if (this.useSubAgents && this.subAgentRunner) {
+            return await this.subAgentRunner.runAllAgents(stopOnFailure);
+        }
+        
+        // Legacy script runner
         const results = new Map<string, ScriptResult>();
         let allPassed = true;
         const MAX_ERROR_LINES = 10;
@@ -370,6 +397,12 @@ export class ScriptRunner {
     }
 
     async runCheckLoop(forceAnalysis: boolean = false): Promise<void> {
+        // Use sub-agent loop if enabled
+        if (this.useSubAgents && this.subAgentRunner) {
+            return await this.subAgentRunner.runAgentLoop(forceAnalysis);
+        }
+        
+        // Legacy script loop
         this.iteration = 0;
         
         // Initial check
@@ -462,6 +495,12 @@ export class ScriptRunner {
     }
 
     async runMessageLoop(message: MessageItem, forceAnalysis: boolean = false): Promise<void> {
+        // Use sub-agent message loop if enabled
+        if (this.useSubAgents && this.subAgentRunner) {
+            return await this.subAgentRunner.runMessageWithAgents(message);
+        }
+        
+        // Legacy message loop
         this.iteration = 0;
         
         debugLog(`\n=== Starting Message Loop for: ${message.text.substring(0, 50)}... ===`);
