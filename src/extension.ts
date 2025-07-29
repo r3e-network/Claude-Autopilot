@@ -524,11 +524,37 @@ async function runSingleScript(scriptId: string): Promise<void> {
             return;
         }
         
+        const script = scriptRunner.getConfig().scripts.find(s => s.id === scriptId);
+        const scriptName = script?.name || scriptId;
+        
+        // Send results to Claude for analysis regardless of pass/fail
+        let message: string;
         if (result.passed) {
-            vscode.window.showInformationMessage(`✅ ${scriptId} passed!`);
+            vscode.window.showInformationMessage(`✅ ${scriptName} passed!`);
+            message = `Script "${scriptName}" passed all checks.\n\nPlease analyze the code to see if there are any improvements or optimizations that could be made, even though the script passes.`;
         } else {
             const errors = result.errors.join('\n');
-            vscode.window.showWarningMessage(`❌ ${scriptId} failed:\n${errors}`);
+            vscode.window.showWarningMessage(`❌ ${scriptName} failed:\n${errors}`);
+            
+            // Generate detailed fix instructions
+            const fixInstructions = result.fixInstructions || '';
+            message = `Script "${scriptName}" failed with the following errors:\n\n${errors}\n\n${fixInstructions ? `Suggested fixes:\n${fixInstructions}\n\n` : ''}Please fix these issues to make the code pass the script checks.`;
+        }
+        
+        // Add option to send to Claude
+        const sendToClaude = await vscode.window.showInformationMessage(
+            `Send ${scriptName} results to Claude for analysis?`,
+            'Yes',
+            'No'
+        );
+        
+        if (sendToClaude === 'Yes') {
+            try {
+                addMessageToQueueFromWebview(message);
+                vscode.window.showInformationMessage('Script results sent to Claude for analysis');
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to send to Claude: ${error instanceof Error ? error.message : String(error)}`);
+            }
         }
     });
 }

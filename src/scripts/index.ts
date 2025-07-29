@@ -327,15 +327,36 @@ export class ScriptRunner {
         return { allPassed, results };
     }
 
-    async runCheckLoop(): Promise<void> {
+    async runCheckLoop(forceAnalysis: boolean = false): Promise<void> {
         this.iteration = 0;
         
         // Initial check
         debugLog(`\n=== Initial Script Check ===`);
         const initialCheck = await this.runChecks();
         
-        if (initialCheck.allPassed) {
-            vscode.window.showInformationMessage('All checks already pass! No fixes needed.');
+        if (initialCheck.allPassed && !forceAnalysis) {
+            const analyze = await vscode.window.showInformationMessage(
+                'All checks already pass! Would you like Claude to analyze for improvements anyway?',
+                'Yes, Analyze',
+                'No, Exit'
+            );
+            
+            if (analyze !== 'Yes, Analyze') {
+                return;
+            }
+            
+            // Send passing results to Claude for improvement analysis
+            const passingScripts = Array.from(initialCheck.results.entries())
+                .map(([scriptId, _]) => {
+                    const script = this.config.scripts.find(s => s.id === scriptId);
+                    return script?.name || scriptId;
+                });
+            
+            const message = `All script checks are passing:\n${passingScripts.map(s => `✅ ${s}`).join('\n')}\n\nPlease analyze the codebase to see if there are any improvements, optimizations, or best practices that could be applied even though all checks pass.`;
+            
+            addMessageToQueueFromWebview(message);
+            debugLog('Sent passing results to Claude for improvement analysis');
+            vscode.window.showInformationMessage('Sent to Claude for improvement analysis');
             return;
         }
         
@@ -398,7 +419,7 @@ export class ScriptRunner {
         await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
-    async runMessageLoop(message: MessageItem): Promise<void> {
+    async runMessageLoop(message: MessageItem, forceAnalysis: boolean = false): Promise<void> {
         this.iteration = 0;
         
         debugLog(`\n=== Starting Message Loop for: ${message.text.substring(0, 50)}... ===`);
@@ -434,16 +455,48 @@ export class ScriptRunner {
         }
         
         // Now run the check loop
+        let iterationCount = 0;
         while (this.iteration < this.config.maxIterations) {
             this.iteration++;
+            iterationCount++;
             debugLog(`\n=== Message Loop Iteration ${this.iteration}/${this.config.maxIterations} ===`);
             
             // Run checks
             const { allPassed, results } = await this.runChecks();
             
             if (allPassed) {
-                vscode.window.showInformationMessage(`✅ All checks passed after ${this.iteration} iteration(s)!`);
-                return;
+                if (iterationCount === 1 && !forceAnalysis) {
+                    // First iteration and all passed - ask if we should analyze for improvements
+                    const analyze = await vscode.window.showInformationMessage(
+                        `✅ All checks passed after processing the message! Would you like Claude to analyze for further improvements?`,
+                        'Yes, Continue Analysis',
+                        'No, Complete'
+                    );
+                    
+                    if (analyze !== 'Yes, Continue Analysis') {
+                        vscode.window.showInformationMessage(`✅ All checks passed!`);
+                        return;
+                    }
+                    
+                    // Send results to Claude for improvement analysis
+                    const passingScripts = Array.from(results.entries())
+                        .map(([scriptId, _]) => {
+                            const script = this.config.scripts.find(s => s.id === scriptId);
+                            return script?.name || scriptId;
+                        });
+                    
+                    const analysisMessage = `After processing the previous message, all script checks are now passing:\n${passingScripts.map(s => `✅ ${s}`).join('\n')}\n\nPlease analyze the codebase to see if there are any additional improvements, optimizations, or best practices that could be applied.`;
+                    
+                    addMessageToQueueFromWebview(analysisMessage);
+                    debugLog('Sent passing results to Claude for improvement analysis');
+                    
+                    // Continue the loop to see Claude's improvements
+                    await this.waitForClaudeProcessing();
+                    continue;
+                } else {
+                    vscode.window.showInformationMessage(`✅ All checks passed after ${this.iteration} iteration(s)!`);
+                    return;
+                }
             }
             
             // Generate fix instructions
