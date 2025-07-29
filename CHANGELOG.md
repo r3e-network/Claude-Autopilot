@@ -5,6 +5,23 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2025-01-29
+
+### 🐛 Bug Fixes
+
+#### Improved Live Output Scrolling
+- **Smooth Scrolling**: Replaced abrupt scrolling with smooth 300ms animation
+- **Smart Auto-Scroll**: Only auto-scrolls when user is already near the bottom
+- **Scroll Position Preservation**: Maintains user scroll position when reading previous output
+- **Cross-Browser Compatibility**: Added fallback for browsers without smooth scroll support
+- **Performance Optimization**: Uses passive event listeners and debounced scroll detection
+
+### 🔧 Technical Improvements
+- Enhanced scroll state management with proper initialization and reset
+- Fixed output jumping issues during rapid content updates
+- Added 30px threshold for "near bottom" detection
+- Implemented custom ease-out cubic animation for natural feel
+
 ## [2.3.0] - 2025-01-29
 
 ### 🎉 Major User Experience Overhaul

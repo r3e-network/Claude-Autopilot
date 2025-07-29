@@ -2,7 +2,7 @@
   "name": "autoclaude",
   "displayName": "AutoClaude",
   "description": "Intelligent AI-powered development assistant with automated workflows, smart task completion, and user-friendly Claude integration",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
