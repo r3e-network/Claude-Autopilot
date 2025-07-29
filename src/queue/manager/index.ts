@@ -111,9 +111,12 @@ export function clearMessageQueue(): void {
     savePendingQueue(); // Save queue changes (empty queue)
     
     // Ensure Claude output is cleared and ready for new messages
-    const { clearClaudeOutput, flushClaudeOutput } = require('../../claude/output');
-    flushClaudeOutput(); // Flush any pending output first
-    clearClaudeOutput(); // Then clear the buffer
+    import('../../claude/output').then(({ clearClaudeOutput, flushClaudeOutput }) => {
+        flushClaudeOutput(); // Flush any pending output first
+        clearClaudeOutput(); // Then clear the buffer
+    }).catch(error => {
+        debugLog(`Warning: Failed to clear Claude output: ${error}`);
+    });
     
     vscode.window.showInformationMessage('Message queue cleared');
 }

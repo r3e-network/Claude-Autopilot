@@ -290,9 +290,12 @@ export function resetClaudeSession(): void {
     setProcessingQueue(false);
     
     // Clear output buffers
-    const { clearClaudeOutput, flushClaudeOutput } = require('../output');
-    flushClaudeOutput();
-    clearClaudeOutput();
+    import('../output').then(({ clearClaudeOutput, flushClaudeOutput }) => {
+        flushClaudeOutput();
+        clearClaudeOutput();
+    }).catch(error => {
+        debugLog(`Warning: Failed to clear Claude output: ${error}`);
+    });
     
     updateWebviewContent();
     updateSessionState();
