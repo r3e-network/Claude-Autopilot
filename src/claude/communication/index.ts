@@ -7,6 +7,7 @@ import { saveWorkspaceHistory, ensureHistoryRun, updateMessageStatusInHistory } 
 import { TIMEOUT_MS, ANSI_CLEAR_SCREEN_PATTERNS } from '../../core/constants';
 import { startClaudeSession, isClaudeProcessHealthy } from '../../claude/session';
 import { ScriptRunner } from '../../scripts';
+import { checkAndResumeTasks, isClaudeWaitingForInput, hasClaudeStoppedMidTask } from '../../claude/analyzer';
 
 export async function processNextMessage(): Promise<void> {
     debugLog('--- PROCESSING NEXT MESSAGE ---');
@@ -106,6 +107,22 @@ export async function processNextMessage(): Promise<void> {
                 debugLog(`⚠️ Script execution failed for message #${message.id}: ${scriptError}`);
                 // Don't fail the entire message for script errors, just log them
             }
+        }
+        
+        // Check for unfinished tasks and auto-resume if needed
+        const config = vscode.workspace.getConfiguration('autoclaude');
+        const autoResumeEnabled = config.get<boolean>('session.autoResumeUnfinishedTasks', true);
+        
+        if (autoResumeEnabled) {
+            debugLog('🔍 Checking for unfinished tasks...');
+            const hasResumed = await checkAndResumeTasks();
+            
+            if (hasResumed) {
+                debugLog('📝 Automatically added continuation message for unfinished tasks');
+                vscode.window.showInformationMessage('Detected unfinished tasks - automatically continuing...');
+            }
+        } else {
+            debugLog('⏸️ Auto-resume disabled in settings');
         }
         
         setTimeout(() => {
@@ -327,6 +344,26 @@ function waitForPrompt(): Promise<void> {
                 const jsonScreen = JSON.stringify(currentScreenBuffer);
                 return pattern.test(jsonScreen) || pattern.test(currentScreenBuffer);
             });
+            
+            // Check if Claude appears to have stopped mid-task with extended stability
+            const EXTENDED_STABILITY_MS = 3000; // 3 seconds for mid-task detection
+            if (!isReady && timeSinceLastOutput >= EXTENDED_STABILITY_MS) {
+                // Check if Claude stopped mid-task
+                if (hasClaudeStoppedMidTask()) {
+                    debugLog(`⚠️ Claude appears to have stopped mid-task after ${timeSinceLastOutput}ms`);
+                    cleanup();
+                    resolve(); // Consider it "done" so we can check for unfinished work
+                    return;
+                }
+                
+                // Check if Claude is waiting for input
+                if (isClaudeWaitingForInput()) {
+                    debugLog(`❓ Claude appears to be waiting for user input`);
+                    cleanup();
+                    resolve(); // Consider it ready
+                    return;
+                }
+            }
             
             if (isReady && timeSinceLastOutput >= DEBOUNCE_THRESHOLD_MS) {
                 debugLog(`✅ Claude is ready! Pattern detected and ${timeSinceLastOutput}ms of stability`);

@@ -2,3 +2,4 @@
 export * from './session';
 export * from './output';
 export * from './communication';
+export * from './analyzer';

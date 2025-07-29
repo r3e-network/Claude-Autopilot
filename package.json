@@ -119,6 +119,11 @@
           "description": "Schedule session start at specific time (HH:MM format, e.g., '09:30'). Cannot be used with autoStart. Empty string disables scheduling.",
           "pattern": "^(([01]?[0-9]|2[0-3]):[0-5][0-9])?$"
         },
+        "autoclaude.session.autoResumeUnfinishedTasks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect and continue unfinished tasks when Claude stops working. Analyzes output for TODOs, incomplete steps, and mid-task interruptions."
+        },
         "autoclaude.sleepPrevention.enabled": {
           "type": "boolean",
           "default": true,

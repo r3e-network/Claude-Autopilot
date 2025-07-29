@@ -20,6 +20,7 @@ export interface ClaudeAutopilotConfig {
         autoStart: boolean;
         skipPermissions: boolean;
         scheduledStartTime: string; // Format: "HH:MM" or empty string for disabled
+        autoResumeUnfinishedTasks: boolean; // Automatically continue incomplete work
     };
     
     // Sleep prevention settings
@@ -57,7 +58,8 @@ export const DEFAULT_CONFIG: ClaudeAutopilotConfig = {
     session: {
         autoStart: false,
         skipPermissions: true,
-        scheduledStartTime: ''
+        scheduledStartTime: '',
+        autoResumeUnfinishedTasks: true
     },
     
     sleepPrevention: {
@@ -217,7 +219,8 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
         session: {
             autoStart: workspaceConfig.get('session.autoStart', DEFAULT_CONFIG.session.autoStart),
             skipPermissions: workspaceConfig.get('session.skipPermissions', DEFAULT_CONFIG.session.skipPermissions),
-            scheduledStartTime: workspaceConfig.get('session.scheduledStartTime', DEFAULT_CONFIG.session.scheduledStartTime)
+            scheduledStartTime: workspaceConfig.get('session.scheduledStartTime', DEFAULT_CONFIG.session.scheduledStartTime),
+            autoResumeUnfinishedTasks: workspaceConfig.get('session.autoResumeUnfinishedTasks', DEFAULT_CONFIG.session.autoResumeUnfinishedTasks)
         },
         
         sleepPrevention: {
