@@ -549,7 +549,8 @@ async function runScriptChecks(): Promise<void> {
         title: 'Running script checks...',
         cancellable: false
     }, async (progress) => {
-        const { allPassed, results } = await scriptRunner.runChecks();
+        // Run checks with stopOnFailure = true for manual runs
+        const { allPassed, results } = await scriptRunner.runChecks(true);
         
         if (allPassed) {
             vscode.window.showInformationMessage('All script checks passed!');

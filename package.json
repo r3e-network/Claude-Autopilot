@@ -12,6 +12,9 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onCommand:autoclaude.start"
+  ],
   "contributes": {
     "commands": [
       {

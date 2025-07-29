@@ -259,9 +259,11 @@ export class ScriptRunner {
         return result;
     }
 
-    async runChecks(): Promise<{ allPassed: boolean; results: Map<string, ScriptResult> }> {
+    async runChecks(stopOnFailure: boolean = false): Promise<{ allPassed: boolean; results: Map<string, ScriptResult> }> {
         const results = new Map<string, ScriptResult>();
         let allPassed = true;
+        const MAX_ERROR_LINES = 10;
+        const MAX_ERROR_LENGTH = 500;
         
         for (const script of this.config.scripts.filter(s => s.enabled)) {
             debugLog(`Running script: ${script.name}`);
@@ -276,6 +278,26 @@ export class ScriptRunner {
                 };
             }
             
+            // Limit error output
+            if (!result.passed && result.errors.length > 0) {
+                let limitedErrors = result.errors;
+                if (result.errors.length > MAX_ERROR_LINES) {
+                    limitedErrors = result.errors.slice(0, MAX_ERROR_LINES);
+                    limitedErrors.push(`... and ${result.errors.length - MAX_ERROR_LINES} more errors`);
+                }
+                
+                // Further limit each error line length
+                limitedErrors = limitedErrors.map(error => {
+                    if (error.length > MAX_ERROR_LENGTH) {
+                        return error.substring(0, MAX_ERROR_LENGTH) + '...';
+                    }
+                    return error;
+                });
+                
+                // Store limited errors in result
+                result = { ...result, errors: limitedErrors };
+            }
+            
             results.set(script.id, result);
             if (!result.passed) {
                 allPassed = false;
@@ -286,7 +308,19 @@ export class ScriptRunner {
                 debugLog(`✅ ${script.name}: Passed`);
             } else {
                 debugLog(`❌ ${script.name}: Failed`);
-                debugLog(`   Errors: ${result.errors.join(', ')}`);
+                debugLog(`   First ${Math.min(MAX_ERROR_LINES, result.errors.length)} errors:`);
+                result.errors.slice(0, 5).forEach(error => {
+                    debugLog(`   - ${error}`);
+                });
+                if (result.errors.length > 5) {
+                    debugLog(`   ... ${result.errors.length - 5} more errors`);
+                }
+                
+                // Stop on first failure if requested
+                if (stopOnFailure) {
+                    debugLog(`⛔ Stopping checks on first failure`);
+                    break;
+                }
             }
         }
         
@@ -487,23 +521,48 @@ export class ScriptRunner {
 
     private generateFixInstructions(results: Map<string, ScriptResult>): string {
         const instructions: string[] = [];
+        const MAX_ERRORS_PER_SCRIPT = 5;
+        const MAX_TOTAL_LINES = 50;
+        let totalLines = 0;
         
         for (const [scriptId, result] of results) {
             if (!result.passed) {
                 const script = this.config.scripts.find(s => s.id === scriptId);
                 if (script) {
+                    // Check if we've reached the line limit
+                    if (totalLines >= MAX_TOTAL_LINES) {
+                        instructions.push('\n... Output truncated to prevent overwhelming Claude ...');
+                        instructions.push(`Additional failing scripts: ${Array.from(results.entries())
+                            .filter(([id, r]) => !r.passed && id !== scriptId)
+                            .map(([id]) => this.config.scripts.find(s => s.id === id)?.name || id)
+                            .join(', ')}`);
+                        break;
+                    }
+                    
                     instructions.push(`## ${script.name}`);
                     instructions.push(`Errors found:`);
-                    result.errors.forEach(error => {
+                    totalLines += 2;
+                    
+                    // Limit errors per script
+                    const errorsToShow = Math.min(result.errors.length, MAX_ERRORS_PER_SCRIPT);
+                    result.errors.slice(0, errorsToShow).forEach(error => {
                         instructions.push(`- ${error}`);
+                        totalLines++;
                     });
+                    
+                    if (result.errors.length > MAX_ERRORS_PER_SCRIPT) {
+                        instructions.push(`- ... and ${result.errors.length - MAX_ERRORS_PER_SCRIPT} more errors`);
+                        totalLines++;
+                    }
                     
                     if (result.fixInstructions) {
                         instructions.push(`\nSuggested fixes:`);
                         instructions.push(result.fixInstructions);
+                        totalLines += 2;
                     }
                     
                     instructions.push('');
+                    totalLines++;
                 }
             }
         }

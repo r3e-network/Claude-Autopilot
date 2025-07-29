@@ -418,67 +418,124 @@ async function runAttachedScripts(message: MessageItem): Promise<void> {
         return;
     }
     
-    debugLog(`🔧 Running ${message.attachedScripts.length} attached scripts for message #${message.id}`);
+    debugLog(`🔧 Running ${message.attachedScripts.length} attached scripts sequentially for message #${message.id}`);
+    
+    const MAX_ERROR_LINES = 10;
+    const MAX_ERROR_LENGTH = 500;
     
     try {
         const scriptRunner = new ScriptRunner(workspaceFolder.uri.fsPath);
         await scriptRunner.initialize();
         await scriptRunner.loadUserScripts();
         
-        const results: { [scriptId: string]: any } = {};
-        let allPassed = true;
+        const config = scriptRunner.getConfig();
+        let failedScript: string | null = null;
+        let failedScriptName: string | null = null;
+        let failureDetails: string[] = [];
         
-        // Run each attached script
+        // Run scripts sequentially, stop on first failure
         for (const scriptId of message.attachedScripts) {
-            debugLog(`🔧 Running attached script: ${scriptId}`);
+            const script = config.scripts.find(s => s.id === scriptId);
+            const scriptName = script?.name || scriptId;
+            
+            debugLog(`🔧 Running attached script: ${scriptName} (${scriptId})`);
             
             try {
                 const result = await scriptRunner.runSingleCheck(scriptId);
-                if (result) {
-                    results[scriptId] = result;
-                    if (!result.passed) {
-                        allPassed = false;
+                
+                if (!result) {
+                    failedScript = scriptId;
+                    failedScriptName = scriptName;
+                    failureDetails = [`Script ${scriptName} not found or failed to execute`];
+                    debugLog(`⚠️ Script ${scriptId} not found or failed to execute`);
+                    break;
+                }
+                
+                if (!result.passed) {
+                    failedScript = scriptId;
+                    failedScriptName = scriptName;
+                    
+                    // Limit error output
+                    let limitedErrors = result.errors;
+                    if (result.errors.length > MAX_ERROR_LINES) {
+                        limitedErrors = result.errors.slice(0, MAX_ERROR_LINES);
+                        limitedErrors.push(`... and ${result.errors.length - MAX_ERROR_LINES} more errors`);
                     }
                     
-                    debugLog(`${result.passed ? '✅' : '❌'} Script ${scriptId}: ${result.passed ? 'PASSED' : 'FAILED'}`);
-                    if (!result.passed && result.errors.length > 0) {
-                        debugLog(`   Errors: ${result.errors.join(', ')}`);
-                    }
-                } else {
-                    debugLog(`⚠️ Script ${scriptId} not found or failed to execute`);
+                    // Further limit each error line length
+                    limitedErrors = limitedErrors.map(error => {
+                        if (error.length > MAX_ERROR_LENGTH) {
+                            return error.substring(0, MAX_ERROR_LENGTH) + '...';
+                        }
+                        return error;
+                    });
+                    
+                    failureDetails = limitedErrors;
+                    
+                    debugLog(`❌ Script ${scriptId} FAILED - stopping execution`);
+                    debugLog(`   First ${Math.min(MAX_ERROR_LINES, result.errors.length)} errors:`);
+                    limitedErrors.forEach(error => debugLog(`   - ${error}`));
+                    
+                    break; // Stop on first failure
                 }
+                
+                debugLog(`✅ Script ${scriptId} PASSED - continuing to next script`);
+                
             } catch (scriptError) {
+                failedScript = scriptId;
+                failedScriptName = scriptName;
+                failureDetails = [`Error running script: ${scriptError instanceof Error ? scriptError.message : String(scriptError)}`];
+                
                 debugLog(`❌ Error running script ${scriptId}: ${scriptError}`);
-                allPassed = false;
+                break; // Stop on error
             }
         }
         
-        // Show summary notification
-        const scriptNames = message.attachedScripts
-            .map(id => {
-                const config = scriptRunner.getConfig();
-                const script = config.scripts.find(s => s.id === id);
-                return script?.name || id;
-            })
-            .join(', ');
+        // Show result notification
+        if (failedScript) {
+            // Create a detailed but limited error message
+            const errorSummary = failureDetails.slice(0, 3).join('\n');
+            const remainingErrors = failureDetails.length > 3 ? `\n... and ${failureDetails.length - 3} more issues` : '';
             
-        if (allPassed) {
-            vscode.window.showInformationMessage(`✅ All attached scripts passed: ${scriptNames}`);
+            vscode.window.showErrorMessage(
+                `❌ Script "${failedScriptName}" failed. First issues:\n${errorSummary}${remainingErrors}`,
+                'Show Details'
+            ).then(selection => {
+                if (selection === 'Show Details') {
+                    // Show full limited error list in output channel
+                    const outputChannel = vscode.window.createOutputChannel('AutoClaude Script Results');
+                    outputChannel.clear();
+                    outputChannel.appendLine(`Script Check Failed: ${failedScriptName}`);
+                    outputChannel.appendLine('=' .repeat(50));
+                    failureDetails.forEach(error => outputChannel.appendLine(error));
+                    outputChannel.show();
+                }
+            });
+            
+            // Log which scripts were skipped
+            const skippedScripts = message.attachedScripts.slice(message.attachedScripts.indexOf(failedScript) + 1);
+            if (skippedScripts.length > 0) {
+                const skippedNames = skippedScripts.map(id => {
+                    const script = config.scripts.find(s => s.id === id);
+                    return script?.name || id;
+                }).join(', ');
+                debugLog(`⚠️ Skipped scripts due to failure: ${skippedNames}`);
+            }
         } else {
-            const failedScripts = Object.entries(results)
-                .filter(([_, result]) => !result.passed)
-                .map(([scriptId, _]) => {
-                    const config = scriptRunner.getConfig();
-                    const script = config.scripts.find(s => s.id === scriptId);
-                    return script?.name || scriptId;
+            // All scripts passed
+            const scriptNames = message.attachedScripts
+                .map(id => {
+                    const script = config.scripts.find(s => s.id === id);
+                    return script?.name || id;
                 })
                 .join(', ');
                 
-            vscode.window.showWarningMessage(`❌ Some attached scripts failed: ${failedScripts}`);
+            vscode.window.showInformationMessage(`✅ All attached scripts passed: ${scriptNames}`);
+            debugLog(`✅ All ${message.attachedScripts.length} scripts passed successfully`);
         }
         
     } catch (error) {
-        debugLog(`❌ Error running attached scripts: ${error}`);
+        debugLog(`❌ Error initializing script runner: ${error}`);
         vscode.window.showErrorMessage(`Failed to run attached scripts: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
