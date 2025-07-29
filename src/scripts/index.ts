@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import { debugLog } from '../utils/logging';
 import { MessageItem } from '../core/types';
 import { addMessageToQueueFromWebview } from '../queue';
-import { BUILTIN_SCRIPTS, DEFAULT_CONFIG, SCRIPTS_README } from './builtinScripts';
+import { SHELL_SCRIPTS as BUILTIN_SCRIPTS, DEFAULT_CONFIG, SCRIPTS_README } from './shellScripts';
 
 const execAsync = promisify(exec);
 
@@ -111,7 +111,7 @@ export class ScriptRunner {
                 description: 'Checks for TODO, FIXME, placeholders, and incomplete implementations',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'production-readiness.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'production-readiness.sh')
             },
             {
                 id: 'build-check',
@@ -119,7 +119,7 @@ export class ScriptRunner {
                 description: 'Ensures the project can build successfully',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'build-check.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'build-check.sh')
             },
             {
                 id: 'test-check',
@@ -127,7 +127,7 @@ export class ScriptRunner {
                 description: 'Runs all tests and ensures they pass',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'test-check.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'test-check.sh')
             },
             {
                 id: 'format-check',
@@ -135,7 +135,7 @@ export class ScriptRunner {
                 description: 'Ensures code is properly formatted',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'format-check.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'format-check.sh')
             },
             {
                 id: 'github-actions',
@@ -143,7 +143,7 @@ export class ScriptRunner {
                 description: 'Validates GitHub Actions workflows',
                 enabled: true,
                 predefined: true,
-                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'github-actions.js')
+                path: path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER, 'github-actions.sh')
             }
         ];
     }
@@ -156,8 +156,16 @@ export class ScriptRunner {
             const scriptPath = path.join(scriptsPath, filename);
             
             if (!fs.existsSync(scriptPath)) {
+                // Write script with executable permissions
                 fs.writeFileSync(scriptPath, content, { mode: 0o755 });
                 debugLog(`Created built-in script: ${filename}`);
+                
+                // Ensure it's executable on all platforms
+                try {
+                    await execAsync(`chmod +x "${scriptPath}"`);
+                } catch (error) {
+                    debugLog(`Warning: Could not set executable permission for ${filename}: ${error}`);
+                }
             }
         }
         
@@ -180,19 +188,53 @@ export class ScriptRunner {
 
     private async runScript(scriptPath: string): Promise<ScriptResult> {
         try {
-            const { stdout } = await execAsync(`node "${scriptPath}"`, {
-                cwd: this.workspacePath,
-                timeout: 60000
+            // Make sure script is executable
+            await execAsync(`chmod +x "${scriptPath}"`, {
+                cwd: this.workspacePath
             });
             
-            return JSON.parse(stdout);
+            // Execute the shell script
+            const { stdout } = await execAsync(`bash "${scriptPath}"`, {
+                cwd: this.workspacePath,
+                timeout: 60000,
+                maxBuffer: 1024 * 1024 * 10 // 10MB buffer for large outputs
+            });
+            
+            // Parse JSON output
+            try {
+                const result = JSON.parse(stdout);
+                // Validate result structure
+                if (typeof result.passed !== 'boolean') {
+                    throw new Error('Invalid script output: missing "passed" field');
+                }
+                if (!Array.isArray(result.errors)) {
+                    result.errors = [];
+                }
+                return result;
+            } catch (parseError) {
+                debugLog(`Failed to parse script output: ${parseError}`);
+                debugLog(`Script output: ${stdout}`);
+                return {
+                    passed: false,
+                    errors: [`Script output is not valid JSON: ${parseError}`]
+                };
+            }
         } catch (error: any) {
+            // Check if script produced output before failing
             if (error.stdout) {
                 try {
-                    return JSON.parse(error.stdout);
+                    const result = JSON.parse(error.stdout);
+                    if (typeof result.passed === 'boolean') {
+                        return result;
+                    }
                 } catch {
                     // Fall through to error handling
                 }
+            }
+            
+            debugLog(`Script execution error: ${error.message}`);
+            if (error.stderr) {
+                debugLog(`Script stderr: ${error.stderr}`);
             }
             
             return {
@@ -204,10 +246,10 @@ export class ScriptRunner {
 
     async loadUserScripts(): Promise<void> {
         const scriptsPath = path.join(this.workspacePath, AUTOCLAUDE_FOLDER, SCRIPTS_FOLDER);
-        const files = fs.readdirSync(scriptsPath).filter(f => f.endsWith('.js'));
+        const files = fs.readdirSync(scriptsPath).filter(f => f.endsWith('.sh'));
         
         for (const file of files) {
-            const scriptId = path.basename(file, '.js');
+            const scriptId = path.basename(file, '.sh');
             
             // Skip if it's a predefined script already in config
             if (this.config.scripts.find(s => s.id === scriptId && s.predefined)) {
