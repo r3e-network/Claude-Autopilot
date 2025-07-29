@@ -5,7 +5,7 @@ import { debugLog } from '../../utils/logging';
 import { updateWebviewContent, updateSessionState } from '../../ui/webview';
 import { saveWorkspaceHistory, ensureHistoryRun, updateMessageStatusInHistory } from '../../queue/processor/history';
 import { TIMEOUT_MS, ANSI_CLEAR_SCREEN_PATTERNS } from '../../core/constants';
-import { startClaudeSession } from '../../claude/session';
+import { startClaudeSession, isClaudeProcessHealthy } from '../../claude/session';
 import { ScriptRunner } from '../../scripts';
 
 export async function processNextMessage(): Promise<void> {
@@ -36,11 +36,36 @@ export async function processNextMessage(): Promise<void> {
         return;
     }
 
-    if (!claudeProcess) {
-        debugLog('❌ Claude process not available');
-        vscode.window.showWarningMessage('Claude session not started. Please start Claude session first.');
-        setProcessingQueue(false);
-        return;
+    // Check if Claude process is alive and healthy
+    if (!isClaudeProcessHealthy()) {
+        debugLog('❌ Claude process not healthy - attempting to restart');
+        vscode.window.showInformationMessage('Claude session disconnected. Restarting...');
+        
+        try {
+            await startClaudeSession(true);
+            
+            // Wait for session to be ready
+            await new Promise((resolve, reject) => {
+                const checkInterval = setInterval(() => {
+                    if (sessionReady && claudeProcess) {
+                        clearInterval(checkInterval);
+                        resolve(void 0);
+                    }
+                }, 1000);
+                
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    reject(new Error('Claude session restart timeout'));
+                }, 30000);
+            });
+            
+            debugLog('✅ Claude session restarted successfully');
+        } catch (error) {
+            debugLog(`❌ Failed to restart Claude session: ${error}`);
+            vscode.window.showErrorMessage(`Failed to restart Claude session: ${error instanceof Error ? error.message : String(error)}`);
+            setProcessingQueue(false);
+            return;
+        }
     }
 
     if (!sessionReady) {

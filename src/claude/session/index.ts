@@ -289,9 +289,39 @@ export function resetClaudeSession(): void {
     setCurrentMessage(null);
     setProcessingQueue(false);
     
+    // Clear output buffers
+    const { clearClaudeOutput, flushClaudeOutput } = require('../output');
+    flushClaudeOutput();
+    clearClaudeOutput();
+    
     updateWebviewContent();
     updateSessionState();
     vscode.window.showInformationMessage('Claude session reset. You can now start a new session.');
+}
+
+export function isClaudeProcessHealthy(): boolean {
+    if (!claudeProcess) {
+        debugLog('❌ Claude process is null');
+        return false;
+    }
+    
+    if (claudeProcess.killed) {
+        debugLog('❌ Claude process has been killed');
+        return false;
+    }
+    
+    if (!claudeProcess.stdin || claudeProcess.stdin.destroyed) {
+        debugLog('❌ Claude process stdin is not available or destroyed');
+        return false;
+    }
+    
+    if (!claudeProcess.stdout) {
+        debugLog('❌ Claude process stdout is not available');
+        return false;
+    }
+    
+    debugLog('✅ Claude process appears healthy');
+    return true;
 }
 
 export function handleClaudeKeypress(key: string): void {
