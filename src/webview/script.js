@@ -1157,6 +1157,108 @@ let lastParsedContent = '';
 let lastParsedHtml = '';
 const CLAUDE_RENDER_THROTTLE_MS = 500; // 500ms = 2 times per second max (matches backend analysis)
 
+// Scroll management variables
+let userScrolledUp = false;
+let scrollCheckTimeout = null;
+const SCROLL_BOTTOM_THRESHOLD = 30; // pixels from bottom to consider "at bottom"
+
+/**
+ * Smart smooth scrolling function that respects user scroll position
+ * Only auto-scrolls if user is already near the bottom
+ */
+function smoothScrollToBottom(element) {
+    if (!element) return;
+    
+    const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= SCROLL_BOTTOM_THRESHOLD;
+    
+    // Only auto-scroll if user is already near the bottom
+    if (isNearBottom) {
+        try {
+            // Try modern smooth scrolling first
+            if (element.scrollTo && typeof element.scrollTo === 'function') {
+                element.scrollTo({
+                    top: element.scrollHeight,
+                    behavior: 'smooth'
+                });
+            } else {
+                // Fallback for older browsers - animate manually
+                smoothScrollFallback(element, element.scrollHeight);
+            }
+            userScrolledUp = false;
+        } catch (error) {
+            // Ultimate fallback - immediate scroll
+            console.warn('Smooth scroll failed, using immediate scroll:', error);
+            element.scrollTop = element.scrollHeight;
+            userScrolledUp = false;
+        }
+    } else {
+        // User has scrolled up, don't force them to bottom
+        userScrolledUp = true;
+    }
+    
+    // Set up scroll event listener to detect when user scrolls manually
+    setupScrollListener(element);
+}
+
+/**
+ * Fallback smooth scrolling for browsers that don't support scrollTo with behavior
+ */
+function smoothScrollFallback(element, targetScrollTop) {
+    const startScrollTop = element.scrollTop;
+    const distance = targetScrollTop - startScrollTop;
+    const duration = 300; // 300ms animation
+    const startTime = performance.now();
+    
+    function animateScroll(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease-out cubic function for smooth deceleration
+        const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+        
+        element.scrollTop = startScrollTop + (distance * easeOutCubic);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+        }
+    }
+    
+    requestAnimationFrame(animateScroll);
+}
+
+/**
+ * Set up scroll listener to detect user scroll behavior
+ */
+function setupScrollListener(element) {
+    // Remove existing listener
+    element.removeEventListener('scroll', handleUserScroll);
+    
+    // Add new listener
+    element.addEventListener('scroll', handleUserScroll, { passive: true });
+}
+
+/**
+ * Handle user scroll events to track scroll position
+ */
+function handleUserScroll(event) {
+    const element = event.target;
+    const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= SCROLL_BOTTOM_THRESHOLD;
+    
+    // Clear existing timeout
+    if (scrollCheckTimeout) {
+        clearTimeout(scrollCheckTimeout);
+    }
+    
+    // Debounce scroll detection to avoid excessive updates
+    scrollCheckTimeout = setTimeout(() => {
+        if (isNearBottom) {
+            userScrolledUp = false;
+        } else {
+            userScrolledUp = true;
+        }
+    }, 100);
+}
+
 function appendToClaudeOutput(output) {
     try {
         // Store the latest output
@@ -1217,6 +1319,10 @@ function performClaudeRender(output) {
             claudeOutput = document.createElement('div');
             claudeOutput.className = 'claude-live-output';
             claudeContainer.appendChild(claudeOutput);
+            
+            // Initialize scroll state for new output element
+            userScrolledUp = false;
+            setupScrollListener(claudeOutput);
         }
 
         // Clear the ready message on first output
@@ -1229,6 +1335,13 @@ function performClaudeRender(output) {
             // Reset parsing cache
             lastParsedContent = '';
             lastParsedHtml = '';
+            
+            // Reset scroll state when clearing content
+            userScrolledUp = false;
+            if (scrollCheckTimeout) {
+                clearTimeout(scrollCheckTimeout);
+                scrollCheckTimeout = null;
+            }
         }
 
         // Check if this output contains screen clearing commands
@@ -1241,6 +1354,13 @@ function performClaudeRender(output) {
             // Reset cache since this is a new screen
             lastParsedContent = '';
             lastParsedHtml = '';
+            
+            // Reset scroll state when screen is cleared
+            userScrolledUp = false;
+            if (scrollCheckTimeout) {
+                clearTimeout(scrollCheckTimeout);
+                scrollCheckTimeout = null;
+            }
             
             // Parse and render the new content
             const htmlOutput = parseAnsiToHtml(claudeContent);
@@ -1283,8 +1403,8 @@ function performClaudeRender(output) {
             }
         }
 
-        // Auto-scroll to bottom
-        claudeOutput.scrollTop = claudeOutput.scrollHeight;
+        // Smart auto-scroll to bottom with smooth behavior
+        smoothScrollToBottom(claudeOutput);
 
         // Highlight the Claude output section briefly with new colors
         claudeOutput.style.borderColor = '#00ff88';
