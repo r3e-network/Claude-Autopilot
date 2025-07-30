@@ -13,9 +13,15 @@ import {
 } from './types';
 import { ScriptResult } from '../scripts';
 import { debugLog } from '../utils/logging';
-import { addMessageToQueueFromWebview } from '../queue';
 
 const execAsync = promisify(exec);
+
+// Message handler to avoid circular dependency
+let messageHandler: ((message: string) => void) | null = null;
+
+export function setSubAgentMessageHandler(handler: (message: string) => void) {
+    messageHandler = handler;
+}
 
 export abstract class SubAgent implements SubAgentExecutor {
     protected config: SubAgentConfig;
@@ -103,7 +109,11 @@ export abstract class SubAgent implements SubAgentExecutor {
             const message = this.buildClaudeMessage(request);
             
             // Add to Claude queue
-            addMessageToQueueFromWebview(message);
+            if (messageHandler) {
+                messageHandler(message);
+            } else {
+                debugLog('Warning: No message handler set for SubAgent');
+            }
             
             return {
                 success: true,

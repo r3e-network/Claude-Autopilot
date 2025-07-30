@@ -8,11 +8,13 @@ module.exports = {
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      tsconfig: {
-        strict: false,
-        noImplicitAny: false
-      }
+      tsconfig: 'tsconfig.test.json'
     }]
+  },
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^vscode$': '<rootDir>/__mocks__/vscode.ts'
   },
   collectCoverageFrom: [
     'src/**/*.ts',

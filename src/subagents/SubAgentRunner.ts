@@ -6,6 +6,7 @@ import { ScriptResult } from '../scripts';
 import { MessageItem } from '../core/types';
 import { debugLog } from '../utils/logging';
 import { addMessageToQueueFromWebview } from '../queue';
+import { setSubAgentMessageHandler } from './SubAgent';
 
 export interface SubAgentRunnerConfig {
     enabledAgents: string[];
@@ -46,6 +47,11 @@ export class SubAgentRunner {
     }
 
     async initialize(): Promise<void> {
+        // Set up message handler for SubAgents
+        setSubAgentMessageHandler((message: string) => {
+            addMessageToQueueFromWebview(message);
+        });
+        
         // Load custom agents
         await this.registry.loadCustomAgents();
         
