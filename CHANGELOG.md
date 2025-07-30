@@ -5,6 +5,134 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-07-30
+
+### ✨ New Features
+
+#### Import/Export System
+- **Export Queue**: Save your message queue to JSON for backup or sharing
+- **Import Queue**: Load previously exported queues with merge options
+- **Export Settings**: Backup all extension settings to a file
+- **Flexible Import**: Choose to append, merge, or replace when importing
+
+#### Message Templates
+- **Pre-built Templates**: 6 professional templates for common tasks
+  - Make Production Ready
+  - Add Comprehensive Tests
+  - Refactor Code
+  - Security Audit & Fix
+  - Add New Feature
+  - Optimize Performance
+- **Variable Support**: Templates support dynamic variables with prompts
+- **Categories**: Templates organized by category (Quality, Testing, Security, etc.)
+- **Custom Templates**: Create and save your own templates
+
+#### Queue Statistics Dashboard
+- **Real-time Metrics**: Live dashboard showing queue performance
+- **Visual Charts**: Time distribution and status pie charts
+- **Performance Tracking**: Success rate, average processing time
+- **Error Analysis**: Breakdown of error types and patterns
+- **Peak Usage**: Identify busiest hours for optimization
+
+#### Keyboard Shortcuts
+- `Ctrl/Cmd + Shift + M`: Add new message
+- `Ctrl/Cmd + Shift + S`: Start processing
+- `Ctrl/Cmd + Shift + X`: Stop processing
+- `Ctrl/Cmd + Shift + T`: Use template
+- `Ctrl/Cmd + Shift + D`: Show statistics
+
+### 🔧 Improvements
+- Better error recovery and messaging
+- Enhanced queue persistence
+- Improved memory management
+- More intuitive UI interactions
+- **Scroll to Bottom Button**: Added dedicated button to instantly jump to the latest Claude output
+- **Keyboard Shortcut**: Press `Ctrl/Cmd + End` when Claude output is focused to scroll to bottom
+
+### 📚 Documentation
+- Added template usage guide
+- Import/export documentation
+- Statistics interpretation guide
+
+## [3.0.1] - 2025-07-30
+
+### 🐛 Bug Fixes
+
+- **Fixed VS Code Server/Web Compatibility**: Extension now works properly in browser-based VS Code environments
+- **Fixed Empty Webview Issue**: Resolved blank panel in VS Code Server, github.dev, and vscode.dev
+- **Improved Resource Loading**: Updated to use proper webview URI handling for web environments
+- **Enhanced CSP**: Content Security Policy now properly configured for web contexts
+
+## [3.0.0] - 2025-07-30
+
+### 🚀 Major Release: Terminal Version & Enhanced VS Code Extension
+
+#### New Terminal Application
+- **Standalone Terminal Program**: Complete terminal-based Claude automation tool
+- **Beautiful TUI**: Built with blessed for intuitive terminal interface
+- **Cross-Platform**: Works on any Linux/macOS terminal, including SSH sessions
+- **Server Ready**: Perfect for headless server environments
+
+#### Terminal Features
+- 🖥️ **Interactive Mode**: Full-featured terminal UI with multiple panes
+- 📋 **Batch Processing**: Process multiple messages from files
+- 🎯 **Single Command Mode**: Run one-off commands and exit
+- 🔧 **Configuration Management**: Extensive CLI-based configuration
+- 📊 **Real-time Monitoring**: Live status updates and progress tracking
+
+#### VS Code Extension Enhancements
+- **Auto-Scroll Improvements**: Claude output always scrolls to bottom by default
+- **Scroll Lock Toggle**: New button to control auto-scrolling behavior
+- **Persistent Preferences**: Scroll settings saved per workspace
+- **Smooth Animations**: Better scrolling performance
+
+#### Parallel Agent System (Both Terminal & VS Code)
+- **50+ Parallel Agents**: Run massive parallel Claude instances
+- **Automatic Orchestration**: One-click fully automatic operation
+- **Work Detection**: Automatically finds and fixes issues in codebase
+- **Smart Distribution**: Intelligent task allocation without conflicts
+- **Auto-Scaling**: Dynamically adjusts agent count based on workload
+- **Coordination Protocol**: Advanced multi-agent collaboration
+- **34 Tech Stacks**: Pre-configured support for major technologies
+
+#### Automation Features
+- **Auto-Start**: Agents start automatically when work detected
+- **Auto-Scale**: Agent count adjusts based on queue size
+- **Auto-Complete**: Shuts down when all work finished
+- **Auto-Restart**: Failed agents restart automatically
+- **Auto-Recovery**: Handles crashes and network issues
+
+### Installation
+
+#### VS Code Extension
+```bash
+# Install from VS Code Marketplace
+# Search for "AutoClaude" or use:
+code --install-extension r3e.autoclaude
+```
+
+#### Terminal Version
+```bash
+# Global installation
+npm install -g claude-autopilot
+
+# Run with
+claude-autopilot
+# or short alias
+cap
+```
+
+### Breaking Changes
+- Minimum Node.js version is now 16.0.0
+- Configuration format has been updated
+- Some VS Code settings have been renamed
+
+### Bug Fixes
+- Fixed memory leaks in long-running sessions
+- Improved error handling for network failures
+- Better cleanup of temporary files
+- Fixed race conditions in parallel processing
+
 ## [2.4.0] - 2025-07-30
 
 ### 🚀 Intelligent Task Automation System

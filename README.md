@@ -1,7 +1,7 @@
 # AutoClaude - Intelligent Development Automation
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
-[![Version](https://img.shields.io/badge/version-2.4.0-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v2.4.0)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v3.0.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/r3e-network/AutoClaude/build.yml?branch=main)](https://github.com/r3e-network/AutoClaude/actions)
 
@@ -13,7 +13,21 @@
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
-## 🆕 NEW: Intelligent Task Automation System (v2.4.0)
+## 🆕 NEW in v3.0.0: Terminal Version & Auto-Scroll
+
+### 🖥️ **Standalone Terminal Application**
+Run AutoClaude anywhere - SSH sessions, servers, or your local terminal:
+```bash
+npm install -g claude-autopilot
+claude-autopilot  # or just 'cap'
+```
+
+### 📜 **Enhanced Auto-Scroll**
+- Claude output always scrolls to bottom by default
+- Smart scroll lock toggle for reviewing output
+- Persistent scroll preferences per workspace
+
+## 🧠 Intelligent Task Automation System
 
 ### 🧠 **Natural Language Commands**
 Transform high-level goals into completed work with simple commands:
@@ -30,6 +44,14 @@ Each agent is an expert in its domain:
 - **WebsiteBuilderAgent** - Creates beautiful, responsive websites
 - **CodeCleanerAgent** - Refactors and organizes your codebase
 - And many more!
+
+### 🚜 **NEW: Parallel Agent Farm** 
+Run multiple Claude agents simultaneously for massive productivity:
+- **20-50+ Parallel Agents** - Launch armies of AI agents working on your codebase
+- **Smart Work Distribution** - Intelligent task assignment prevents conflicts
+- **Real-time Monitoring** - Beautiful dashboard shows agent status and progress
+- **Cooperating Agents** - Advanced coordination protocol for complex tasks
+- **34 Tech Stack Support** - Pre-configured for popular frameworks and languages
 
 ### 💾 **Cross-Session Task Persistence**
 Never lose work progress:
@@ -210,6 +232,74 @@ Scripts are configured in `.autoclaude/config.json`:
     }
   },
   "maxIterations": 5
+}
+```
+
+### 🚜 Parallel Agent Farm - Massive Scale Automation
+
+Run multiple Claude agents simultaneously to tackle large-scale code improvements:
+
+#### Getting Started with Parallel Agents
+
+1. **Start Parallel Agents** 🚀
+   - Command: `Claude Agent Farm: Start Parallel Agents`
+   - Choose number of agents (1-50)
+   - Agents launch in tmux sessions with automatic coordination
+
+2. **Monitor Progress** 📊
+   - Command: `Claude Agent Farm: Show Agent Monitor`
+   - Real-time dashboard with agent status, context usage, and work cycles
+   - Visual indicators for agent health and activity
+
+3. **Attach to Session** 🖥️
+   - Command: `Claude Agent Farm: Attach to Agent Session`
+   - View agents working in terminal
+   - Direct tmux access for debugging
+
+4. **Clear All Context** 🧹
+   - Command: `Claude Agent Farm: Clear All Agent Context`
+   - Broadcasts `/clear` to all agents simultaneously
+   - Useful when multiple agents are running low on context
+
+#### Advanced Features
+
+**Smart Work Distribution**
+- Automatic chunk-based task assignment
+- Conflict prevention through file locking
+- Dynamic chunk sizing based on remaining work
+- Priority-based work queue management
+
+**Cooperating Agents Protocol**
+- Agents coordinate through shared work registry
+- File and feature locking prevents conflicts
+- Stale lock detection and recovery
+- Business value tracking for work items
+
+**Multi-Tech Stack Support**
+- 34 pre-configured technology stacks
+- Auto-detection of project type
+- Stack-specific prompts and best practices
+- Custom stack configuration support
+
+**Monitoring & Recovery**
+- Heartbeat monitoring for stuck agents
+- Automatic restart with exponential backoff
+- Settings backup and corruption recovery
+- Adaptive timing adjustments
+
+#### Configuration
+
+Configure parallel agents in VS Code settings:
+
+```json
+{
+  "autoclaude.parallelAgents.enabled": true,
+  "autoclaude.parallelAgents.maxAgents": 50,
+  "autoclaude.parallelAgents.defaultAgents": 5,
+  "autoclaude.parallelAgents.staggerDelay": 10,
+  "autoclaude.parallelAgents.contextThreshold": 20,
+  "autoclaude.parallelAgents.autoRestart": true,
+  "autoclaude.parallelAgents.coordinationEnabled": false
 }
 ```
 

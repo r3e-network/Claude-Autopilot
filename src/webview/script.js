@@ -963,6 +963,10 @@ window.addEventListener('message', event => {
         case 'setAvailableScripts':
             setAvailableScripts(message.scripts);
             break;
+        case 'setScrollLockState':
+            autoScrollEnabled = message.enabled;
+            updateScrollLockButton();
+            break;
     }
 });
 
@@ -1160,19 +1164,20 @@ const CLAUDE_RENDER_THROTTLE_MS = 500; // 500ms = 2 times per second max (matche
 // Scroll management variables
 let userScrolledUp = false;
 let scrollCheckTimeout = null;
+let autoScrollEnabled = true; // Auto-scroll is enabled by default
 const SCROLL_BOTTOM_THRESHOLD = 30; // pixels from bottom to consider "at bottom"
 
 /**
  * Smart smooth scrolling function that respects user scroll position
- * Only auto-scrolls if user is already near the bottom
+ * Auto-scrolls to bottom if autoScrollEnabled is true
  */
 function smoothScrollToBottom(element) {
     if (!element) return;
     
     const isNearBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= SCROLL_BOTTOM_THRESHOLD;
     
-    // Only auto-scroll if user is already near the bottom
-    if (isNearBottom) {
+    // Auto-scroll if enabled OR if user is already near the bottom
+    if (autoScrollEnabled || isNearBottom) {
         try {
             // Try modern smooth scrolling first
             if (element.scrollTo && typeof element.scrollTo === 'function') {
@@ -1192,8 +1197,13 @@ function smoothScrollToBottom(element) {
             userScrolledUp = false;
         }
     } else {
-        // User has scrolled up, don't force them to bottom
+        // User has scrolled up, temporarily disable auto-scroll
         userScrolledUp = true;
+        if (autoScrollEnabled) {
+            // Temporarily disable auto-scroll when user scrolls up
+            autoScrollEnabled = false;
+            updateScrollLockButton();
+        }
     }
     
     // Set up scroll event listener to detect when user scrolls manually
@@ -1415,6 +1425,62 @@ function performClaudeRender(output) {
         }, 800);
     } catch (error) {
         console.error('Error performing Claude render:', error);
+    }
+}
+
+function toggleScrollLock() {
+    autoScrollEnabled = !autoScrollEnabled;
+    updateScrollLockButton();
+    
+    // Save state to backend
+    vscode.postMessage({
+        command: 'saveScrollLockState',
+        enabled: autoScrollEnabled
+    });
+    
+    // If re-enabled, immediately scroll to bottom
+    if (autoScrollEnabled) {
+        const claudeContainer = document.getElementById('claudeOutputContainer');
+        const claudeOutput = claudeContainer.querySelector('.claude-live-output');
+        if (claudeOutput) {
+            claudeOutput.scrollTop = claudeOutput.scrollHeight;
+        }
+    }
+}
+
+function scrollToBottom() {
+    const claudeContainer = document.getElementById('claudeOutputContainer');
+    const claudeOutput = claudeContainer.querySelector('.claude-live-output');
+    if (claudeOutput) {
+        // Use smooth scrolling to go to the bottom
+        smoothScrollToBottom(claudeOutput);
+        
+        // Flash the button to indicate action
+        const btn = document.getElementById('scrollToBottomBtn');
+        if (btn) {
+            btn.style.backgroundColor = 'var(--vscode-button-hoverBackground)';
+            setTimeout(() => {
+                btn.style.backgroundColor = '';
+            }, 200);
+        }
+    }
+}
+
+function updateScrollLockButton() {
+    const btn = document.getElementById('scrollLockBtn');
+    const icon = document.getElementById('scrollLockIcon');
+    if (btn && icon) {
+        if (autoScrollEnabled) {
+            icon.textContent = '🔓'; // Locked (auto-scroll ON)
+            btn.classList.remove('btn-warning');
+            btn.classList.add('btn-secondary');
+            btn.title = 'Auto-scroll is ON (click to disable)';
+        } else {
+            icon.textContent = '🔔'; // Unlocked (auto-scroll OFF)
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-warning');
+            btn.title = 'Auto-scroll is OFF (click to enable)';
+        }
     }
 }
 
@@ -1910,6 +1976,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Initialize scroll lock button state
+    updateScrollLockButton();
+    
     // Handle keyboard navigation when Claude output is focused
     claudeOutput.addEventListener('keydown', function (event) {
         const outputElement = claudeOutput.querySelector('.claude-live-output');
@@ -1965,6 +2034,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     command: 'claudeKeypress',
                     key: 'escape'
                 });
+                break;
+            case 'End':
+                // Ctrl/Cmd + End scrolls to bottom
+                if (event.ctrlKey || event.metaKey) {
+                    event.preventDefault();
+                    scrollToBottom();
+                }
                 break;
         }
     });

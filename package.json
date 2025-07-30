@@ -2,7 +2,7 @@
   "name": "autoclaude",
   "displayName": "AutoClaude",
   "description": "Intelligent AI-powered development assistant with automated workflows, smart task completion, and user-friendly Claude integration",
-  "version": "2.4.0",
+  "version": "3.1.0",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
@@ -19,81 +19,153 @@
     "commands": [
       {
         "command": "autoclaude.start",
-        "title": "🚀 Start AutoClaude Assistant",
-        "category": "AutoClaude",
+        "title": "🚀 Start Claude Assistant",
+        "category": "Claude",
         "icon": "$(play)"
       },
       {
         "command": "autoclaude.stop",
-        "title": "⏹️ Stop AutoClaude",
-        "category": "AutoClaude",
+        "title": "⏹️ Stop Claude",
+        "category": "Claude",
         "icon": "$(stop)"
       },
       {
         "command": "autoclaude.addMessage",
         "title": "💬 Ask Claude Something...",
-        "category": "AutoClaude",
+        "category": "Claude",
         "icon": "$(comment-add)"
       },
       {
         "command": "autoclaude.runScriptChecks",
         "title": "🔍 Run Quality Checks",
-        "category": "AutoClaude",
-        "icon": "$(check-all)"
+        "category": "Claude",
+        "icon": "$(search)"
       },
       {
         "command": "autoclaude.runScriptLoop",
         "title": "🔄 Auto-Fix Issues (Loop Mode)",
-        "category": "AutoClaude",
-        "icon": "$(sync)"
+        "category": "Claude",
+        "icon": "$(refresh)"
       },
       {
         "command": "autoclaude.quickStart",
         "title": "⚡ Quick Start Guide",
-        "category": "AutoClaude",
-        "icon": "$(getting-started)"
+        "category": "Claude",
+        "icon": "$(rocket)"
       },
       {
         "command": "autoclaude.runSubAgents",
-        "title": "🤖 Run AI Analysis Agents",
-        "category": "AutoClaude",
-        "icon": "$(robot)"
+        "title": "🤖 Run Claude AI Agents",
+        "category": "Claude",
+        "icon": "$(hubot)"
       },
       {
         "command": "autoclaude.autoComplete",
         "title": "✨ Auto-Complete Current Task",
-        "category": "AutoClaude",
-        "icon": "$(wand)"
+        "category": "Claude",
+        "icon": "$(sparkle)"
       },
       {
         "command": "autoclaude.workflowWizard",
-        "title": "🧙 Workflow Wizard",
-        "category": "AutoClaude",
+        "title": "🧙 Claude Workflow Wizard",
+        "category": "Claude",
         "icon": "$(list-tree)"
       },
       {
         "command": "autoclaude.executeCommand",
-        "title": "🎯 Execute Automation Command",
-        "category": "AutoClaude",
+        "title": "🎯 Execute Claude Command",
+        "category": "Claude",
         "icon": "$(terminal)"
       },
       {
         "command": "autoclaude.updateContext",
         "title": "🔄 Update Project Context",
-        "category": "AutoClaude",
-        "icon": "$(sync)"
+        "category": "Claude",
+        "icon": "$(refresh)"
       },
       {
         "command": "autoclaude.showContext",
         "title": "📋 Show Project Context",
-        "category": "AutoClaude",
+        "category": "Claude",
         "icon": "$(file-text)"
       },
       {
         "command": "autoclaude.showTasks",
         "title": "📝 Show Task History",
-        "category": "AutoClaude",
-        "icon": "$(checklist)"
+        "category": "Claude",
+        "icon": "$(list-ordered)"
+      },
+      {
+        "command": "autoclaude.startParallelAgents",
+        "title": "🚀 Start Parallel Agents",
+        "category": "Claude Agent Farm",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "autoclaude.stopParallelAgents",
+        "title": "⏹️ Stop Parallel Agents",
+        "category": "Claude Agent Farm",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "autoclaude.showAgentMonitor",
+        "title": "📊 Show Agent Monitor",
+        "category": "Claude Agent Farm",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "autoclaude.attachToAgents",
+        "title": "🖥️ Attach to Agent Session",
+        "category": "Claude Agent Farm",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "autoclaude.clearAllAgentContext",
+        "title": "🧹 Clear All Agent Context",
+        "category": "Claude Agent Farm",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "autoclaude.toggleAutoOrchestration",
+        "title": "🤖 Toggle Auto-Orchestration (On/Off)",
+        "category": "Claude Agent Farm",
+        "icon": "$(circuit-board)"
+      },
+      {
+        "command": "autoclaude.exportQueue",
+        "title": "📤 Export Queue",
+        "category": "Claude",
+        "icon": "$(export)"
+      },
+      {
+        "command": "autoclaude.importQueue",
+        "title": "📥 Import Queue",
+        "category": "Claude",
+        "icon": "$(import)"
+      },
+      {
+        "command": "autoclaude.exportSettings",
+        "title": "⚙️ Export Settings",
+        "category": "Claude",
+        "icon": "$(save-as)"
+      },
+      {
+        "command": "autoclaude.useTemplate",
+        "title": "📋 Use Message Template",
+        "category": "Claude",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "autoclaude.manageTemplates",
+        "title": "🗂️ Manage Message Templates",
+        "category": "Claude",
+        "icon": "$(library)"
+      },
+      {
+        "command": "autoclaude.showStatistics",
+        "title": "📊 Show Queue Statistics",
+        "category": "Claude",
+        "icon": "$(graph)"
       }
     ],
     "menus": {
@@ -148,6 +220,30 @@
         },
         {
           "command": "autoclaude.showTasks",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.startParallelAgents",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.stopParallelAgents",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.showAgentMonitor",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.attachToAgents",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.clearAllAgentContext",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.toggleAutoOrchestration",
           "when": "true"
         }
       ],
@@ -309,9 +405,118 @@
           "type": "boolean",
           "default": true,
           "description": "Show sub-agent capabilities in the UI when hovering over scripts"
+        },
+        "autoclaude.parallelAgents.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable parallel agent orchestration for large-scale automated improvements"
+        },
+        "autoclaude.parallelAgents.maxAgents": {
+          "type": "number",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of parallel agents allowed"
+        },
+        "autoclaude.parallelAgents.defaultAgents": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Default number of agents to start"
+        },
+        "autoclaude.parallelAgents.staggerDelay": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Delay in seconds between starting each agent"
+        },
+        "autoclaude.parallelAgents.contextThreshold": {
+          "type": "number",
+          "default": 20,
+          "minimum": 10,
+          "maximum": 50,
+          "description": "Context usage percentage threshold for auto-clearing"
+        },
+        "autoclaude.parallelAgents.autoRestart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically restart agents that fail or go idle"
+        },
+        "autoclaude.parallelAgents.checkInterval": {
+          "type": "number",
+          "default": 10,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Health check interval in seconds"
+        },
+        "autoclaude.parallelAgents.coordinationEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable advanced coordination protocol for cooperating agents"
+        },
+        "autoclaude.parallelAgents.autoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically start parallel agents when workspace opens"
+        },
+        "autoclaude.parallelAgents.autoDetectWork": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically detect and distribute work to agents"
+        },
+        "autoclaude.parallelAgents.autoScale": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scale agent count based on workload"
+        },
+        "autoclaude.parallelAgents.autoShutdown": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically shutdown agents when work is complete"
+        },
+        "autoclaude.parallelAgents.workDetectionInterval": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 600,
+          "description": "Interval in seconds to check for new work"
         }
       }
-    }
+    },
+    "keybindings": [
+      {
+        "command": "autoclaude.addMessage",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "activePanel == 'autoclaude'"
+      },
+      {
+        "command": "autoclaude.start",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "activePanel == 'autoclaude'"
+      },
+      {
+        "command": "autoclaude.stop",
+        "key": "ctrl+shift+x",
+        "mac": "cmd+shift+x",
+        "when": "activePanel == 'autoclaude'"
+      },
+      {
+        "command": "autoclaude.useTemplate",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "activePanel == 'autoclaude'"
+      },
+      {
+        "command": "autoclaude.showStatistics",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "activePanel == 'autoclaude'"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -359,7 +564,17 @@
     "workflow-automation",
     "smart-completion",
     "guided-setup",
-    "interactive-help"
+    "interactive-help",
+    "parallel-agents",
+    "agent-farm",
+    "multi-agent",
+    "distributed-ai",
+    "tmux",
+    "large-scale-automation",
+    "agent-orchestration",
+    "ai-coordination",
+    "tech-stack-support",
+    "code-improvement"
   ],
   "author": "Jimmy <jimmy@r3e.network> (based on original work by Ben Basha)",
   "contributors": [
@@ -386,5 +601,11 @@
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "cors": "^2.8.5",
+    "ethers": "^6.15.0",
+    "express": "^5.1.0"
   }
 }

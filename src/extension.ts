@@ -22,11 +22,18 @@ import { QuickStartManager } from './ui/quickStart';
 import { WorkflowOrchestrator } from './automation/workflowOrchestrator';
 import { TaskCompletionEngine } from './automation/taskCompletion';
 import { ErrorRecoverySystem } from './automation/errorRecovery';
+import { ParallelAgentOrchestrator } from './agents/ParallelAgentOrchestrator';
+import { AgentMonitor } from './monitoring/AgentMonitor';
+import { WorkDistributor } from './agents/WorkDistributor';
+import { CoordinationProtocol } from './coordination/CoordinationProtocol';
 
 // Development-only imports
 let simulateUsageLimit: (() => void) | undefined;
 let clearAllTimers: (() => void) | undefined;
 let debugQueueState: (() => void) | undefined;
+
+// Extension context for global access
+let extensionContext: vscode.ExtensionContext;
 
 // Dynamically import development features only in dev mode
 if (isDevelopmentMode()) {
@@ -41,6 +48,7 @@ if (isDevelopmentMode()) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    extensionContext = context;
     setExtensionContext(context);
     setDebugMode(false);
 
@@ -48,9 +56,60 @@ export function activate(context: vscode.ExtensionContext) {
     const config = getValidatedConfig();
     debugLog('Extension activated with validated configuration');
 
+    // Global instances for new features
+    let parallelOrchestrator: ParallelAgentOrchestrator | null = null;
+    let agentMonitor: AgentMonitor | null = null;
+    let workDistributor: WorkDistributor | null = null;
+    let coordinationProtocol: CoordinationProtocol | null = null;
+
     // Initialize automation if workspace is available
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder) {
+        // Initialize automatic parallel agents if enabled
+        const parallelConfig = vscode.workspace.getConfiguration('autoclaude.parallelAgents');
+        if (parallelConfig.get<boolean>('enabled', false) && parallelConfig.get<boolean>('autoStart', false)) {
+            setTimeout(async () => {
+                try {
+                    const { AutoWorkDetector } = await import('./agents/AutoWorkDetector');
+                    const autoDetector = new AutoWorkDetector(workspaceFolder.uri.fsPath);
+                    await autoDetector.initialize();
+                    
+                    const detection = await autoDetector.detectWork();
+                    if (detection.hasWork) {
+                        debugLog(`Auto-detected ${detection.workCount} work items on startup`);
+                        
+                        // Auto-start agents
+                        const agentCount = Math.min(
+                            detection.suggestedAgents,
+                            parallelConfig.get<number>('defaultAgents', 5)
+                        );
+                        
+                        vscode.window.showInformationMessage(
+                            `AutoClaude detected ${detection.workCount} items to fix. Starting ${agentCount} agents...`
+                        );
+                        
+                        // Start agents automatically
+                        parallelOrchestrator = new ParallelAgentOrchestrator(workspaceFolder.uri.fsPath);
+                        await parallelOrchestrator.initialize();
+                        await parallelOrchestrator.startAgents(agentCount);
+                        
+                        // Start monitoring
+                        agentMonitor = new AgentMonitor(parallelOrchestrator, workspaceFolder.uri.fsPath);
+                        await agentMonitor.initialize();
+                        
+                        // Start auto-detection
+                        if (parallelConfig.get<boolean>('autoDetectWork', true)) {
+                            await autoDetector.startAutoDetection(parallelOrchestrator);
+                        }
+                        
+                        // Store globally
+                        (global as any).autoWorkDetector = autoDetector;
+                    }
+                } catch (error) {
+                    debugLog(`Failed to auto-start parallel agents: ${error}`);
+                }
+            }, 5000); // Delay to ensure extension is fully loaded
+        }
         // Initialize context system for project indexing and task persistence
         import('./context').then(module => {
             module.initializeContextSystem(workspaceFolder.uri.fsPath).then(contextProvider => {
@@ -238,10 +297,192 @@ export function activate(context: vscode.ExtensionContext) {
         });
     });
 
+    // Parallel Agent Commands
+    const startParallelAgentsCommand = vscode.commands.registerCommand('autoclaude.startParallelAgents', async () => {
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('Please open a workspace folder to use parallel agents');
+            return;
+        }
+
+        const agentCount = await vscode.window.showInputBox({
+            prompt: 'How many parallel agents to start?',
+            placeHolder: '5',
+            value: '5',
+            validateInput: (value) => {
+                const num = parseInt(value);
+                if (isNaN(num) || num < 1) return 'Please enter a number greater than 0';
+                if (num > 50) return 'Maximum 50 agents allowed';
+                return null;
+            }
+        });
+
+        if (!agentCount) return;
+
+        try {
+            // Get config from settings
+            const config = vscode.workspace.getConfiguration('autoclaude.parallelAgents');
+            const orchestratorConfig = {
+                maxAgents: config.get<number>('maxAgents', 50),
+                defaultAgents: parseInt(agentCount),
+                staggerDelay: config.get<number>('staggerDelay', 10),
+                contextThreshold: config.get<number>('contextThreshold', 20),
+                autoRestart: config.get<boolean>('autoRestart', true),
+                checkInterval: config.get<number>('checkInterval', 10)
+            };
+
+            parallelOrchestrator = new ParallelAgentOrchestrator(workspaceFolder.uri.fsPath, orchestratorConfig);
+            await parallelOrchestrator.initialize();
+            await parallelOrchestrator.startAgents(parseInt(agentCount));
+
+            // Initialize monitor
+            agentMonitor = new AgentMonitor(parallelOrchestrator, workspaceFolder.uri.fsPath);
+            await agentMonitor.initialize();
+            
+            // Store in context for cleanup
+            context.workspaceState.update('parallelOrchestrator', parallelOrchestrator);
+            context.workspaceState.update('agentMonitor', agentMonitor);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to start parallel agents: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    });
+
+    const stopParallelAgentsCommand = vscode.commands.registerCommand('autoclaude.stopParallelAgents', async () => {
+        if (parallelOrchestrator) {
+            await parallelOrchestrator.stopAgents();
+            parallelOrchestrator = null;
+        }
+        if (agentMonitor) {
+            agentMonitor.dispose();
+            agentMonitor = null;
+        }
+    });
+
+    const showAgentMonitorCommand = vscode.commands.registerCommand('autoclaude.showAgentMonitor', async () => {
+        if (!agentMonitor) {
+            vscode.window.showErrorMessage('No parallel agents running');
+            return;
+        }
+        await agentMonitor.showDashboard();
+    });
+
+    const attachToAgentsCommand = vscode.commands.registerCommand('autoclaude.attachToAgents', async () => {
+        if (!parallelOrchestrator) {
+            vscode.window.showErrorMessage('No parallel agents running');
+            return;
+        }
+        await parallelOrchestrator.attachToSession();
+    });
+
+    const clearAllAgentContextCommand = vscode.commands.registerCommand('autoclaude.clearAllAgentContext', async () => {
+        if (!parallelOrchestrator) {
+            vscode.window.showErrorMessage('No parallel agents running');
+            return;
+        }
+        await parallelOrchestrator.sendCommandToAllAgents('/clear');
+        vscode.window.showInformationMessage('Sent /clear command to all agents');
+    });
+
+    const toggleAutoOrchestrationCommand = vscode.commands.registerCommand('autoclaude.toggleAutoOrchestration', async () => {
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('Please open a workspace folder to use auto-orchestration');
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('autoclaude.parallelAgents');
+        const isEnabled = config.get<boolean>('enabled', false);
+        
+        if (!isEnabled) {
+            // Enable auto-orchestration
+            await config.update('enabled', true, vscode.ConfigurationTarget.Workspace);
+            await config.update('autoStart', true, vscode.ConfigurationTarget.Workspace);
+            await config.update('autoDetectWork', true, vscode.ConfigurationTarget.Workspace);
+            await config.update('autoScale', true, vscode.ConfigurationTarget.Workspace);
+            await config.update('autoShutdown', true, vscode.ConfigurationTarget.Workspace);
+            
+            vscode.window.showInformationMessage(
+                '🚀 Auto-orchestration enabled! Agents will start automatically when work is detected.'
+            );
+            
+            // Start immediately
+            const { AutoOrchestrationCoordinator } = await import('./agents/AutoOrchestrationCoordinator');
+            const autoConfig = {
+                enabled: true,
+                autoStart: true,
+                autoDetectWork: true,
+                autoScale: true,
+                autoShutdown: true,
+                maxAgents: config.get<number>('maxAgents', 50),
+                workDetectionInterval: config.get<number>('workDetectionInterval', 60),
+                coordinationEnabled: config.get<boolean>('coordinationEnabled', false)
+            };
+            
+            const coordinator = new AutoOrchestrationCoordinator(workspaceFolder.uri.fsPath, autoConfig);
+            await coordinator.initialize();
+            await coordinator.start();
+            
+            // Store globally
+            (global as any).autoOrchestrationCoordinator = coordinator;
+        } else {
+            // Disable auto-orchestration
+            await config.update('enabled', false, vscode.ConfigurationTarget.Workspace);
+            await config.update('autoStart', false, vscode.ConfigurationTarget.Workspace);
+            
+            // Stop if running
+            const coordinator = (global as any).autoOrchestrationCoordinator;
+            if (coordinator) {
+                await coordinator.stop();
+                (global as any).autoOrchestrationCoordinator = null;
+            }
+            
+            vscode.window.showInformationMessage('Auto-orchestration disabled');
+        }
+    });
+
+    // Import/Export commands
+    const exportQueueCommand = vscode.commands.registerCommand('autoclaude.exportQueue', async () => {
+        const { exportQueueCommand } = await import('./commands/exportImport');
+        await exportQueueCommand();
+    });
+
+    const importQueueCommand = vscode.commands.registerCommand('autoclaude.importQueue', async () => {
+        const { importQueueCommand } = await import('./commands/exportImport');
+        await importQueueCommand();
+    });
+
+    const exportSettingsCommand = vscode.commands.registerCommand('autoclaude.exportSettings', async () => {
+        const { exportSettingsCommand } = await import('./commands/exportImport');
+        await exportSettingsCommand();
+    });
+
+    // Template commands
+    const useTemplateCommand = vscode.commands.registerCommand('autoclaude.useTemplate', async () => {
+        const { MessageTemplateManager, showTemplateQuickPick } = await import('./templates/messageTemplates');
+        const templateManager = new MessageTemplateManager(context);
+        const content = await showTemplateQuickPick(templateManager);
+        if (content) {
+            await addMessageToQueueFromWebview(content);
+        }
+    });
+
+    const manageTemplatesCommand = vscode.commands.registerCommand('autoclaude.manageTemplates', async () => {
+        vscode.window.showInformationMessage('Template manager coming soon!');
+    });
+
+    // Statistics command
+    const showStatisticsCommand = vscode.commands.registerCommand('autoclaude.showStatistics', async () => {
+        const { StatisticsManager } = await import('./ui/statistics');
+        const statsManager = new StatisticsManager();
+        await statsManager.showStatisticsWebview(context);
+    });
+
     context.subscriptions.push(
         startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
         quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
         updateContextCommand, showContextCommand, showTasksCommand, executeAutomationCommand,
+        startParallelAgentsCommand, stopParallelAgentsCommand, showAgentMonitorCommand,
+        attachToAgentsCommand, clearAllAgentContextCommand, toggleAutoOrchestrationCommand,
+        exportQueueCommand, importQueueCommand, exportSettingsCommand,
+        useTemplateCommand, manageTemplatesCommand, showStatisticsCommand,
         configWatcher
     );
     
@@ -280,7 +521,12 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
         vscode.ViewColumn.Two,
         {
             enableScripts: true,
-            retainContextWhenHidden: true
+            retainContextWhenHidden: true,
+            localResourceRoots: [
+                vscode.Uri.joinPath(context.extensionUri, 'out'),
+                vscode.Uri.joinPath(context.extensionUri, 'src'),
+                context.extensionUri
+            ]
         }
     );
 
@@ -298,6 +544,7 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
         updateSessionState();
         sendSecuritySettings();
         sendHistoryVisibilitySettings();
+        sendScrollLockState();
         loadWorkspaceHistory();
         debugLog('Webview state synchronized after reopening');
         
@@ -378,6 +625,10 @@ function startClaudeAutopilot(context: vscode.ExtensionContext): void {
                     break;
                 case 'openSettings':
                     vscode.commands.executeCommand('workbench.action.openSettings', 'autoclaude');
+                    break;
+                case 'saveScrollLockState':
+                    // Save scroll lock state to workspace state
+                    extensionContext.workspaceState.update('autoScrollEnabled', message.enabled);
                     break;
                 case 'getDevelopmentModeSetting':
                     sendDevelopmentModeSetting();
@@ -605,6 +856,18 @@ function sendDevelopmentModeSetting(): void {
         claudePanel.webview.postMessage({
             command: 'setDevelopmentModeSetting',
             enabled: isDevelopmentMode
+        });
+    }
+}
+
+function sendScrollLockState(): void {
+    if (claudePanel) {
+        // Get saved scroll lock state from workspace state, default to true (auto-scroll enabled)
+        const autoScrollEnabled = extensionContext.workspaceState.get('autoScrollEnabled', true);
+        
+        claudePanel.webview.postMessage({
+            command: 'setScrollLockState',
+            enabled: autoScrollEnabled
         });
     }
 }
@@ -1079,11 +1342,30 @@ async function runMessageInLoopWithConfig(messageId: string, scriptConfig: any):
     }
 }
 
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
     // Stop all timers and background processes first
     stopHealthCheck();
     stopAutomaticMaintenance();
     stopScheduledSession();
+    
+    // Clean up parallel agents
+    const context = (global as any).extensionContext;
+    if (context) {
+        const parallelOrchestrator = context.workspaceState.get('parallelOrchestrator') as ParallelAgentOrchestrator | undefined;
+        const agentMonitor = context.workspaceState.get('agentMonitor') as AgentMonitor | undefined;
+        
+        if (parallelOrchestrator) {
+            try {
+                await parallelOrchestrator.stopAgents();
+            } catch (error) {
+                debugLog(`Error stopping parallel agents: ${error}`);
+            }
+        }
+        
+        if (agentMonitor) {
+            agentMonitor.dispose();
+        }
+    }
     
     // Clear development timers if available
     if (clearAllTimers) {

@@ -14,12 +14,16 @@
     <div class="container">
         <div class="header">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h1>AutoClaude</h1>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" 
+                         alt="Claude" style="width: 32px; height: 32px; border-radius: 6px;" id="claudeIcon">
+                    <h1>Claude Assistant</h1>
+                </div>
                 <button id="settingsBtn" onclick="openSettings()" class="btn-secondary" title="Open Settings">
                     <span class="btn-icon">⚙️</span>Settings
                 </button>
             </div>
-            <p>Queue messages for automated Claude CLI processing with intelligent session management</p>
+            <p>Intelligent AI-powered development assistant with automated workflows and Claude integration</p>
         </div>
 
         <div class="input-section">
@@ -100,7 +104,15 @@
         <div class="claude-output-section">
             <div class="claude-header">
                 <h3 class="claude-title">🤖 Claude Live Output</h3>
-                <button onclick="clearClaudeOutput()" class="clear-button">Clear</button>
+                <div style="display: flex; gap: 10px;">
+                    <button id="scrollLockBtn" onclick="toggleScrollLock()" class="btn-secondary btn-small" title="Toggle auto-scroll">
+                        <span id="scrollLockIcon">🔓</span> Auto-scroll
+                    </button>
+                    <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="btn-secondary btn-small" title="Scroll to bottom">
+                        <span>⬇️</span> To Bottom
+                    </button>
+                    <button onclick="clearClaudeOutput()" class="clear-button">Clear</button>
+                </div>
             </div>
             <div id="claudeOutputContainer">
                 <div class="claude-live-output" tabindex="0">
