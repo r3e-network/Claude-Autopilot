@@ -1,4 +1,4 @@
-# Claude Autopilot Terminal 🚀
+# AutoClaude Terminal 🚀
 
 A powerful terminal-based Claude AI automation tool with parallel agents, intelligent task management, and a beautiful TUI interface.
 
@@ -18,14 +18,14 @@ A powerful terminal-based Claude AI automation tool with parallel agents, intell
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g claude-autopilot
+npm install -g @r3e/autoclaude
 ```
 
 ### Local Installation
 
 ```bash
-git clone https://github.com/r3e-network/Claude-Autopilot.git
-cd Claude-Autopilot/terminal
+git clone https://github.com/r3e-network/AutoClaude.git
+cd AutoClaude/terminal
 npm install
 npm link
 ```
@@ -42,7 +42,7 @@ npm link
 ### Interactive Mode (Default)
 
 ```bash
-claude-autopilot
+autoclaude
 # or use the short alias
 cap
 ```
@@ -50,19 +50,19 @@ cap
 ### Process Single Message
 
 ```bash
-claude-autopilot run "Explain quantum computing"
+autoclaude run "Explain quantum computing"
 ```
 
 ### Batch Processing
 
 ```bash
-claude-autopilot batch messages.txt --parallel 5
+autoclaude batch messages.txt --parallel 5
 ```
 
 ### Start Parallel Agents
 
 ```bash
-claude-autopilot agents --start 10
+autoclaude agents --start 10
 ```
 
 ## Commands
@@ -81,19 +81,19 @@ claude-autopilot agents --start 10
 
 ```bash
 # Start with initial message
-claude-autopilot start -m "Help me refactor this code" -a
+autoclaude start -m "Help me refactor this code" -a
 
 # Run with output to file
-claude-autopilot run "Generate a README" -o README.md
+autoclaude run "Generate a README" -o README.md
 
 # Batch processing with 10 agents
-claude-autopilot batch tasks.txt -p 10
+autoclaude batch tasks.txt -p 10
 
 # Start agent farm
-claude-autopilot agents -s 20
+autoclaude agents -s 20
 
 # Run quality checks in loop mode
-claude-autopilot check -l -m 5
+autoclaude check -l -m 5
 ```
 
 ## Keyboard Shortcuts
@@ -116,7 +116,7 @@ claude-autopilot check -l -m 5
 
 ## Configuration
 
-Configuration file: `~/.claude-autopilot/config.json`
+Configuration file: `~/.autoclaude/config.json`
 
 ```json
 {
@@ -144,13 +144,13 @@ Configuration file: `~/.claude-autopilot/config.json`
 
 ```bash
 # View all settings
-claude-autopilot config -l
+autoclaude config -l
 
 # Set a value
-claude-autopilot config -s session.autoStart=true
+autoclaude config -s session.autoStart=true
 
 # Open in editor
-claude-autopilot config -e
+autoclaude config -e
 ```
 
 ## Parallel Agents
@@ -159,16 +159,16 @@ The parallel agents feature uses tmux to manage multiple Claude instances:
 
 ```bash
 # Start 20 agents
-claude-autopilot agents -s 20
+autoclaude agents -s 20
 
 # Monitor agents
-claude-autopilot agents -m
+autoclaude agents -m
 
 # List running agents
-claude-autopilot agents -l
+autoclaude agents -l
 
 # Stop all agents
-claude-autopilot agents -k
+autoclaude agents -k
 ```
 
 ## Quality Checks
@@ -177,13 +177,13 @@ Run automated quality checks on your project:
 
 ```bash
 # Single run
-claude-autopilot check
+autoclaude check
 
 # Loop until fixed (max 5 iterations)
-claude-autopilot check -l -m 5
+autoclaude check -l -m 5
 
 # Custom directory
-claude-autopilot check -d /path/to/project
+autoclaude check -d /path/to/project
 ```
 
 Default checks:
@@ -198,15 +198,15 @@ Perfect for headless server environments:
 
 ```bash
 # Run in background with nohup
-nohup claude-autopilot batch tasks.txt -p 20 &
+nohup autoclaude batch tasks.txt -p 20 &
 
 # Use with screen
-screen -S claude-autopilot
-claude-autopilot start
+screen -S autoclaude
+autoclaude start
 
 # Use with systemd (create service file)
 [Service]
-ExecStart=/usr/local/bin/claude-autopilot start -a
+ExecStart=/usr/local/bin/autoclaude start -a
 Restart=always
 ```
 
@@ -214,11 +214,11 @@ Restart=always
 
 ### Custom Scripts
 
-Add custom check scripts to `~/.claude-autopilot/scripts/`:
+Add custom check scripts to `~/.autoclaude/scripts/`:
 
 ```bash
 #!/bin/bash
-# ~/.claude-autopilot/scripts/05-security-check.sh
+# ~/.autoclaude/scripts/05-security-check.sh
 echo "Running security audit..."
 npm audit || exit 1
 ```
@@ -269,15 +269,15 @@ sudo yum install tmux
 ### Permission issues
 ```bash
 # Fix permissions
-chmod +x ~/.claude-autopilot/scripts/*.sh
+chmod +x ~/.autoclaude/scripts/*.sh
 ```
 
 ## Development
 
 ```bash
 # Clone repository
-git clone https://github.com/r3e-network/Claude-Autopilot.git
-cd Claude-Autopilot/terminal
+git clone https://github.com/r3e-network/AutoClaude.git
+cd AutoClaude/terminal
 
 # Install dependencies
 npm install
@@ -306,8 +306,8 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- Issues: https://github.com/r3e-network/Claude-Autopilot/issues
-- Discussions: https://github.com/r3e-network/Claude-Autopilot/discussions
+- Issues: https://github.com/r3e-network/AutoClaude/issues
+- Discussions: https://github.com/r3e-network/AutoClaude/discussions
 
 ---
 
