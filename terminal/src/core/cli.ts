@@ -20,7 +20,7 @@ export interface CLIOptions {
     parallel?: string;
 }
 
-export class ClaudeAutopilotCLI extends EventEmitter {
+export class AutoClaudeCLI extends EventEmitter {
     private config: Config;
     private logger: Logger;
     private session: ClaudeSession | null = null;
@@ -41,7 +41,7 @@ export class ClaudeAutopilotCLI extends EventEmitter {
 
     async start(options: CLIOptions): Promise<void> {
         try {
-            this.logger.info('Starting Claude Autopilot in interactive mode...');
+            this.logger.info('Starting AutoClaude in interactive mode...');
             
             // Initialize UI
             this.ui = new UIManager(this.config, this.logger);
@@ -276,7 +276,13 @@ export class ClaudeAutopilotCLI extends EventEmitter {
 
     private async initialize(): Promise<void> {
         await this.queue.initialize();
-        await this.agentManager.initialize();
+        
+        // Only initialize agent manager if parallel agents are enabled
+        if (this.config.get('parallelAgents', 'enabled')) {
+            await this.agentManager.initialize();
+        } else {
+            this.logger.info('Parallel agents disabled, skipping agent manager initialization');
+        }
     }
 
     private setupEventHandlers(): void {

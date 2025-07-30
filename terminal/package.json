@@ -1,11 +1,11 @@
 {
-  "name": "claude-autopilot",
-  "version": "3.1.2",
-  "description": "Powerful terminal-based Claude AI automation tool with parallel agents and intelligent task management",
-  "main": "dist/index.js",
+  "name": "@r3e/autoclaude",
+  "version": "3.1.3",
+  "description": "Powerful terminal-based AutoClaude AI automation tool with parallel agents and intelligent task management",
+  "main": "src/index.ts",
   "bin": {
-    "claude-autopilot": "./bin/claude-autopilot",
-    "cap": "./bin/claude-autopilot"
+    "autoclaude": "./bin/autoclaude",
+    "cap": "./bin/autoclaude"
   },
   "scripts": {
     "build": "tsc",
@@ -14,10 +14,11 @@
     "test": "jest",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "echo 'Publishing source code - users will build locally'",
     "postinstall": "node scripts/postinstall.js"
   },
   "keywords": [
+    "autoclaude",
     "claude",
     "ai",
     "automation",

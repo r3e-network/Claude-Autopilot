@@ -2,7 +2,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import figlet from 'figlet';
-import { ClaudeAutopilotCLI } from './core/cli';
+import { AutoClaudeCLI } from './core/cli';
 import { Config } from './core/config';
 import { Logger } from './utils/logger';
 import { checkForUpdates } from './utils/updater';
@@ -14,14 +14,14 @@ const config = new Config();
 function showBanner(): void {
     console.log(
         chalk.cyan(
-            figlet.textSync('Claude Autopilot', {
+            figlet.textSync('AutoClaude', {
                 font: 'ANSI Shadow',
                 horizontalLayout: 'default',
                 verticalLayout: 'default'
             })
         )
     );
-    console.log(chalk.gray('   Terminal-based Claude AI Automation Tool v3.0.0\n'));
+    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.1.3\n'));
 }
 
 // Check for updates
@@ -37,9 +37,9 @@ async function checkUpdates(): Promise<void> {
 const program = new Command();
 
 program
-    .name('claude-autopilot')
-    .description('Powerful terminal-based Claude AI automation tool')
-    .version('3.0.0')
+    .name('autoclaude')
+    .description('Powerful terminal-based AutoClaude AI automation tool')
+    .version('3.1.3')
     .option('-q, --quiet', 'Suppress banner and non-essential output')
     .option('-v, --verbose', 'Enable verbose logging')
     .option('-c, --config <path>', 'Use custom config file')
@@ -64,12 +64,12 @@ program
 // Start interactive mode (default)
 program
     .command('start', { isDefault: true })
-    .description('Start Claude Autopilot in interactive mode')
+    .description('Start AutoClaude in interactive mode')
     .option('-m, --message <text>', 'Add initial message to queue')
     .option('-s, --skip-permissions', 'Skip Claude permission prompts')
     .option('-a, --auto-start', 'Automatically start processing queue')
     .action(async (options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.start(options);
     });
 
@@ -80,7 +80,7 @@ program
     .option('-s, --skip-permissions', 'Skip Claude permission prompts')
     .option('-o, --output <file>', 'Save output to file')
     .action(async (message, options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.runSingle(message, options);
     });
 
@@ -91,7 +91,7 @@ program
     .option('-s, --skip-permissions', 'Skip Claude permission prompts')
     .option('-p, --parallel <count>', 'Number of parallel agents', '1')
     .action(async (file, options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.runBatch(file, options);
     });
 
@@ -104,7 +104,7 @@ program
     .option('-k, --stop', 'Stop all agents')
     .option('-m, --monitor', 'Open agent monitor dashboard')
     .action(async (options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.manageAgents(options);
     });
 
@@ -117,7 +117,7 @@ program
     .option('-c, --clear', 'Clear all messages')
     .option('-r, --remove <id>', 'Remove message by ID')
     .action(async (options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.manageQueue(options);
     });
 
@@ -131,7 +131,7 @@ program
     .option('-r, --reset', 'Reset to defaults')
     .option('-e, --edit', 'Open config in editor')
     .action(async (options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.manageConfig(options);
     });
 
@@ -143,7 +143,7 @@ program
     .option('-l, --loop', 'Run in loop mode until all issues fixed')
     .option('-m, --max-iterations <n>', 'Maximum loop iterations', '5')
     .action(async (options) => {
-        const cli = new ClaudeAutopilotCLI(config, logger);
+        const cli = new AutoClaudeCLI(config, logger);
         await cli.runChecks(options);
     });
 

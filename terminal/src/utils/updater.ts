@@ -2,8 +2,8 @@ import updateNotifier from 'update-notifier';
 import chalk from 'chalk';
 
 const pkg = {
-    name: 'claude-autopilot',
-    version: '3.0.0'
+    name: '@r3e/autoclaude',
+    version: '3.1.3'
 };
 
 export async function checkForUpdates(): Promise<void> {
@@ -18,7 +18,7 @@ export async function checkForUpdates(): Promise<void> {
             chalk.yellow('╭─────────────────────────────────────────────────────╮'),
             chalk.yellow('│                                                     │'),
             chalk.yellow('│') + chalk.cyan('   Update available ') + chalk.gray(notifier.update.current) + ' → ' + chalk.green(notifier.update.latest) + chalk.yellow('              │'),
-            chalk.yellow('│') + chalk.white('   Run ') + chalk.cyan('npm install -g claude-autopilot') + chalk.white(' to update') + chalk.yellow('   │'),
+            chalk.yellow('│') + chalk.white('   Run ') + chalk.cyan('npm install -g @r3e/autoclaude') + chalk.white(' to update') + chalk.yellow('   │'),
             chalk.yellow('│                                                     │'),
             chalk.yellow('╰─────────────────────────────────────────────────────╯'),
             ''

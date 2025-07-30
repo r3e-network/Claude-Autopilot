@@ -10,15 +10,15 @@ import chalk from 'chalk';
 export class UIManager extends EventEmitter {
     private config: Config;
     private logger: Logger;
-    private screen: blessed.Widgets.Screen | null = null;
+    private screen: any = null;
     private grid: any;
     private widgets: {
-        claudeOutput?: blessed.Widgets.Log;
-        messageInput?: blessed.Widgets.Textarea;
-        queue?: blessed.Widgets.ListTable;
-        status?: blessed.Widgets.Box;
-        controls?: blessed.Widgets.Box;
-        terminal?: blessed.Widgets.Log;
+        claudeOutput?: any;
+        messageInput?: any;
+        queue?: any;
+        status?: any;
+        controls?: any;
+        terminal?: any;
     } = {};
     private autoScroll: boolean = true;
 
@@ -33,18 +33,14 @@ export class UIManager extends EventEmitter {
         // Create screen
         this.screen = blessed.screen({
             smartCSR: true,
-            title: 'Claude Autopilot Terminal',
+            title: 'AutoClaude Terminal',
             fullUnicode: true,
             dockBorders: true,
             autoPadding: true
         });
 
-        // Create grid layout
-        this.grid = new contrib.grid({
-            rows: 12,
-            cols: 12,
-            screen: this.screen
-        });
+        // Skip grid layout for now to avoid blessed issues
+        this.grid = null;
 
         // Create widgets
         this.createWidgets();
@@ -55,9 +51,16 @@ export class UIManager extends EventEmitter {
     }
 
     private createWidgets(): void {
-        // Claude Output (top left - 8x8)
-        this.widgets.claudeOutput = this.grid.set(0, 0, 6, 8, blessed.log, {
+        if (!this.screen) return;
+
+        // Claude Output (main area)
+        this.widgets.claudeOutput = blessed.log({
             label: '🤖 Claude Output',
+            parent: this.screen,
+            top: 0,
+            left: 0,
+            width: '70%',
+            height: '60%',
             border: { type: 'line' },
             style: {
                 fg: 'cyan',
@@ -67,33 +70,36 @@ export class UIManager extends EventEmitter {
             alwaysScroll: true,
             mouse: true,
             keys: true,
-            vi: true,
-            scrollbar: {
-                style: {
-                    bg: 'cyan'
-                }
-            }
+            vi: true
         });
 
-        // Message Queue (top right - 8x4)
-        this.widgets.queue = this.grid.set(0, 8, 6, 4, blessed.listtable, {
+        // Message Queue (right side)
+        this.widgets.queue = blessed.list({
             label: '📋 Message Queue',
+            parent: this.screen,
+            top: 0,
+            left: '70%',
+            width: '30%',
+            height: '60%',
             border: { type: 'line' },
             style: {
                 fg: 'green',
-                border: { fg: 'green' },
-                header: { fg: 'bright-green' }
+                border: { fg: 'green' }
             },
-            align: 'left',
             mouse: true,
             keys: true,
             vi: true,
-            headers: ['#', 'Status', 'Message']
+            items: ['Ready - Waiting for messages...']
         });
 
-        // Terminal Output (middle - 3x12)
-        this.widgets.terminal = this.grid.set(6, 0, 3, 12, blessed.log, {
+        // Terminal Output (middle)
+        this.widgets.terminal = blessed.log({
             label: '📟 Terminal Output',
+            parent: this.screen,
+            top: '60%',
+            left: 0,
+            width: '100%',
+            height: '25%',
             border: { type: 'line' },
             style: {
                 fg: 'white',
@@ -105,9 +111,14 @@ export class UIManager extends EventEmitter {
             vi: true
         });
 
-        // Message Input (bottom left - 2x8)
-        this.widgets.messageInput = this.grid.set(9, 0, 2, 8, blessed.textarea, {
+        // Message Input (bottom left)
+        this.widgets.messageInput = blessed.textarea({
             label: '✏️  Message Input (Ctrl+Enter to send)',
+            parent: this.screen,
+            top: '85%',
+            left: 0,
+            width: '70%',
+            height: '10%',
             border: { type: 'line' },
             style: {
                 fg: 'yellow',
@@ -118,9 +129,14 @@ export class UIManager extends EventEmitter {
             inputOnFocus: true
         });
 
-        // Control Buttons (bottom right - 2x4)
-        this.widgets.controls = this.grid.set(9, 8, 2, 4, blessed.box, {
+        // Control Buttons (bottom right)
+        this.widgets.controls = blessed.box({
             label: '🎮 Controls',
+            parent: this.screen,
+            top: '85%',
+            left: '70%',
+            width: '30%',
+            height: '10%',
             border: { type: 'line' },
             style: {
                 fg: 'magenta',
@@ -129,14 +145,27 @@ export class UIManager extends EventEmitter {
             content: this.getControlsContent()
         });
 
-        // Status Bar (very bottom - 1x12)
-        this.widgets.status = this.grid.set(11, 0, 1, 12, blessed.box, {
+        // Status Bar (very bottom)
+        this.widgets.status = blessed.box({
+            parent: this.screen,
+            top: '95%',
+            left: 0,
+            width: '100%',
+            height: '5%',
             style: {
                 fg: 'white',
                 bg: 'blue'
             },
             content: this.getStatusContent()
         });
+
+        // Initialize content for log widgets to prevent rendering errors
+        if (this.widgets.claudeOutput) {
+            this.widgets.claudeOutput.log('AutoClaude Terminal initialized');
+        }
+        if (this.widgets.terminal) {
+            this.widgets.terminal.log('Terminal output ready');
+        }
     }
 
     private setupEventHandlers(): void {
@@ -296,7 +325,7 @@ export class UIManager extends EventEmitter {
         // Create a new screen for agent monitoring
         const dashScreen = blessed.screen({
             smartCSR: true,
-            title: 'Claude Agent Monitor'
+            title: 'AutoClaude Agent Monitor'
         });
 
         const dashGrid = new contrib.grid({

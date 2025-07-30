@@ -5,7 +5,7 @@ const path = require('path');
 const os = require('os');
 const chalk = require('chalk');
 
-console.log(chalk.cyan('\n🚀 Setting up Claude Autopilot...\n'));
+console.log(chalk.cyan('\n🚀 Setting up AutoClaude...\n'));
 
 // Create config directory
 const configDir = path.join(os.homedir(), '.claude-autopilot');

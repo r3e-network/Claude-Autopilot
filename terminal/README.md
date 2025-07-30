@@ -237,13 +237,13 @@ Optimize database queries
 
 ```bash
 # Set custom config location
-export CLAUDE_AUTOPILOT_CONFIG=/custom/path/config.json
+export AUTOCLAUDE_CONFIG=/custom/path/config.json
 
 # Enable debug logging
 export LOG_LEVEL=debug
 
 # Set custom data directory
-export CLAUDE_AUTOPILOT_DATA=/custom/data
+export AUTOCLAUDE_DATA=/custom/data
 ```
 
 ## Troubleshooting

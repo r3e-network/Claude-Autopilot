@@ -1,9 +1,12 @@
 # AutoClaude - Intelligent Development Automation
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
-[![Version](https://img.shields.io/badge/version-3.0.0-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v3.0.0)
+[![NPM Package](https://img.shields.io/badge/NPM-@r3e/autoclaude-red)](https://www.npmjs.com/package/@r3e/autoclaude)
+[![Version](https://img.shields.io/badge/version-3.1.2-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v3.1.2)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/r3e-network/AutoClaude/build.yml?branch=main)](https://github.com/r3e-network/AutoClaude/actions)
+
+> 🚀 **Quick Install:** `npm install -g @r3e/autoclaude` (terminal) or search "AutoClaude" in VS Code Extensions
 
 **AutoClaude** is the ultimate AI-powered development assistant that transforms high-level commands into completed work. Simply tell it to "make your project production ready" and watch as it automatically fixes tests, adds documentation, creates Docker configs, and more - all while you focus on what matters most.
 
@@ -13,14 +16,19 @@
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
-## 🆕 NEW in v3.0.0: Terminal Version & Auto-Scroll
+## 🆕 NEW in v3.1.2: Terminal Version & VS Code Web Support
 
 ### 🖥️ **Standalone Terminal Application**
 Run AutoClaude anywhere - SSH sessions, servers, or your local terminal:
 ```bash
-npm install -g claude-autopilot
-claude-autopilot  # or just 'cap'
+npm install -g @r3e/autoclaude
+autoclaude  # or just 'cap'
 ```
+
+### 🌐 **VS Code Web Compatibility**
+- Full support for VS Code in web browsers (vscode.dev, github.dev)
+- Fixed webview rendering issues in browser environments
+- All functionality now works seamlessly in both desktop and web versions
 
 ### 📜 **Enhanced Auto-Scroll**
 - Claude output always scrolls to bottom by default
@@ -123,10 +131,19 @@ AutoClaude learns your project:
 
 ### Installation
 
+#### 🖥️ **Terminal Version (Standalone)**
+```bash
+npm install -g @r3e/autoclaude
+autoclaude  # Start the terminal interface
+cap         # Short alias
+```
+
+#### 📦 **VS Code Extension**
 1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
 2. Or install via command palette: `Extensions: Install Extensions` → Search "AutoClaude"
-3. Or install from VSIX: `code --install-extension autoclaude-1.0.2.vsix`
+3. Or install from VSIX: Download from [GitHub Releases](https://github.com/r3e-network/AutoClaude/releases)
 4. **Cursor**: AutoClaude works seamlessly in Cursor with the same installation process
+5. **VS Code Web**: Full compatibility with vscode.dev and github.dev
 
 ### Basic Usage
 
@@ -481,7 +498,7 @@ src/
 
 ```bash
 # Clone the repository
-git clone https://github.com/benbasha/AutoClaude.git
+git clone https://github.com/r3e-network/AutoClaude.git
 cd AutoClaude
 
 # Install dependencies

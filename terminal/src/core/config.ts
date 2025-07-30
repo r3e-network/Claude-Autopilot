@@ -67,9 +67,9 @@ const defaultConfig: ConfigSchema = {
         file: null
     },
     paths: {
-        dataDir: path.join(os.homedir(), '.claude-autopilot', 'data'),
-        logsDir: path.join(os.homedir(), '.claude-autopilot', 'logs'),
-        scriptsDir: path.join(os.homedir(), '.claude-autopilot', 'scripts')
+        dataDir: path.join(os.homedir(), '.autoclaude', 'data'),
+        logsDir: path.join(os.homedir(), '.autoclaude', 'logs'),
+        scriptsDir: path.join(os.homedir(), '.autoclaude', 'scripts')
     }
 };
 
@@ -80,18 +80,16 @@ export class Config {
     constructor(configPath?: string) {
         this.customConfigPath = configPath;
         
-        const configDir = path.join(os.homedir(), '.claude-autopilot');
+        const configDir = path.join(os.homedir(), '.autoclaude');
         if (!fs.existsSync(configDir)) {
             fs.mkdirSync(configDir, { recursive: true });
         }
 
         this.store = new Conf<ConfigSchema>({
-            projectName: 'claude-autopilot',
+            projectName: 'autoclaude',
             cwd: configDir,
             defaults: defaultConfig,
             schema: {
-                type: 'object',
-                properties: {
                     session: {
                         type: 'object',
                         properties: {
@@ -142,7 +140,6 @@ export class Config {
                             scriptsDir: { type: 'string' }
                         }
                     }
-                }
             }
         });
 
