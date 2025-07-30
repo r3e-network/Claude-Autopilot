@@ -69,7 +69,12 @@ const defaultConfig: ConfigSchema = {
         autoGenerate: true,
         builtInAgents: {
             enabled: true,
-            types: ['code-analyzer', 'documentation-writer', 'test-generator', 'refactor-specialist', 'security-auditor']
+            types: [
+                'code-analyzer', 'documentation-writer', 'test-generator', 
+                'refactor-specialist', 'security-auditor', 'rust-specialist',
+                'dotnet-expert', 'java-architect', 'golang-engineer',
+                'c-systems-programmer', 'cpp-performance-expert'
+            ]
         },
         contextGeneration: {
             enabled: true,

@@ -81,6 +81,36 @@ export class TerminalMode extends EventEmitter {
             description: 'Identifies security vulnerabilities and suggests fixes',
             specialization: 'Security analysis, vulnerability assessment, secure coding',
             promptTemplate: 'You are a specialized security auditor. Identify security vulnerabilities, analyze attack vectors, and provide secure coding recommendations.'
+        },
+        'rust-specialist': {
+            description: 'Rust language expert for memory-safe systems programming',
+            specialization: 'Rust ownership, lifetimes, async/await, cargo, memory safety',
+            promptTemplate: 'You are a Rust specialist. Focus on ownership patterns, lifetime annotations, trait implementations, async programming, and memory safety. Provide idiomatic Rust solutions.'
+        },
+        'dotnet-expert': {
+            description: '.NET framework and C# development specialist',
+            specialization: 'C#, ASP.NET Core, Entity Framework, LINQ, .NET ecosystem',
+            promptTemplate: 'You are a .NET expert. Specialize in C# best practices, ASP.NET Core APIs, Entity Framework, dependency injection, and the broader .NET ecosystem.'
+        },
+        'java-architect': {
+            description: 'Java enterprise application architect',
+            specialization: 'Java, Spring Boot, microservices, JVM optimization, design patterns',
+            promptTemplate: 'You are a Java architect. Focus on Spring framework, microservices architecture, JVM tuning, concurrent programming, and enterprise design patterns.'
+        },
+        'golang-engineer': {
+            description: 'Go language specialist for concurrent and cloud-native apps',
+            specialization: 'Go concurrency, channels, goroutines, cloud-native development',
+            promptTemplate: 'You are a Go specialist. Focus on goroutines, channels, concurrent patterns, error handling, and building efficient cloud-native applications.'
+        },
+        'c-systems-programmer': {
+            description: 'C language expert for low-level systems programming',
+            specialization: 'C programming, memory management, pointers, system calls, embedded',
+            promptTemplate: 'You are a C systems programmer. Focus on memory management, pointer arithmetic, system calls, performance optimization, and embedded systems.'
+        },
+        'cpp-performance-expert': {
+            description: 'C++ specialist for high-performance applications',
+            specialization: 'Modern C++, STL, templates, RAII, performance optimization',
+            promptTemplate: 'You are a C++ performance expert. Focus on modern C++ features, template metaprogramming, RAII patterns, STL usage, and performance optimization techniques.'
         }
     };
     
@@ -783,7 +813,56 @@ export class TerminalMode extends EventEmitter {
         const contextLower = context.toLowerCase();
         const generatedAgents: Array<{ type: string; description: string; context: string }> = [];
         
-        // Development-related context
+        // Language-specific agents
+        if (contextLower.includes('rust') || contextLower.includes('.rs') || contextLower.includes('cargo')) {
+            generatedAgents.push({
+                type: 'rust-systems-developer',
+                description: 'Rust systems programming and memory safety',
+                context: 'Rust ownership, async/await, cargo ecosystem, memory-safe systems'
+            });
+        }
+        
+        if (contextLower.includes('.net') || contextLower.includes('dotnet') || contextLower.includes('c#') || contextLower.includes('csharp') || contextLower.includes('.cs')) {
+            generatedAgents.push({
+                type: 'dotnet-solutions-architect',
+                description: '.NET Core/5+ and C# enterprise development',
+                context: 'ASP.NET Core, Entity Framework, Blazor, microservices, Azure integration'
+            });
+        }
+        
+        if (contextLower.includes('java') || contextLower.includes('.java') || contextLower.includes('spring') || contextLower.includes('maven') || contextLower.includes('gradle')) {
+            generatedAgents.push({
+                type: 'java-enterprise-developer',
+                description: 'Java enterprise applications and Spring ecosystem',
+                context: 'Spring Boot, microservices, JPA, REST APIs, reactive programming'
+            });
+        }
+        
+        if (contextLower.includes('golang') || contextLower.includes('go ') || contextLower.includes('.go') || contextLower.includes('goroutine')) {
+            generatedAgents.push({
+                type: 'golang-cloud-developer',
+                description: 'Go concurrent programming and cloud-native development',
+                context: 'Goroutines, channels, context patterns, gRPC, Kubernetes operators'
+            });
+        }
+        
+        if ((contextLower.includes(' c ') || contextLower.includes('.c ') || contextLower.includes('embedded')) && !contextLower.includes('c++') && !contextLower.includes('c#')) {
+            generatedAgents.push({
+                type: 'c-embedded-developer',
+                description: 'C systems and embedded programming',
+                context: 'Memory management, pointers, system calls, embedded systems, real-time'
+            });
+        }
+        
+        if (contextLower.includes('c++') || contextLower.includes('cpp') || contextLower.includes('.cpp') || contextLower.includes('.hpp')) {
+            generatedAgents.push({
+                type: 'cpp-high-performance',
+                description: 'Modern C++ and high-performance computing',
+                context: 'C++17/20/23, template metaprogramming, STL, move semantics, SIMD'
+            });
+        }
+        
+        // Framework and technology-specific agents
         if (contextLower.includes('react') || contextLower.includes('component')) {
             generatedAgents.push({
                 type: 'react-specialist',
@@ -792,7 +871,7 @@ export class TerminalMode extends EventEmitter {
             });
         }
         
-        if (contextLower.includes('typescript') || contextLower.includes('ts')) {
+        if (contextLower.includes('typescript') || contextLower.includes('ts') || contextLower.includes('.ts')) {
             generatedAgents.push({
                 type: 'typescript-expert',
                 description: 'TypeScript type system and advanced patterns',
@@ -808,7 +887,7 @@ export class TerminalMode extends EventEmitter {
             });
         }
         
-        if (contextLower.includes('database') || contextLower.includes('sql') || contextLower.includes('db')) {
+        if (contextLower.includes('database') || contextLower.includes('sql') || contextLower.includes('db') || contextLower.includes('postgres') || contextLower.includes('mysql')) {
             generatedAgents.push({
                 type: 'database-optimizer',
                 description: 'Database design and query optimization',
@@ -816,19 +895,54 @@ export class TerminalMode extends EventEmitter {
             });
         }
         
-        if (contextLower.includes('deploy') || contextLower.includes('docker') || contextLower.includes('cloud')) {
+        if (contextLower.includes('deploy') || contextLower.includes('docker') || contextLower.includes('kubernetes') || contextLower.includes('k8s') || contextLower.includes('cloud')) {
             generatedAgents.push({
                 type: 'devops-engineer',
                 description: 'Deployment and infrastructure automation',
-                context: 'Docker, CI/CD, cloud deployment, infrastructure as code'
+                context: 'Docker, Kubernetes, CI/CD, cloud deployment, infrastructure as code'
             });
         }
         
-        if (contextLower.includes('performance') || contextLower.includes('optimization')) {
+        if (contextLower.includes('performance') || contextLower.includes('optimization') || contextLower.includes('profiling')) {
             generatedAgents.push({
                 type: 'performance-optimizer',
                 description: 'Application performance analysis and optimization',
                 context: 'Performance profiling, optimization strategies, bottleneck analysis'
+            });
+        }
+        
+        // Testing and quality
+        if (contextLower.includes('test') || contextLower.includes('unit') || contextLower.includes('integration') || contextLower.includes('e2e')) {
+            generatedAgents.push({
+                type: 'testing-automation-engineer',
+                description: 'Comprehensive testing strategies and automation',
+                context: 'Unit testing, integration testing, E2E testing, test automation, TDD'
+            });
+        }
+        
+        // Mobile development
+        if (contextLower.includes('android') || contextLower.includes('kotlin')) {
+            generatedAgents.push({
+                type: 'android-developer',
+                description: 'Android app development with Kotlin/Java',
+                context: 'Android SDK, Jetpack Compose, Kotlin coroutines, Material Design'
+            });
+        }
+        
+        if (contextLower.includes('ios') || contextLower.includes('swift') || contextLower.includes('swiftui')) {
+            generatedAgents.push({
+                type: 'ios-developer',
+                description: 'iOS app development with Swift',
+                context: 'Swift, SwiftUI, UIKit, Core Data, iOS frameworks'
+            });
+        }
+        
+        // Machine learning and data
+        if (contextLower.includes('machine learning') || contextLower.includes('ml') || contextLower.includes('ai') || contextLower.includes('neural')) {
+            generatedAgents.push({
+                type: 'ml-engineer',
+                description: 'Machine learning and AI implementation',
+                context: 'TensorFlow, PyTorch, scikit-learn, model training, deployment'
             });
         }
         
@@ -960,7 +1074,18 @@ export class TerminalMode extends EventEmitter {
             'implement', 'create', 'build', 'develop', 'design',
             'refactor', 'optimize', 'test', 'deploy', 'analyze',
             'multiple', 'complex', 'system', 'architecture',
-            'full-stack', 'database', 'api', 'frontend', 'backend'
+            'full-stack', 'database', 'api', 'frontend', 'backend',
+            // Language-specific indicators
+            'rust', 'cargo', 'ownership', 'lifetime', 'trait',
+            '.net', 'dotnet', 'c#', 'csharp', 'asp.net', 'blazor',
+            'java', 'spring', 'maven', 'gradle', 'jvm', 'hibernate',
+            'golang', 'go', 'goroutine', 'channel', 'grpc',
+            'embedded', 'pointer', 'memory', 'kernel', 'driver',
+            'c++', 'cpp', 'template', 'stl', 'boost', 'qt',
+            // Framework and tech indicators
+            'microservice', 'kubernetes', 'docker', 'cloud-native',
+            'machine learning', 'ml', 'ai', 'neural', 'tensorflow',
+            'android', 'ios', 'mobile', 'swift', 'kotlin'
         ];
 
         const lowerText = text.toLowerCase();
