@@ -5,6 +5,88 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-07-30
+
+### 🚀 Intelligent Task Automation System
+
+This release introduces a groundbreaking automation system that enables AutoClaude to understand, decompose, and execute complex development tasks automatically.
+
+### ✨ New Features
+
+#### 🧠 **Intelligent Task Automation**
+- **TaskDecomposer**: Automatically breaks down complex commands into manageable subtasks
+  - Workflow templates for common tasks (production-ready, testing, documentation)
+  - Smart dependency detection between subtasks
+  - Time estimation for each workflow step
+- **Automatic Task Resumption**: Continues interrupted work seamlessly
+  - Monitors task health and progress
+  - Generates recovery plans for failed tasks
+  - Smart error analysis with targeted fixes
+
+#### 📚 **Advanced Project Context System**
+- **ProjectIndexer**: Comprehensive file indexing with symbol extraction
+  - Analyzes project structure and dependencies
+  - Detects code patterns and complexity
+  - Provides project statistics and insights
+- **Cross-Session Task Persistence**: Never lose work progress
+  - Tasks persist across VSCode sessions
+  - Automatic context restoration
+  - Task history and audit trail
+- **Automatic Context Generation**: Better project understanding
+  - Generates comprehensive project summaries
+  - Tracks file relationships and dependencies
+  - Provides relevant context to improve accuracy
+
+#### 🤖 **Specialized Sub-Agents**
+
+**Production Agents:**
+- **TestFixerAgent**: Analyzes and fixes failing unit tests
+- **TestCreatorAgent**: Creates unit tests for untested code  
+- **DocGeneratorAgent**: Creates comprehensive documentation (README, API, Architecture)
+- **DockerCreatorAgent**: Generates Docker configuration with best practices
+- **CodeCleanerAgent**: Cleans and organizes codebase
+
+**Creation Agents:**
+- **ProjectInitializerAgent**: Creates new projects from specifications
+- **WebsiteBuilderAgent**: Creates beautiful, responsive websites
+- **RequirementAnalyzerAgent**: Analyzes requirements and creates specifications
+
+**Git Agents:**
+- **CommitCreatorAgent**: Creates meaningful commit messages
+- **PRCreatorAgent**: Automates pull request creation
+
+#### 🛡️ **Task Monitoring and Recovery**
+- **Real-time Health Monitoring**: Tracks task progress and health
+- **Automatic Error Recovery**: Detects and recovers from common errors
+- **Recovery Script Generation**: Creates scripts to fix failed tasks
+- **Task Progress Tracking**: Visual progress indicators with ETA
+
+### 🎨 Enhanced Architecture
+
+#### 🏗️ **Command Orchestration**
+- High-level command interpretation (e.g., "make project production ready")
+- Automatic workflow selection based on command
+- Parallel task execution for efficiency
+- Smart task prioritization
+
+#### 🔧 **Improved Error Handling**
+- Pattern-based error detection
+- Multiple recovery strategies per error type
+- Automatic retry with exponential backoff
+- User-friendly error messages with solutions
+
+### 📈 Performance Improvements
+- Parallel execution of independent tasks
+- Efficient file indexing with caching
+- Optimized context generation
+- Reduced memory footprint
+
+### 🐛 Bug Fixes
+- Fixed TypeScript compilation errors in automation system
+- Resolved sub-agent interface compatibility issues
+- Improved error handling in task execution
+- Enhanced stability of task monitoring
+
 ## [2.3.1] - 2025-01-29
 
 ### 🐛 Bug Fixes
