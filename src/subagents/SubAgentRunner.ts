@@ -135,15 +135,17 @@ export class SubAgentRunner {
         // Initial check
         let { allPassed, results } = await this.runAllAgents();
         
-        if (allPassed && !forceAnalysis) {
-            const analyze = await vscode.window.showInformationMessage(
-                'All agent checks pass! Would you like the agents to analyze for improvements anyway?',
-                'Yes, Analyze',
-                'No, Exit'
-            );
-            
-            if (analyze !== 'Yes, Analyze') {
-                return;
+        if (allPassed) {
+            if (!forceAnalysis) {
+                const analyze = await vscode.window.showInformationMessage(
+                    'All agent checks pass! Would you like the agents to analyze for improvements anyway?',
+                    'Yes, Analyze',
+                    'No, Exit'
+                );
+                
+                if (analyze !== 'Yes, Analyze') {
+                    return;
+                }
             }
             
             // Have each agent analyze even though checks pass

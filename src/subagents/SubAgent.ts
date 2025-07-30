@@ -154,6 +154,22 @@ export abstract class SubAgent implements SubAgentExecutor {
                 request.context.scriptResult.errors.forEach(error => {
                     parts.push(`- ${error}`);
                 });
+                
+                // Add warnings if present
+                if (request.context.scriptResult.warnings && request.context.scriptResult.warnings.length > 0) {
+                    parts.push('');
+                    parts.push('⚠️ Warnings:');
+                    request.context.scriptResult.warnings.forEach(warning => {
+                        parts.push(`- ${warning}`);
+                    });
+                }
+                
+                // Add fix instructions if present
+                if (request.context.scriptResult.fixInstructions) {
+                    parts.push('');
+                    parts.push('💡 Fix Instructions:');
+                    parts.push(request.context.scriptResult.fixInstructions);
+                }
             }
             parts.push('');
         }
