@@ -2074,7 +2074,82 @@ window.addEventListener('DOMContentLoaded', function() {
     vscode.postMessage({
         command: 'getDevelopmentModeSetting'
     });
+    
+    // Add event listeners for all buttons
+    initializeButtonEventListeners();
 });
+
+// Initialize button event listeners
+function initializeButtonEventListeners() {
+    // Settings button
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+    
+    // Add message button
+    const addMessageBtn = document.getElementById('addMessageBtn');
+    if (addMessageBtn) addMessageBtn.addEventListener('click', addMessage);
+    
+    // Control buttons
+    const startBtn = document.getElementById('startBtn');
+    if (startBtn) startBtn.addEventListener('click', startProcessing);
+    
+    const stopBtn = document.getElementById('stopBtn');
+    if (stopBtn) stopBtn.addEventListener('click', stopProcessing);
+    
+    const interruptBtn = document.getElementById('interruptBtn');
+    if (interruptBtn) interruptBtn.addEventListener('click', interruptClaude);
+    
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', resetSession);
+    
+    // Debug buttons
+    const simulateUsageLimitBtn = document.getElementById('simulateUsageLimitBtn');
+    if (simulateUsageLimitBtn) simulateUsageLimitBtn.addEventListener('click', simulateUsageLimit);
+    
+    const clearAllTimersBtn = document.getElementById('clearAllTimersBtn');
+    if (clearAllTimersBtn) clearAllTimersBtn.addEventListener('click', clearAllTimers);
+    
+    const debugQueueStateBtn = document.getElementById('debugQueueStateBtn');
+    if (debugQueueStateBtn) debugQueueStateBtn.addEventListener('click', debugQueueState);
+    
+    const toggleDebugModeBtn = document.getElementById('toggleDebugModeBtn');
+    if (toggleDebugModeBtn) toggleDebugModeBtn.addEventListener('click', toggleDebugMode);
+    
+    // Claude output buttons
+    const scrollLockBtn = document.getElementById('scrollLockBtn');
+    if (scrollLockBtn) scrollLockBtn.addEventListener('click', toggleScrollLock);
+    
+    const scrollToBottomBtn = document.getElementById('scrollToBottomBtn');
+    if (scrollToBottomBtn) scrollToBottomBtn.addEventListener('click', scrollToBottom);
+    
+    const clearClaudeOutputBtn = document.getElementById('clearClaudeOutputBtn');
+    if (clearClaudeOutputBtn) clearClaudeOutputBtn.addEventListener('click', clearClaudeOutput);
+    
+    // Script buttons
+    const runScriptChecksBtn = document.getElementById('runScriptChecksBtn');
+    if (runScriptChecksBtn) runScriptChecksBtn.addEventListener('click', runScriptChecks);
+    
+    const runScriptLoopBtn = document.getElementById('runScriptLoopBtn');
+    if (runScriptLoopBtn) runScriptLoopBtn.addEventListener('click', runScriptLoop);
+    
+    // Queue buttons
+    const clearBtn = document.getElementById('clearBtn');
+    if (clearBtn) clearBtn.addEventListener('click', clearQueue);
+    
+    // History button
+    const deleteAllHistoryBtn = document.getElementById('deleteAllHistoryBtn');
+    if (deleteAllHistoryBtn) deleteAllHistoryBtn.addEventListener('click', deleteAllHistory);
+    
+    // Select change events
+    const sortField = document.getElementById('sortField');
+    if (sortField) sortField.addEventListener('change', sortQueue);
+    
+    const sortDirection = document.getElementById('sortDirection');
+    if (sortDirection) sortDirection.addEventListener('change', sortQueue);
+    
+    const historyFilter = document.getElementById('historyFilter');
+    if (historyFilter) historyFilter.addEventListener('change', filterHistory);
+}
 
 // Development mode state
 let isDevelopmentMode = false;

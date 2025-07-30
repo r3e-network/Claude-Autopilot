@@ -5,6 +5,14 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.2] - 2025-07-30
+
+### 🐛 Bug Fixes
+- Fixed VS Code web compatibility by removing inline onclick handlers
+- Updated Content Security Policy for web environment
+- Added proper event listeners for all buttons and controls
+- Fixed webview panel not showing content in VS Code web
+
 ## [3.1.1] - 2025-07-30
 
 ### 🔧 Improvements

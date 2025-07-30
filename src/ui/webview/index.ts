@@ -80,7 +80,7 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
                          alt="Claude" style="width: 32px; height: 32px; border-radius: 6px;" id="claudeIcon">
                     <h1>Claude Assistant</h1>
                 </div>
-                <button id="settingsBtn" onclick="openSettings()" class="btn-secondary" title="Open Settings">
+                <button id="settingsBtn" class="btn-secondary" title="Open Settings">
                     <span class="btn-icon">⚙️</span>Settings
                 </button>
             </div>
@@ -108,23 +108,23 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
                 <small style="color: var(--vscode-descriptionForeground); margin-left: 12px; opacity: 0.8;">
                     Press Cmd+Enter (Mac) or Ctrl+Enter to add message • Type @ to attach scripts
                 </small>
-                <button onclick="addMessage()" class="btn-primary">
+                <button id="addMessageBtn" class="btn-primary">
                     <span class="btn-icon">➕</span>Add Message
                 </button>
             </div>
         </div>
 
         <div class="controls">
-            <button id="startBtn" onclick="startProcessing()" class="btn-success" disabled>
+            <button id="startBtn" class="btn-success" disabled>
                 <span class="btn-icon">▶️</span>Start Processing
             </button>
-            <button id="stopBtn" onclick="stopProcessing()" class="btn-danger" disabled>
+            <button id="stopBtn" class="btn-danger" disabled>
                 <span class="btn-icon">⏹️</span>Stop Processing
             </button>
-            <button id="interruptBtn" onclick="interruptClaude()" class="btn-warning">
+            <button id="interruptBtn" class="btn-warning">
                 <span class="btn-icon">⚠️</span>Interrupt (ESC)
             </button>
-            <button id="resetBtn" onclick="resetSession()" class="btn-warning">
+            <button id="resetBtn" class="btn-warning">
                 <span class="btn-icon">🔄</span>Reset Session
             </button>
             <div class="toggle-container" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
@@ -147,16 +147,16 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
                 <small style="opacity: 0.7;">These controls are only available in development mode</small>
             </div>
             <div class="debug-controls">
-                <button onclick="simulateUsageLimit()" class="btn-warning btn-small">
+                <button id="simulateUsageLimitBtn" class="btn-warning btn-small">
                     <span class="btn-icon">⏱️</span>Simulate Usage Limit (10sec)
                 </button>
-                <button onclick="clearAllTimers()" class="btn-secondary btn-small">
+                <button id="clearAllTimersBtn" class="btn-secondary btn-small">
                     <span class="btn-icon">🔄</span>Clear All Timers
                 </button>
-                <button onclick="debugQueueState()" class="btn-secondary btn-small">
+                <button id="debugQueueStateBtn" class="btn-secondary btn-small">
                     <span class="btn-icon">🐛</span>Debug Queue State
                 </button>
-                <button onclick="toggleDebugMode()" class="btn-secondary btn-small">
+                <button id="toggleDebugModeBtn" class="btn-secondary btn-small">
                     <span class="btn-icon">🔍</span>Toggle Debug Logging
                 </button>
             </div>
@@ -166,10 +166,13 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
             <div class="claude-header">
                 <h3 class="claude-title">🤖 Claude Live Output</h3>
                 <div style="display: flex; gap: 10px;">
-                    <button id="scrollLockBtn" onclick="toggleScrollLock()" class="btn-secondary btn-small" title="Toggle auto-scroll">
+                    <button id="scrollLockBtn" class="btn-secondary btn-small" title="Toggle auto-scroll">
                         <span id="scrollLockIcon">🔓</span> Auto-scroll
                     </button>
-                    <button onclick="clearClaudeOutput()" class="clear-button">Clear</button>
+                    <button id="scrollToBottomBtn" class="btn-secondary btn-small" title="Scroll to bottom">
+                        <span>⬇️</span> To Bottom
+                    </button>
+                    <button id="clearClaudeOutputBtn" class="clear-button">Clear</button>
                 </div>
             </div>
             <div id="claudeOutputContainer">
@@ -214,10 +217,10 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
                         Max Iterations: 
                         <input type="number" id="maxIterations" min="1" max="20" value="5" style="width: 40px; margin-left: 5px;">
                     </label>
-                    <button onclick="runScriptChecks()" class="btn-secondary btn-small">
+                    <button id="runScriptChecksBtn" class="btn-secondary btn-small">
                         <span class="btn-icon">🔍</span>Run Checks
                     </button>
-                    <button onclick="runScriptLoop()" class="btn-primary btn-small">
+                    <button id="runScriptLoopBtn" class="btn-primary btn-small">
                         <span class="btn-icon">🔄</span>Run Loop
                     </button>
                 </div>
@@ -231,16 +234,16 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
             <div class="queue-header">
                 <h3>Message Queue</h3>
                 <div class="queue-controls">
-                    <select id="sortField" onchange="sortQueue()">
+                    <select id="sortField">
                         <option value="timestamp">Sort by Time</option>
                         <option value="status">Sort by Status</option>
                         <option value="text">Sort by Text</option>
                     </select>
-                    <select id="sortDirection" onchange="sortQueue()">
+                    <select id="sortDirection">
                         <option value="asc">Ascending</option>
                         <option value="desc">Descending</option>
                     </select>
-                    <button id="clearBtn" onclick="clearQueue()" class="btn-secondary btn-small">
+                    <button id="clearBtn" class="btn-secondary btn-small">
                         <span class="btn-icon">🗑️</span>Clear Queue
                     </button>
                 </div>
@@ -256,14 +259,14 @@ function getHtmlContent(webview: vscode.Webview, scriptUri: vscode.Uri, styleUri
             <div class="history-header">
                 <h3>History</h3>
                 <div class="history-controls">
-                    <select id="historyFilter" onchange="filterHistory()">
+                    <select id="historyFilter">
                         <option value="all">All Runs</option>
                         <option value="waiting">With Waiting Messages</option>
                         <option value="completed">Completed Runs</option>
                         <option value="errors">With Errors</option>
                         <option value="recent">Recent (10)</option>
                     </select>
-                    <button onclick="deleteAllHistory()" class="btn-secondary btn-small">
+                    <button id="deleteAllHistoryBtn" class="btn-secondary btn-small">
                         <span class="btn-icon">🗑️</span>Delete All
                     </button>
                 </div>
