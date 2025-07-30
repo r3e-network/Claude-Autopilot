@@ -7,16 +7,16 @@ jest.mock('../../../src/subagents/registry', () => ({
     loadCustomAgents: jest.fn(),
     getAgent: jest.fn(),
     getAllAgents: jest.fn(() => [])
-  })})
-})});
+  }))
+}));
 
 jest.mock('../../../src/utils/logging', () => ({
   debugLog: jest.fn()
-})});
+}));
 
 jest.mock('../../../src/core/state', () => ({
   messageQueue: []
-})});
+}));
 
 const mockShowInformationMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
@@ -46,7 +46,7 @@ describe('SubAgentRunner', () => {
   describe('Constructor and Initialization', () => {
     it('should initialize with correct workspace path', () => {
       expect(runner).toBeDefined();
-      expect(runner.getConfig()}).toBeDefined();
+      expect(runner.getConfig()).toBeDefined();
     });
 
     it('should have default configuration', () => {
@@ -102,7 +102,7 @@ describe('SubAgentRunner', () => {
           passed: true,
           errors: [],
           warnings: []
-        })})
+        }))
       };
 
       const registry = runner.getRegistry();
@@ -135,7 +135,7 @@ describe('SubAgentRunner', () => {
         execute: jest.fn(() => Promise.resolve({
           success: true,
           message: 'Analysis complete'
-        })})
+        }))
       };
 
       const registry = runner.getRegistry();
@@ -246,7 +246,7 @@ describe('SubAgentRunner', () => {
     it('should handle forced analysis mode', async () => {
       const mockAgent = {
         id: 'test-agent',
-        runCheck: jest.fn(() => Promise.resolve({ passed: true, errors: [], warnings: [] }))),
+        runCheck: jest.fn(() => Promise.resolve({ passed: true, errors: [], warnings: [] })),
         execute: jest.fn(() => Promise.resolve({ success: true, message: 'Analysis complete' }))
       };
 
