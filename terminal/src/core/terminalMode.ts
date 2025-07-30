@@ -23,6 +23,32 @@ export class TerminalMode extends EventEmitter {
     private isRunning: boolean = false;
     private processingQueue: boolean = false;
     private activeAgents: number = 0;
+    
+    // Auto-completion state
+    private availableCommands: string[] = [
+        'status', 'agents', 'queue', 'config', 'start', 'stop', 'clear', 'test', 'log', 'help'
+    ];
+    private commandDescriptions: Record<string, string> = {
+        'status': 'Show system status and processing state',
+        'agents': 'Display agent information and activity',
+        'queue': 'View message queue status and recent tasks',
+        'config': 'Show current configuration settings',
+        'start': 'Start processing queue',
+        'stop': 'Stop processing queue',
+        'clear': 'Clear message queue',
+        'test': 'Test terminal functionality',
+        'log': 'Show real-time Claude output (press Enter to stop)',
+        'help': 'Display available commands'
+    };
+    
+    // Interactive completion state
+    private showingCompletions: boolean = false;
+    private completionMatches: string[] = [];
+    private selectedCompletion: number = 0;
+    
+    // Logging state
+    private isLogging: boolean = false;
+    private logOutputListener: ((output: string) => void) | null = null;
 
     constructor(config: Config, logger: Logger) {
         super();
@@ -76,10 +102,12 @@ export class TerminalMode extends EventEmitter {
             input: process.stdin,
             output: process.stdout,
             prompt: chalk.cyan('AutoClaude> '),
-            historySize: 100
+            historySize: 100,
+            completer: this.completer.bind(this)
         });
 
         this.rl.on('line', (input: string) => {
+            this.hideCompletions();
             this.handleInput(input.trim());
         });
 
@@ -92,6 +120,192 @@ export class TerminalMode extends EventEmitter {
             console.log(chalk.yellow('\\n\\nShutting down AutoClaude...'));
             this.shutdown();
         });
+        
+        // Setup key handlers for interactive completion
+        this.setupKeyHandlers();
+    }
+    
+    private setupKeyHandlers(): void {
+        if (!this.rl) return;
+        
+        // Enable keypress events
+        if (process.stdin.isTTY) {
+            process.stdin.setRawMode(false); // Keep readline processing
+        }
+        
+        // Handle keypress events for interactive completion
+        process.stdin.on('keypress', (str, key) => {
+            if (!key || !this.rl) return;
+            
+            const currentLine = (this.rl as any).line || '';
+            
+            // Show completions when typing '/'
+            if (str === '/' && !this.showingCompletions) {
+                setTimeout(() => {
+                    this.showCompletionsMenu(currentLine + '/');
+                }, 10);
+                return;
+            }
+            
+            // Handle completions navigation
+            if (this.showingCompletions) {
+                if (key.name === 'up') {
+                    this.navigateCompletions(-1);
+                    return;
+                } else if (key.name === 'down') {
+                    this.navigateCompletions(1);
+                    return;
+                } else if (key.name === 'return' || key.name === 'tab') {
+                    this.selectCompletion();
+                    return;
+                } else if (key.name === 'escape') {
+                    this.hideCompletions();
+                    return;
+                }
+                
+                // Update completions as user types
+                if (currentLine.startsWith('/')) {
+                    setTimeout(() => {
+                        this.updateCompletions(currentLine);
+                    }, 10);
+                }
+            }
+        });
+    }
+    
+    private completer(line: string): [string[], string] {
+        // If line starts with '/', provide command completion
+        if (line.startsWith('/')) {
+            const partial = line.slice(1).toLowerCase();
+            const matches = this.availableCommands.filter(cmd => cmd.startsWith(partial));
+            
+            if (matches.length === 0) {
+                return [[], line];
+            }
+            
+            // If we have matches, show them with descriptions
+            if (partial.length > 0 && matches.length > 1) {
+                console.log(chalk.cyan('\\n📋 Available commands:'));
+                matches.forEach(cmd => {
+                    console.log(chalk.gray(`  /${cmd} - ${this.commandDescriptions[cmd]}`));
+                });
+                console.log(''); // Empty line for spacing
+            }
+            
+            // Return matches with '/' prefix
+            const completions = matches.map(cmd => `/${cmd}`);
+            return [completions, line];
+        }
+        
+        return [[], line];
+    }
+    
+    private showCompletionsMenu(line: string): void {
+        if (!line.startsWith('/')) return;
+        
+        const partial = line.slice(1).toLowerCase();
+        const matches = this.availableCommands.filter(cmd => cmd.startsWith(partial));
+        
+        if (matches.length === 0) return;
+        
+        this.completionMatches = matches;
+        this.selectedCompletion = 0;
+        this.showingCompletions = true;
+        
+        this.displayCompletions();
+    }
+    
+    private updateCompletions(line: string): void {
+        if (!line.startsWith('/')) {
+            this.hideCompletions();
+            return;
+        }
+        
+        const partial = line.slice(1).toLowerCase();
+        const matches = this.availableCommands.filter(cmd => cmd.startsWith(partial));
+        
+        if (matches.length === 0) {
+            this.hideCompletions();
+            return;
+        }
+        
+        this.completionMatches = matches;
+        this.selectedCompletion = Math.min(this.selectedCompletion, matches.length - 1);
+        this.displayCompletions();
+    }
+    
+    private displayCompletions(): void {
+        if (this.completionMatches.length === 0) return;
+        
+        // Clear previous completions and move cursor up
+        process.stdout.write('\\x1b[s'); // Save cursor position
+        
+        console.log(chalk.cyan('\\n📋 Available commands:'));
+        
+        this.completionMatches.forEach((cmd, index) => {
+            const isSelected = index === this.selectedCompletion;
+            const prefix = isSelected ? chalk.green('▶ ') : '  ';
+            const cmdName = isSelected ? chalk.green(`/${cmd}`) : chalk.gray(`/${cmd}`);
+            const desc = isSelected ? chalk.white(this.commandDescriptions[cmd]) : chalk.gray(this.commandDescriptions[cmd]);
+            
+            console.log(`${prefix}${cmdName} - ${desc}`);
+        });
+        
+        console.log(chalk.gray('\\nUse ↑↓ to navigate, Enter to select, Esc to cancel\\n'));
+        
+        // Restore cursor and move back to input line
+        process.stdout.write('\\x1b[u'); // Restore cursor position
+    }
+    
+    private navigateCompletions(direction: number): void {
+        if (this.completionMatches.length === 0) return;
+        
+        this.selectedCompletion += direction;
+        
+        if (this.selectedCompletion < 0) {
+            this.selectedCompletion = this.completionMatches.length - 1;
+        } else if (this.selectedCompletion >= this.completionMatches.length) {
+            this.selectedCompletion = 0;
+        }
+        
+        // Clear and redisplay completions
+        this.clearCompletionsDisplay();
+        this.displayCompletions();
+    }
+    
+    private selectCompletion(): void {
+        if (this.completionMatches.length === 0 || !this.rl) return;
+        
+        const selectedCmd = this.completionMatches[this.selectedCompletion];
+        
+        // Clear the current line and set the selected command
+        (this.rl as any).line = `/${selectedCmd}`;
+        (this.rl as any).cursor = (this.rl as any).line.length;
+        
+        this.hideCompletions();
+        
+        // Refresh the display
+        (this.rl as any)._refreshLine();
+    }
+    
+    private hideCompletions(): void {
+        if (!this.showingCompletions) return;
+        
+        this.showingCompletions = false;
+        this.completionMatches = [];
+        this.selectedCompletion = 0;
+        
+        this.clearCompletionsDisplay();
+    }
+    
+    private clearCompletionsDisplay(): void {
+        // Move cursor up and clear the completion display
+        const linesToClear = this.completionMatches.length + 3; // commands + header + navigation help + spacing
+        
+        for (let i = 0; i < linesToClear; i++) {
+            process.stdout.write('\\x1b[1A'); // Move up one line
+            process.stdout.write('\\x1b[2K'); // Clear the line
+        }
     }
 
     async start(): Promise<void> {
@@ -101,7 +315,8 @@ export class TerminalMode extends EventEmitter {
         
         console.log(chalk.cyan('\\n🤖 AutoClaude Terminal Mode'));
         console.log(chalk.gray('Type your message and press Enter to send'));
-        console.log(chalk.gray('Use slash commands like /status, /agents, /queue for information'));
+        console.log(chalk.gray('Type / to see available commands with auto-completion'));
+        console.log(chalk.gray('Use ↑↓ arrows to navigate, Enter to select, Tab for completion'));
         console.log(chalk.gray('Press Ctrl+C to exit\\n'));
 
         // Auto-start processing if enabled
@@ -191,6 +406,10 @@ export class TerminalMode extends EventEmitter {
                 console.log(`├─ Readline: ${this.rl ? 'Active' : 'Inactive'}`);
                 console.log(`├─ Session: ${this.session ? 'Connected' : 'Disconnected'}`);
                 console.log(`└─ Running: ${this.isRunning ? 'Yes' : 'No'}`);
+                break;
+            
+            case 'log':
+                await this.toggleLogging();
                 break;
             
             default:
@@ -289,6 +508,100 @@ export class TerminalMode extends EventEmitter {
         await this.queue.clear();
         console.log(chalk.green('🗑️  Queue cleared'));
     }
+    
+    private async toggleLogging(): Promise<void> {
+        if (this.isLogging) {
+            await this.stopLogging();
+        } else {
+            await this.startLogging();
+        }
+    }
+    
+    private async startLogging(): Promise<void> {
+        if (!this.session) {
+            console.log(chalk.red('❌ Claude session not available for logging'));
+            return;
+        }
+        
+        if (this.isLogging) {
+            console.log(chalk.yellow('⚠️  Logging is already active'));
+            return;
+        }
+        
+        this.isLogging = true;
+        console.log(chalk.cyan('📡 Starting real-time Claude output logging...'));
+        console.log(chalk.gray('Press Enter to stop logging and return to prompt\n'));
+        
+        // Create output listener
+        this.logOutputListener = (output: string) => {
+            // Clean and format the output
+            const cleanOutput = this.cleanLogOutput(output);
+            if (cleanOutput.trim()) {
+                console.log(chalk.blue('Claude> ') + chalk.white(cleanOutput));
+            }
+        };
+        
+        // Attach listener to session
+        this.session.on('output', this.logOutputListener);
+        
+        // Setup special Enter key handling for logging mode
+        this.setupLogModeKeyHandling();
+    }
+    
+    private async stopLogging(): Promise<void> {
+        if (!this.isLogging) return;
+        
+        this.isLogging = false;
+        
+        // Remove output listener
+        if (this.session && this.logOutputListener) {
+            this.session.removeListener('output', this.logOutputListener);
+            this.logOutputListener = null;
+        }
+        
+        console.log(chalk.cyan('\n📡 Stopped real-time logging'));
+        console.log(''); // Add spacing
+    }
+    
+    private cleanLogOutput(output: string): string {
+        // Remove ANSI escape codes
+        let cleaned = output.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '');
+        
+        // Remove excessive whitespace but preserve meaningful formatting
+        cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n'); // Max 2 consecutive newlines
+        cleaned = cleaned.replace(/^\s+|\s+$/g, ''); // Trim start/end
+        
+        return cleaned;
+    }
+    
+    private setupLogModeKeyHandling(): void {
+        if (!this.rl) return;
+        
+        // Override the line handler temporarily for log mode
+        const originalLineHandler = this.rl.listeners('line')[0] as (input: string) => void;
+        
+        const logModeLineHandler = (input: string) => {
+            // Any Enter key press stops logging
+            if (this.isLogging) {
+                this.stopLogging().then(() => {
+                    // Restore normal input handling
+                    this.rl?.removeListener('line', logModeLineHandler);
+                    this.rl?.on('line', originalLineHandler);
+                    
+                    // If there was actual input, process it
+                    if (input.trim()) {
+                        this.handleInput(input.trim());
+                    } else {
+                        this.rl?.prompt();
+                    }
+                });
+            }
+        };
+        
+        // Replace line handler temporarily
+        this.rl.removeListener('line', originalLineHandler as (...args: any[]) => void);
+        this.rl.on('line', logModeLineHandler);
+    }
 
     private showHelp(): void {
         console.log(chalk.cyan('\\n📖 Available Commands'));
@@ -300,6 +613,7 @@ export class TerminalMode extends EventEmitter {
         console.log(chalk.gray('├─ /stop      - Stop processing'));
         console.log(chalk.gray('├─ /clear     - Clear queue'));
         console.log(chalk.gray('├─ /test      - Test terminal functionality'));
+        console.log(chalk.gray('├─ /log       - Show real-time Claude output (press Enter to stop)'));
         console.log(chalk.gray('└─ /help      - Show this help\\n'));
     }
 
@@ -464,6 +778,11 @@ Please combine these results into a coherent, complete response to the original 
     async shutdown(): Promise<void> {
         this.isRunning = false;
         this.processingQueue = false;
+
+        // Stop logging if active
+        if (this.isLogging) {
+            await this.stopLogging();
+        }
 
         if (this.rl) {
             this.rl.close();
