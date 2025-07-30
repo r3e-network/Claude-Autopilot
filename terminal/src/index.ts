@@ -21,7 +21,7 @@ function showBanner(): void {
             })
         )
     );
-    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.1.3\n'));
+    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.1.5\n'));
 }
 
 // Check for updates
@@ -39,7 +39,7 @@ const program = new Command();
 program
     .name('autoclaude')
     .description('Powerful terminal-based AutoClaude AI automation tool')
-    .version('3.1.3')
+    .version('3.1.5')
     .option('-q, --quiet', 'Suppress banner and non-essential output')
     .option('-v, --verbose', 'Enable verbose logging')
     .option('-c, --config <path>', 'Use custom config file')

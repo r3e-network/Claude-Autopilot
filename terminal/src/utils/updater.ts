@@ -3,7 +3,7 @@ import chalk from 'chalk';
 
 const pkg = {
     name: '@r3e/autoclaude',
-    version: '3.1.3'
+    version: '3.1.5'
 };
 
 export async function checkForUpdates(): Promise<void> {

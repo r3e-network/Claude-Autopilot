@@ -5,6 +5,26 @@ All notable changes to AutoClaude will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.5] - 2025-07-30
+
+### Fixed
+- Fixed Ctrl+Enter key binding for sending messages in terminal UI
+- Added multiple fallback key bindings (Ctrl+M, Enter) for message input
+- Added debug logging to help troubleshoot input issues
+- Improved focus handling for message input widget
+- Added global key handler fallback when widget-level handlers don't work
+
+### Improved
+- Enhanced message input reliability and responsiveness
+- Better user feedback for input interactions
+
+## [3.1.4] - 2025-07-30
+
+### Fixed
+- Fixed npm package to include compiled JavaScript files (dist directory)
+- Updated package.json files array to include necessary build artifacts
+- Fixed prepublishOnly script to build before publishing
+
 ## [3.1.3] - 2025-07-30
 
 ### Changed

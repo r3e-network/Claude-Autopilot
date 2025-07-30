@@ -196,10 +196,30 @@ export class UIManager extends EventEmitter {
             this.emit('interrupt');
         });
 
+        // Global fallback for Ctrl+Enter - send message from input
+        this.screen.key(['C-m'], () => {
+            if (this.widgets.messageInput) {
+                const text = this.widgets.messageInput.getValue().trim();
+                if (this.widgets.terminal) {
+                    this.widgets.terminal.log('Global Ctrl+M pressed, text: ' + text);
+                }
+                if (text) {
+                    this.emit('addMessage', text);
+                    this.widgets.messageInput.clearValue();
+                    this.widgets.messageInput.focus();
+                    this.screen!.render();
+                }
+            }
+        });
+
         // Message input handlers
         if (this.widgets.messageInput) {
-            this.widgets.messageInput.key(['C-enter'], () => {
+            // Send message with Ctrl+Enter
+            this.widgets.messageInput.key(['C-m'], () => {
                 const text = this.widgets.messageInput!.getValue().trim();
+                if (this.widgets.terminal) {
+                    this.widgets.terminal.log('Ctrl+M pressed, text: ' + text);
+                }
                 if (text) {
                     this.emit('addMessage', text);
                     this.widgets.messageInput!.clearValue();
@@ -208,10 +228,28 @@ export class UIManager extends EventEmitter {
                 }
             });
 
+            // Alternative: regular Enter also sends message
+            this.widgets.messageInput.key(['enter'], () => {
+                const text = this.widgets.messageInput!.getValue().trim();
+                if (this.widgets.terminal) {
+                    this.widgets.terminal.log('Enter pressed, text: ' + text);
+                }
+                if (text) {
+                    this.emit('addMessage', text);
+                    this.widgets.messageInput!.clearValue();
+                    this.widgets.messageInput!.focus();
+                    this.screen!.render();
+                }
+            });
+
+            // Clear input with Escape
             this.widgets.messageInput.key(['escape'], () => {
                 this.widgets.messageInput!.clearValue();
                 this.screen!.render();
             });
+
+            // Set focus to message input on startup
+            this.widgets.messageInput.focus();
         }
 
         // Queue navigation
