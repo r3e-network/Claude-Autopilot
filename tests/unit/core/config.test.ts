@@ -15,6 +15,14 @@ beforeEach(() => {
   (global as any).vscode = {
     workspace: {
       getConfiguration: jest.fn(() => mockWorkspaceConfig)
+    },
+    window: {
+      showWarningMessage: jest.fn(),
+      showInformationMessage: jest.fn(),
+      showErrorMessage: jest.fn()
+    },
+    commands: {
+      executeCommand: jest.fn()
     }
   };
 });
@@ -22,7 +30,7 @@ beforeEach(() => {
 describe('Configuration Management', () => {
   describe('getValidatedConfig', () => {
     it('should return default configuration when no custom config exists', () => {
-      mockGet.mockImplementation((key: unknown, defaultValue: unknown) => defaultValue);
+      mockGet.mockImplementation((...args: any[]) => args[1]);
       
       const config = getValidatedConfig();
       
@@ -33,7 +41,8 @@ describe('Configuration Management', () => {
     });
 
     it('should merge custom configuration with defaults', () => {
-      mockGet.mockImplementation((key: unknown, defaultValue: unknown) => {
+      mockGet.mockImplementation((...args: any[]) => {
+        const [key, defaultValue] = args;
         if (key === 'queue.maxSize') return 2000;
         if (key === 'session.autoStart') return true;
         return defaultValue;
@@ -46,7 +55,8 @@ describe('Configuration Management', () => {
     });
 
     it('should validate numeric ranges', () => {
-      mockGet.mockImplementation((key: unknown, defaultValue: unknown) => {
+      mockGet.mockImplementation((...args: any[]) => {
+        const [key, defaultValue] = args;
         if (key === 'queue.maxSize') return -1; // Invalid: below minimum
         if (key === 'queue.maxOutputSize') return 2000000; // Invalid: above maximum
         return defaultValue;
@@ -60,7 +70,8 @@ describe('Configuration Management', () => {
     });
 
     it('should validate boolean values', () => {
-      mockGet.mockImplementation((key: unknown, defaultValue: unknown) => {
+      mockGet.mockImplementation((...args: any[]) => {
+        const [key, defaultValue] = args;
         if (key === 'session.autoStart') return 'true'; // Invalid: string instead of boolean
         return defaultValue;
       });
@@ -71,7 +82,8 @@ describe('Configuration Management', () => {
     });
 
     it('should validate security settings', () => {
-      mockGet.mockImplementation((key: unknown, defaultValue: unknown) => {
+      mockGet.mockImplementation((...args: any[]) => {
+        const [key, defaultValue] = args;
         if (key === 'security.allowDangerousXssbypass') return 'maybe'; // Invalid
         return defaultValue;
       });
@@ -85,7 +97,7 @@ describe('Configuration Management', () => {
 
   describe('validateConfig', () => {
     it('should return validation results', () => {
-      mockGet.mockImplementation(() => undefined);
+      mockGet.mockImplementation((...args: any[]) => args[1]);
       
       const config = getValidatedConfig();
       const validation = validateConfig(config);
