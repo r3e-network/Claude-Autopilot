@@ -41,7 +41,7 @@ export interface ConfigSchema {
 const defaultConfig: ConfigSchema = {
     session: {
         skipPermissions: true,
-        autoStart: false,
+        autoStart: true,
         scheduledStartTime: ''
     },
     queue: {
@@ -50,9 +50,9 @@ const defaultConfig: ConfigSchema = {
         retentionHours: 24
     },
     parallelAgents: {
-        enabled: false,
+        enabled: true,
         maxAgents: 50,
-        defaultAgents: 5,
+        defaultAgents: 3,
         staggerDelay: 10,
         contextThreshold: 20,
         autoRestart: true

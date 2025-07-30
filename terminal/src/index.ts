@@ -3,6 +3,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import figlet from 'figlet';
 import { AutoClaudeCLI } from './core/cli';
+import { TerminalMode } from './core/terminalMode';
 import { Config } from './core/config';
 import { Logger } from './utils/logger';
 import { checkForUpdates } from './utils/updater';
@@ -21,7 +22,7 @@ function showBanner(): void {
             })
         )
     );
-    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.1.5\n'));
+    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.1.6\n'));
 }
 
 // Check for updates
@@ -39,7 +40,7 @@ const program = new Command();
 program
     .name('autoclaude')
     .description('Powerful terminal-based AutoClaude AI automation tool')
-    .version('3.1.5')
+    .version('3.1.6')
     .option('-q, --quiet', 'Suppress banner and non-essential output')
     .option('-v, --verbose', 'Enable verbose logging')
     .option('-c, --config <path>', 'Use custom config file')
@@ -63,14 +64,34 @@ program
 
 // Start interactive mode (default)
 program
-    .command('start', { isDefault: true })
-    .description('Start AutoClaude in interactive mode')
+    .command('start')
+    .description('Start AutoClaude in GUI interactive mode')
     .option('-m, --message <text>', 'Add initial message to queue')
     .option('-s, --skip-permissions', 'Skip Claude permission prompts')
     .option('-a, --auto-start', 'Automatically start processing queue')
     .action(async (options) => {
         const cli = new AutoClaudeCLI(config, logger);
         await cli.start(options);
+    });
+
+// Terminal mode (new default)
+program
+    .command('terminal', { isDefault: true })
+    .description('Start AutoClaude in terminal mode (Claude Code style)')
+    .option('-s, --skip-permissions', 'Skip Claude permission prompts')
+    .option('-a, --auto-start', 'Automatically start processing queue')
+    .action(async (options) => {
+        // Override config with CLI options
+        if (options.skipPermissions) {
+            config.set('session', 'skipPermissions', true);
+        }
+        if (options.autoStart) {
+            config.set('session', 'autoStart', true);
+        }
+
+        const terminal = new TerminalMode(config, logger);
+        await terminal.initialize();
+        await terminal.start();
     });
 
 // Run with a single message
