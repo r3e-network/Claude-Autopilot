@@ -53,10 +53,15 @@ export class ClaudeSession extends EventEmitter {
             this.emit('started');
 
             // Wait for initial prompt
-            await this.waitForReady();
+            try {
+                await this.waitForReady();
+            } catch (readyError) {
+                this.logger.warn(`Claude ready check failed: ${readyError}, continuing anyway`);
+            }
             
         } catch (error) {
             this.isRunning = false;
+            this.logger.error(`Failed to start Claude session: ${error}`);
             throw new Error(`Failed to start Claude session: ${error}`);
         }
     }
@@ -217,11 +222,20 @@ export class ClaudeSession extends EventEmitter {
     }
 
     private async waitForReady(): Promise<void> {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                this.logger.warn('Claude session ready timeout, continuing anyway...');
+                resolve(); // Continue anyway after timeout
+            }, 5000); // 5 second timeout
+
             const checkReady = () => {
+                // More flexible ready detection patterns for Claude Code CLI
                 if (this.currentScreen.includes('Welcome to Claude') || 
                     this.currentScreen.includes('Ready') ||
-                    this.currentScreen.includes('>')) {
+                    this.currentScreen.includes('>') ||
+                    this.currentScreen.includes('Claude Code') ||
+                    this.currentScreen.length > 10) { // Any substantial output indicates ready
+                    clearTimeout(timeout);
                     resolve();
                 } else {
                     setTimeout(checkReady, 100);

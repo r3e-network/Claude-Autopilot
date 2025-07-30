@@ -48,7 +48,9 @@ export class TerminalMode extends EventEmitter {
 
         // Initialize Claude session
         this.session = new ClaudeSession(this.config, this.logger);
+        this.logger.info('Starting Claude session...');
         await this.session.start(this.config.get('session', 'skipPermissions'));
+        this.logger.info('Claude session ready');
 
         // Setup readline interface
         this.setupReadline();
@@ -94,6 +96,7 @@ export class TerminalMode extends EventEmitter {
             await this.startProcessing();
         }
 
+        this.logger.info('Starting interactive prompt...');
         this.rl?.prompt();
     }
 
@@ -342,19 +345,24 @@ export class TerminalMode extends EventEmitter {
     }
 
     private async processWithClaude(text: string): Promise<void> {
-        if (!this.session) {
-            throw new Error('Claude session not initialized');
-        }
-
         console.log(chalk.blue('💭 Thinking...'));
         
-        // Send message to Claude
-        const response = await this.session.sendMessage(text);
-        
-        // Display response with nice formatting
-        console.log(chalk.cyan('\\n🤖 Claude:'));
-        console.log(chalk.white(response));
-        console.log('');
+        try {
+            if (!this.session) {
+                throw new Error('Claude session not initialized');
+            }
+
+            // Send message to Claude
+            const response = await this.session.sendMessage(text);
+            
+            // Display response with nice formatting
+            console.log(chalk.cyan('\\n🤖 Claude:'));
+            console.log(chalk.white(response));
+            console.log('');
+        } catch (error) {
+            console.log(chalk.red(`❌ Error communicating with Claude: ${error}`));
+            console.log(chalk.yellow('💡 Make sure Claude Code CLI is properly authenticated'));
+        }
     }
 
     private async processWithSubagents(text: string): Promise<void> {
