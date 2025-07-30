@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ContextManager } from './contextManager';
 import { ErrorRecoverySystem } from './errorRecovery';
 import { SelfHealingSystem } from './selfHealing';
+import { CommandOrchestrator } from './commandOrchestrator';
 import { debugLog } from '../utils/logging';
 import { addMessageToQueueFromWebview } from '../queue';
 import { ScriptRunner } from '../scripts/index';
@@ -11,9 +12,10 @@ export class AutomationManager {
     private errorRecovery: ErrorRecoverySystem;
     private selfHealing: SelfHealingSystem;
     private scriptRunner: ScriptRunner;
+    private commandOrchestrator: CommandOrchestrator | null = null;
     private isEnabled: boolean = true;
     
-    constructor(workspacePath: string) {
+    constructor(private workspacePath: string) {
         this.contextManager = new ContextManager(workspacePath);
         this.errorRecovery = new ErrorRecoverySystem(this.contextManager, workspacePath);
         this.selfHealing = new SelfHealingSystem(workspacePath);
@@ -28,6 +30,18 @@ export class AutomationManager {
             debugLog('Initializing automation manager...');
             await this.scriptRunner.initialize();
             await this.scriptRunner.loadUserScripts();
+            
+            // Initialize command orchestrator if context system is available
+            const contextProvider = (global as any).contextProvider;
+            if (contextProvider) {
+                const taskManager = contextProvider.taskManager;
+                this.commandOrchestrator = new CommandOrchestrator(
+                    contextProvider,
+                    taskManager,
+                    this.workspacePath
+                );
+                debugLog('Command orchestrator initialized');
+            }
         } catch (error) {
             debugLog(`Failed to initialize automation manager: ${error}`);
             vscode.window.showErrorMessage(`Automation initialization failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -176,13 +190,67 @@ ${prompt}`;
     }
     
     /**
+     * Execute high-level command with intelligent task decomposition
+     */
+    async executeCommand(command: string): Promise<string> {
+        if (!this.commandOrchestrator) {
+            return 'Command orchestrator not initialized. Please ensure the context system is running.';
+        }
+        
+        try {
+            debugLog(`Executing high-level command: ${command}`);
+            
+            // Execute command through orchestrator
+            const result = await this.commandOrchestrator.executeCommand(command);
+            
+            if (result.success) {
+                // Add follow-up message to queue if needed
+                if (result.taskId) {
+                    const followUp = `Task created: ${result.taskId}\n\n${result.message}`;
+                    await addMessageToQueueFromWebview(followUp);
+                }
+                
+                return result.message;
+            } else {
+                return `Command execution failed: ${result.message}`;
+            }
+        } catch (error) {
+            debugLog(`Command execution error: ${error}`);
+            return `Error executing command: ${error instanceof Error ? error.message : String(error)}`;
+        }
+    }
+    
+    /**
+     * Get command suggestions based on current context
+     */
+    async getCommandSuggestions(): Promise<string[]> {
+        if (!this.commandOrchestrator) {
+            return [];
+        }
+        
+        return await this.commandOrchestrator.getCommandSuggestions();
+    }
+    
+    /**
+     * Get active workflow status
+     */
+    getActiveWorkflows() {
+        if (!this.commandOrchestrator) {
+            return [];
+        }
+        
+        return this.commandOrchestrator.getActiveWorkflows();
+    }
+    
+    /**
      * Get automation statistics
      */
     getStatistics() {
         return {
             errorRecoveryStats: this.errorRecovery.getStatistics(),
             contextFilesTracked: this.contextManager['recentFiles'].length,
-            scriptsAvailable: this.scriptRunner['config'].scripts.length
+            scriptsAvailable: this.scriptRunner['config'].scripts.length,
+            activeWorkflows: this.commandOrchestrator ? this.commandOrchestrator.getActiveWorkflows().length : 0
         };
     }
 }

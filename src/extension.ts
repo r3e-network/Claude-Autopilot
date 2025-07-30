@@ -51,6 +51,22 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize automation if workspace is available
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder) {
+        // Initialize context system for project indexing and task persistence
+        import('./context').then(module => {
+            module.initializeContextSystem(workspaceFolder.uri.fsPath).then(contextProvider => {
+                // Store globally for access by other modules
+                (global as any).contextProvider = contextProvider;
+                debugLog('Context system initialized with project indexing and task persistence');
+                
+                // Generate initial context
+                contextProvider.generateFullContext().catch(error => {
+                    debugLog(`Failed to generate initial context: ${error}`);
+                });
+            });
+        }).catch(error => {
+            debugLog(`Failed to initialize context system: ${error}`);
+        });
+
         import('./queue/automationWrapper').then(module => {
             module.initializeAutomation(workspaceFolder.uri.fsPath);
             debugLog('Automation features initialized');
@@ -128,9 +144,38 @@ export function activate(context: vscode.ExtensionContext) {
         await showWorkflowWizard();
     });
 
+    // Context system commands
+    const updateContextCommand = vscode.commands.registerCommand('autoclaude.updateContext', async () => {
+        const contextModule = await import('./context');
+        await contextModule.updateProjectContext();
+    });
+
+    const showContextCommand = vscode.commands.registerCommand('autoclaude.showContext', async () => {
+        const contextModule = await import('./context');
+        await contextModule.showProjectContext();
+    });
+
+    const showTasksCommand = vscode.commands.registerCommand('autoclaude.showTasks', async () => {
+        const contextProvider = (global as any).contextProvider;
+        if (contextProvider) {
+            const taskManager = contextProvider.taskManager;
+            const summary = taskManager.getTaskSummary();
+            
+            // Create temporary document with task summary
+            const doc = await vscode.workspace.openTextDocument({
+                content: summary,
+                language: 'markdown'
+            });
+            await vscode.window.showTextDocument(doc);
+        } else {
+            vscode.window.showErrorMessage('Context system not initialized');
+        }
+    });
+
     context.subscriptions.push(
         startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
         quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
+        updateContextCommand, showContextCommand, showTasksCommand,
         configWatcher
     );
     

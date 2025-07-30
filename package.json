@@ -70,6 +70,24 @@
         "title": "🧙 Workflow Wizard",
         "category": "AutoClaude",
         "icon": "$(list-tree)"
+      },
+      {
+        "command": "autoclaude.updateContext",
+        "title": "🔄 Update Project Context",
+        "category": "AutoClaude",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "autoclaude.showContext",
+        "title": "📋 Show Project Context",
+        "category": "AutoClaude",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "autoclaude.showTasks",
+        "title": "📝 Show Task History",
+        "category": "AutoClaude",
+        "icon": "$(checklist)"
       }
     ],
     "menus": {
@@ -108,6 +126,18 @@
         },
         {
           "command": "autoclaude.workflowWizard",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.updateContext",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.showContext",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.showTasks",
           "when": "true"
         }
       ],
