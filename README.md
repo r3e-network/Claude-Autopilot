@@ -1,16 +1,51 @@
 # AutoClaude - Intelligent Development Automation
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
-[![Version](https://img.shields.io/badge/version-2.2.0-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v2.2.0)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v2.4.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/r3e-network/AutoClaude/build.yml?branch=main)](https://github.com/r3e-network/AutoClaude/actions)
 
-**AutoClaude** lets you run Claude Code while you sleep, eat, or play with your kids. Set up your tasks, hit start, and come back to completed work. This powerful VS Code extension provides fully automated Claude Code task management with intelligent queue processing and auto-resume functionality.
+**AutoClaude** is the ultimate AI-powered development assistant that transforms high-level commands into completed work. Simply tell it to "make your project production ready" and watch as it automatically fixes tests, adds documentation, creates Docker configs, and more - all while you focus on what matters most.
 
 <div align="center">
   <img src="img/autoclaude.png" alt="AutoClaude Interface" width="600">
 </div>
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
+
+## 🆕 NEW: Intelligent Task Automation System (v2.4.0)
+
+### 🧠 **Natural Language Commands**
+Transform high-level goals into completed work with simple commands:
+- `"make project production ready"` - Fixes tests, adds docs, creates Docker config, and more
+- `"fix all failing tests"` - Analyzes failures and fixes them automatically
+- `"create a React website with authentication"` - Builds complete project from scratch
+- `"add comprehensive documentation"` - Generates README, API docs, and architecture docs
+
+### 🤖 **12+ Specialized Sub-Agents**
+Each agent is an expert in its domain:
+- **TestFixerAgent** - Fixes failing tests automatically
+- **DocGeneratorAgent** - Creates comprehensive documentation
+- **DockerCreatorAgent** - Adds Docker support to your project
+- **WebsiteBuilderAgent** - Creates beautiful, responsive websites
+- **CodeCleanerAgent** - Refactors and organizes your codebase
+- And many more!
+
+### 💾 **Cross-Session Task Persistence**
+Never lose work progress:
+- Tasks persist across VSCode sessions
+- Automatic work resumption after interruptions
+- Complete task history and context tracking
+- Recovery from failures with smart retry strategies
+
+### 📊 **Intelligent Project Understanding**
+AutoClaude learns your project:
+- Comprehensive file indexing and analysis
+- Symbol extraction and dependency tracking
+- Pattern recognition and code complexity analysis
+- Context-aware task execution
+
+[Learn more about the Automation System →](docs/AUTOMATION_SYSTEM.md)
 
 ## ✨ Features
 
@@ -405,6 +440,32 @@ This enables:
 -   Debug logging and diagnostics
 -   Configuration validation tools
 -   Advanced queue operations
+
+## 🤖 Intelligent Sub-Agent System
+
+AutoClaude includes 12+ specialized sub-agents that work together to analyze and improve your code:
+
+### Production Readiness Agents
+- **🏭 Production Readiness**: Scans for TODOs, placeholders, and incomplete implementations
+- **🔨 Build Check**: Automatically detects and validates your build system
+- **✅ Test Check**: Ensures all tests pass and identifies missing coverage
+- **💅 Format Check**: Validates code formatting standards
+- **🚀 GitHub Actions**: Validates CI/CD workflows and configurations
+
+### Advanced Analysis Agents
+- **🧠 Context Awareness**: Deep understanding of project structure and dependencies
+- **📋 Task Planning**: Creates detailed implementation plans for complex features
+- **🔗 Dependency Resolution**: Automatic dependency management and conflict resolution
+- **💡 Code Understanding**: Provides comprehensive code analysis and insights
+- **🧪 Integration Testing**: Automated test generation and validation
+- **⚡ Performance Optimization**: Identifies and suggests performance improvements
+- **🔒 Security Audit**: Comprehensive security vulnerability scanning
+
+### How Sub-Agents Work
+1. **Enable Sub-Agent System**: Set `autoclaude.subAgents.enabled` to `true`
+2. **Run Analysis**: Use "🤖 Run AI Analysis Agents" command
+3. **Automated Improvement**: Agents analyze your code and provide intelligent fixes
+4. **Continuous Loop**: Keep running until all checks pass or max iterations reached
 
 ## 🎯 Use Cases
 
