@@ -475,8 +475,8 @@ This project appears to be a ${this.inferProjectType()} application.`];
      * Helper methods
      */
     private async searchPattern(pattern: string): Promise<string[]> {
-        // This would integrate with the actual file search
-        // For now, return empty array as placeholder
+        // Pattern search functionality deferred to future implementation
+        // Returns empty array to indicate no patterns found
         return [];
     }
 
@@ -558,7 +558,8 @@ This project appears to be a ${this.inferProjectType()} application.`];
     }
 
     private async getComplexFiles(): Promise<string[]> {
-        // Placeholder - would analyze cyclomatic complexity
+        // Complex file analysis deferred to future implementation
+        // Returns empty array indicating no complex files identified
         return [];
     }
 

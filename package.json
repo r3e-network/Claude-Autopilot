@@ -322,6 +322,7 @@
     "test:coverage": "jest --coverage",
     "test:integration": "jest --testPathPattern=integration",
     "test:unit": "jest --testPathPattern=\"(simple|id-generator)\\.test\\.ts\"",
+    "test:production": "jest --testPathPattern=\"(simple|id-generator)\\.test\\.ts\"",
     "package": "vsce package --no-dependencies",
     "package:pre-release": "vsce package --no-dependencies --pre-release",
     "publish": "vsce publish",

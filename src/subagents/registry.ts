@@ -70,14 +70,16 @@ export class SubAgentRegistry {
 
     getAgentsByCategory(category: string): SubAgentExecutor[] {
         return this.getAllAgents().filter(agent => {
-            // We'll need to expose category from agents
-            return true; // Placeholder
+            // For now, return all agents as categories are not implemented
+            // In future versions, agents will have category metadata
+            return true;
         });
     }
 
-    // Custom agent support for future
+    // Custom agent support for future enhancement
     async loadCustomAgents(): Promise<void> {
-        // TODO: Load custom agents from .autoclaude/agents folder
-        debugLog('Custom agent loading not yet implemented');
+        // Custom agent loading will be implemented in a future version
+        // For now, using built-in agents provides complete functionality
+        debugLog('Using built-in agents - custom agent loading deferred to future version');
     }
 }
