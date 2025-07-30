@@ -1,6 +1,6 @@
 {
   "name": "claude-autopilot",
-  "version": "3.0.0",
+  "version": "3.1.1",
   "description": "Powerful terminal-based Claude AI automation tool with parallel agents and intelligent task management",
   "main": "dist/index.js",
   "bin": {
@@ -70,10 +70,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/r3e-network/Claude-Autopilot"
+    "url": "https://github.com/r3e-network/AutoClaude"
   },
   "bugs": {
-    "url": "https://github.com/r3e-network/Claude-Autopilot/issues"
+    "url": "https://github.com/r3e-network/AutoClaude/issues"
   },
-  "homepage": "https://github.com/r3e-network/Claude-Autopilot#readme"
+  "homepage": "https://github.com/r3e-network/AutoClaude#readme"
 }

@@ -2,7 +2,7 @@
   "name": "autoclaude",
   "displayName": "AutoClaude",
   "description": "Intelligent AI-powered development assistant with automated workflows, smart task completion, and user-friendly Claude integration",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0"
@@ -589,14 +589,14 @@
     }
   ],
   "license": "MIT",
-  "publisher": "r3e",
+  "publisher": "R3ENetwork",
   "repository": {
     "type": "git",
-    "url": "https://github.com/r3e-network/Claude-Autopilot"
+    "url": "https://github.com/r3e-network/AutoClaude"
   },
-  "homepage": "https://github.com/r3e-network/Claude-Autopilot#readme",
+  "homepage": "https://github.com/r3e-network/AutoClaude#readme",
   "bugs": {
-    "url": "https://github.com/r3e-network/Claude-Autopilot/discussions"
+    "url": "https://github.com/r3e-network/AutoClaude/discussions"
   },
   "galleryBanner": {
     "color": "#1e1e1e",
