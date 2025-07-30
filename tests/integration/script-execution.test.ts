@@ -34,7 +34,7 @@ const mockVscode = {
 global.vscode = mockVscode as any;
 
 // Import after setting up mocks
-import { ScriptRunner } from '../../../src/scripts';
+import { ScriptRunner } from '../../../src/scripts/index';
 import { SHELL_SCRIPTS } from '../../../src/scripts/shellScripts';
 
 describe('Script Execution Integration', () => {

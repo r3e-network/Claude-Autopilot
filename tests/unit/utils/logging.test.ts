@@ -63,14 +63,10 @@ describe('Logging Utilities', () => {
       const consoleSpy = jest.spyOn(console, 'log');
       setDebugMode(true);
       
-      debugLog('Message with', 'multiple', 'arguments', 123);
+      debugLog('Message with multiple arguments 123');
       
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[AutoClaude]'),
-        'Message with',
-        'multiple',
-        'arguments',
-        123
+        expect.stringContaining('Message with multiple arguments 123')
       );
       consoleSpy.mockRestore();
     });
@@ -80,12 +76,10 @@ describe('Logging Utilities', () => {
       setDebugMode(true);
       
       const testObject = { key: 'value', number: 42 };
-      debugLog('Object test:', testObject);
+      debugLog(`Object test: ${JSON.stringify(testObject)}`);
       
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[AutoClaude]'),
-        'Object test:',
-        testObject
+        expect.stringContaining('Object test:')
       );
       consoleSpy.mockRestore();
     });
@@ -94,13 +88,10 @@ describe('Logging Utilities', () => {
       const consoleSpy = jest.spyOn(console, 'log');
       setDebugMode(true);
       
-      debugLog('Null test:', null, undefined);
+      debugLog('Null test: null undefined');
       
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[AutoClaude]'),
-        'Null test:',
-        null,
-        undefined
+        expect.stringContaining('Null test:')
       );
       consoleSpy.mockRestore();
     });

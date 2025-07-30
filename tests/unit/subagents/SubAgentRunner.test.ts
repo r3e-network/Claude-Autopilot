@@ -7,16 +7,16 @@ jest.mock('../../../src/subagents/registry', () => ({
     loadCustomAgents: jest.fn(),
     getAgent: jest.fn(),
     getAllAgents: jest.fn(() => [])
-  }))
-}));
+  })})
+})});
 
 jest.mock('../../../src/utils/logging', () => ({
   debugLog: jest.fn()
-}));
+})});
 
 jest.mock('../../../src/core/state', () => ({
   messageQueue: []
-}));
+})});
 
 const mockShowInformationMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
@@ -46,7 +46,7 @@ describe('SubAgentRunner', () => {
   describe('Constructor and Initialization', () => {
     it('should initialize with correct workspace path', () => {
       expect(runner).toBeDefined();
-      expect(runner.getConfig()).toBeDefined();
+      expect(runner.getConfig()}).toBeDefined();
     });
 
     it('should have default configuration', () => {
@@ -98,11 +98,11 @@ describe('SubAgentRunner', () => {
     it('should run single agent when agent exists', async () => {
       const mockAgent = {
         id: 'test-agent',
-        runCheck: jest.fn().mockResolvedValue({
+        runCheck: jest.fn(() => Promise.resolve({
           passed: true,
           errors: [],
           warnings: []
-        })
+        })})
       };
 
       const registry = runner.getRegistry();
@@ -132,10 +132,10 @@ describe('SubAgentRunner', () => {
     it('should run agent analysis with script results', async () => {
       const mockAgent = {
         id: 'test-agent',
-        execute: jest.fn().mockResolvedValue({
+        execute: jest.fn(() => Promise.resolve({
           success: true,
           message: 'Analysis complete'
-        })
+        })})
       };
 
       const registry = runner.getRegistry();
@@ -166,11 +166,11 @@ describe('SubAgentRunner', () => {
     it('should run all enabled agents', async () => {
       const mockAgent1 = {
         id: 'agent-1',
-        runCheck: jest.fn().mockResolvedValue({ passed: true, errors: [], warnings: [] })
+        runCheck: jest.fn(() => Promise.resolve({ passed: true, errors: [], warnings: [] }))
       };
       const mockAgent2 = {
         id: 'agent-2',
-        runCheck: jest.fn().mockResolvedValue({ passed: false, errors: ['Error'], warnings: [] })
+        runCheck: jest.fn(() => Promise.resolve({ passed: false, errors: ['Error'], warnings: [] }))
       };
 
       const registry = runner.getRegistry();
@@ -194,11 +194,11 @@ describe('SubAgentRunner', () => {
     it('should stop on first failure when stopOnFailure is true', async () => {
       const mockAgent1 = {
         id: 'agent-1',
-        runCheck: jest.fn().mockResolvedValue({ passed: false, errors: ['Error'], warnings: [] })
+        runCheck: jest.fn(() => Promise.resolve({ passed: false, errors: ['Error'], warnings: [] }))
       };
       const mockAgent2 = {
         id: 'agent-2',
-        runCheck: jest.fn().mockResolvedValue({ passed: true, errors: [], warnings: [] })
+        runCheck: jest.fn(() => Promise.resolve({ passed: true, errors: [], warnings: [] }))
       };
 
       const registry = runner.getRegistry();
@@ -222,7 +222,7 @@ describe('SubAgentRunner', () => {
     it('should handle all agents passing initially', async () => {
       const mockAgent = {
         id: 'test-agent',
-        runCheck: jest.fn().mockResolvedValue({ passed: true, errors: [], warnings: [] })
+        runCheck: jest.fn(() => Promise.resolve({ passed: true, errors: [], warnings: [] }))
       };
 
       const registry = runner.getRegistry();
@@ -232,7 +232,7 @@ describe('SubAgentRunner', () => {
         enabledAgents: ['test-agent']
       });
 
-      mockShowInformationMessage.mockResolvedValue('No, Exit');
+      mockShowInformationMessage.mockReturnValue(Promise.resolve('No, Exit'));
 
       await runner.runAgentLoop();
       
@@ -246,8 +246,8 @@ describe('SubAgentRunner', () => {
     it('should handle forced analysis mode', async () => {
       const mockAgent = {
         id: 'test-agent',
-        runCheck: jest.fn().mockResolvedValue({ passed: true, errors: [], warnings: [] }),
-        execute: jest.fn().mockResolvedValue({ success: true, message: 'Analysis complete' })
+        runCheck: jest.fn(() => Promise.resolve({ passed: true, errors: [], warnings: [] }))),
+        execute: jest.fn(() => Promise.resolve({ success: true, message: 'Analysis complete' }))
       };
 
       const registry = runner.getRegistry();

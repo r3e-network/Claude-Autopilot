@@ -9,9 +9,9 @@ const testWorkspace = path.join(tmpdir(), 'autoclaude-e2e-test-' + Date.now());
 // Mock VS Code environment for E2E testing
 const mockVscode = {
   window: {
-    showInformationMessage: jest.fn().mockResolvedValue('Yes'),
-    showWarningMessage: jest.fn().mockResolvedValue('OK'),
-    showErrorMessage: jest.fn().mockResolvedValue('OK'),
+    showInformationMessage: jest.fn(() => Promise.resolve('Yes')),
+    showWarningMessage: jest.fn(() => Promise.resolve('OK')),
+    showErrorMessage: jest.fn(() => Promise.resolve('OK')),
     createWebviewPanel: jest.fn(() => ({
       webview: {
         postMessage: jest.fn(),
@@ -22,7 +22,7 @@ const mockVscode = {
       dispose: jest.fn()
     })),
     withProgress: jest.fn((options, callback) => {
-      return callback({
+      return (callback as any)({
         report: jest.fn()
       });
     })
@@ -66,7 +66,7 @@ const mockVscode = {
   }
 };
 
-global.vscode = mockVscode as any;
+(global as any).vscode = mockVscode;
 
 // Mock other dependencies
 jest.mock('../../../src/utils/logging', () => ({
@@ -77,7 +77,7 @@ jest.mock('../../../src/utils/logging', () => ({
 
 // Import components after mocking
 import { ScriptRunner } from '../../../src/scripts';
-import { SubAgentRunner } from '../../../src/subagents/SubAgentRunner';
+import { SubAgentRunner } from '../../../src/subagents';
 
 describe('End-to-End Workflow Tests', () => {
   beforeAll(async () => {
@@ -650,7 +650,7 @@ export function unsafeFunction(userInput: string) {
       // Should detect issues
       const productionReadiness = results.results.get('production-readiness');
       expect(productionReadiness?.passed).toBe(false);
-      expect(productionReadiness?.errors.some(e => e.includes('TODO'))).toBe(true);
+      expect(productionReadiness?.errors.some((e: string) => e.includes('TODO'))).toBe(true);
 
       // Now fix the issues
       fs.unlinkSync(path.join(testWorkspace, 'src', 'buggy-code.ts'));

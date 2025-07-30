@@ -8,7 +8,11 @@ jest.mock('fs', () => ({
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
   readFileSync: jest.fn(),
-  chmodSync: jest.fn()
+  chmodSync: jest.fn(),
+  readFile: jest.fn(),
+  promises: {
+    readFile: jest.fn()
+  }
 }));
 
 jest.mock('child_process', () => ({
@@ -19,12 +23,28 @@ jest.mock('../../../src/utils/logging', () => ({
   debugLog: jest.fn()
 }));
 
+jest.mock('../../../src/queue', () => ({
+  addMessageToQueueFromWebview: jest.fn()
+}));
+
+// Mock vscode
+(global as any).vscode = {
+  workspace: {
+    getConfiguration: jest.fn(() => ({
+      get: jest.fn(() => false) // subAgents.enabled = false by default
+    }))
+  },
+  window: {
+    showInformationMessage: jest.fn(() => Promise.resolve())
+  }
+};
+
 const mockExistsSync = fs.existsSync as jest.Mock;
 const mockReadFileSync = fs.readFileSync as jest.Mock;
 const mockWriteFileSync = fs.writeFileSync as jest.Mock;
 
 // Import after mocking
-import { ScriptRunner } from '../../../src/scripts';
+import { ScriptRunner } from '../../../src/scripts/index';
 
 describe('ScriptRunner', () => {
   let scriptRunner: ScriptRunner;
@@ -210,9 +230,7 @@ describe('ScriptRunner', () => {
         callback(null, mockResult, '');
       });
 
-      // Mock Claude message sending
-      const { addMessageToQueueFromWebview } = require('../../../src/queue');
-      (addMessageToQueueFromWebview as jest.Mock) = jest.fn();
+      // addMessageToQueueFromWebview is already mocked at the top of the file
 
       await scriptRunner.initialize();
       
@@ -254,15 +272,15 @@ describe('ScriptRunner', () => {
   describe('User Scripts Loading', () => {
     it('should load user-defined scripts', async () => {
       // Mock finding custom script files
-      mockExistsSync.mockImplementation((filePath: string) => {
-        return filePath.includes('custom-script.sh');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        return typeof filePath === 'string' && filePath.includes('custom-script.sh');
       });
 
       const mockScript = `#!/bin/bash
 echo '{"passed": true, "errors": [], "warnings": []}'`;
       
-      mockReadFileSync.mockImplementation((filePath: string) => {
-        if (filePath.includes('custom-script.sh')) {
+      mockReadFileSync.mockImplementation((filePath: unknown) => {
+        if (typeof filePath === 'string' && filePath.includes('custom-script.sh')) {
           return mockScript;
         }
         return '{"scripts": [], "maxIterations": 5, "continueOnError": false}';
