@@ -49,8 +49,21 @@ export class TerminalMode extends EventEmitter {
         // Initialize Claude session
         this.session = new ClaudeSession(this.config, this.logger);
         this.logger.info('Starting Claude session...');
-        await this.session.start(this.config.get('session', 'skipPermissions'));
-        this.logger.info('Claude session ready');
+        
+        try {
+            // Add timeout wrapper for the entire session start process
+            await Promise.race([
+                this.session.start(this.config.get('session', 'skipPermissions')),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Session start timeout')), 10000)
+                )
+            ]);
+            this.logger.info('Claude session ready');
+        } catch (error) {
+            this.logger.warn(`Claude session initialization failed: ${error}`);
+            this.logger.warn('Continuing without Claude session - you can try reconnecting later');
+            this.session = null;
+        }
 
         // Setup readline interface
         this.setupReadline();
@@ -173,6 +186,13 @@ export class TerminalMode extends EventEmitter {
                 this.showHelp();
                 break;
             
+            case 'test':
+                console.log(chalk.green('✅ Terminal mode is working!'));
+                console.log(`├─ Readline: ${this.rl ? 'Active' : 'Inactive'}`);
+                console.log(`├─ Session: ${this.session ? 'Connected' : 'Disconnected'}`);
+                console.log(`└─ Running: ${this.isRunning ? 'Yes' : 'No'}`);
+                break;
+            
             default:
                 console.log(chalk.red(`❌ Unknown command: /${cmd}`));
                 console.log(chalk.gray('Type /help for available commands'));
@@ -279,6 +299,7 @@ export class TerminalMode extends EventEmitter {
         console.log(chalk.gray('├─ /start     - Start processing'));
         console.log(chalk.gray('├─ /stop      - Stop processing'));
         console.log(chalk.gray('├─ /clear     - Clear queue'));
+        console.log(chalk.gray('├─ /test      - Test terminal functionality'));
         console.log(chalk.gray('└─ /help      - Show this help\\n'));
     }
 
@@ -349,7 +370,9 @@ export class TerminalMode extends EventEmitter {
         
         try {
             if (!this.session) {
-                throw new Error('Claude session not initialized');
+                console.log(chalk.red('❌ Claude session not available'));
+                console.log(chalk.yellow('💡 Try restarting AutoClaude or check Claude Code CLI installation'));
+                return;
             }
 
             // Send message to Claude
@@ -447,7 +470,11 @@ Please combine these results into a coherent, complete response to the original 
         }
 
         if (this.session) {
-            await this.session.stop();
+            try {
+                await this.session.stop();
+            } catch (error) {
+                this.logger.warn(`Error stopping session: ${error}`);
+            }
         }
 
         console.log(chalk.gray('\\n👋 AutoClaude terminal mode stopped'));
