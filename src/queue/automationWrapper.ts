@@ -76,3 +76,10 @@ export function getAutomationStatus() {
         statistics: automationManager.getStatistics()
     };
 }
+
+/**
+ * Get automation manager instance
+ */
+export function getAutomationManager(): AutomationManager | null {
+    return automationManager;
+}

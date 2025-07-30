@@ -172,10 +172,76 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Command for executing high-level automation commands
+    const executeAutomationCommand = vscode.commands.registerCommand('autoclaude.executeCommand', async () => {
+        const command = await vscode.window.showInputBox({
+            prompt: 'Enter a high-level command (e.g., "make project production ready", "fix all tests", "create website")',
+            placeHolder: 'make project production ready',
+            ignoreFocusOut: true
+        });
+
+        if (!command) {
+            return;
+        }
+
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            vscode.window.showErrorMessage('No workspace folder open');
+            return;
+        }
+
+        // Get the automation manager
+        const automationWrapper = await import('./queue/automationWrapper');
+        const automation = automationWrapper.getAutomationManager();
+        
+        if (!automation || !(automation as any).commandOrchestrator) {
+            vscode.window.showErrorMessage('Automation system not initialized. Please wait a moment and try again.');
+            return;
+        }
+
+        // Show progress
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Executing: ${command}`,
+            cancellable: false
+        }, async (progress) => {
+            try {
+                progress.report({ increment: 0, message: 'Analyzing command...' });
+                
+                const result = await (automation as any).commandOrchestrator.executeCommand(command);
+                
+                if (result.success) {
+                    vscode.window.showInformationMessage(`✅ Command completed successfully!`);
+                    
+                    // Show execution summary
+                    const summary = `# Command Execution Summary\n\n` +
+                        `**Command:** ${command}\n` +
+                        `**Status:** ${result.success ? 'Success' : 'Failed'}\n` +
+                        `**Steps Executed:** ${result.executedSteps.length}\n\n` +
+                        `## Executed Steps:\n` +
+                        result.executedSteps.map((step: any, i: number) => 
+                            `${i + 1}. ${step.description} - ${step.status}`
+                        ).join('\n') +
+                        `\n\n## Output:\n${result.output || 'No output'}`;
+                    
+                    const doc = await vscode.workspace.openTextDocument({
+                        content: summary,
+                        language: 'markdown'
+                    });
+                    await vscode.window.showTextDocument(doc);
+                } else {
+                    vscode.window.showErrorMessage(`❌ Command failed: ${result.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to execute command: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        });
+    });
+
     context.subscriptions.push(
         startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
         quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
-        updateContextCommand, showContextCommand, showTasksCommand,
+        updateContextCommand, showContextCommand, showTasksCommand, executeAutomationCommand,
         configWatcher
     );
     

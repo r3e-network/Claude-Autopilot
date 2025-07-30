@@ -12,7 +12,7 @@ export class AutomationManager {
     private errorRecovery: ErrorRecoverySystem;
     private selfHealing: SelfHealingSystem;
     private scriptRunner: ScriptRunner;
-    private commandOrchestrator: CommandOrchestrator | null = null;
+    private _commandOrchestrator: CommandOrchestrator | null = null;
     private isEnabled: boolean = true;
     
     constructor(private workspacePath: string) {
@@ -35,7 +35,7 @@ export class AutomationManager {
             const contextProvider = (global as any).contextProvider;
             if (contextProvider) {
                 const taskManager = contextProvider.taskManager;
-                this.commandOrchestrator = new CommandOrchestrator(
+                this._commandOrchestrator = new CommandOrchestrator(
                     contextProvider,
                     taskManager,
                     this.workspacePath
@@ -193,7 +193,7 @@ ${prompt}`;
      * Execute high-level command with intelligent task decomposition
      */
     async executeCommand(command: string): Promise<string> {
-        if (!this.commandOrchestrator) {
+        if (!this._commandOrchestrator) {
             return 'Command orchestrator not initialized. Please ensure the context system is running.';
         }
         
@@ -201,7 +201,7 @@ ${prompt}`;
             debugLog(`Executing high-level command: ${command}`);
             
             // Execute command through orchestrator
-            const result = await this.commandOrchestrator.executeCommand(command);
+            const result = await this._commandOrchestrator.executeCommand(command);
             
             if (result.success) {
                 // Add follow-up message to queue if needed
@@ -224,22 +224,22 @@ ${prompt}`;
      * Get command suggestions based on current context
      */
     async getCommandSuggestions(): Promise<string[]> {
-        if (!this.commandOrchestrator) {
+        if (!this._commandOrchestrator) {
             return [];
         }
         
-        return await this.commandOrchestrator.getCommandSuggestions();
+        return await this._commandOrchestrator.getCommandSuggestions();
     }
     
     /**
      * Get active workflow status
      */
     getActiveWorkflows() {
-        if (!this.commandOrchestrator) {
+        if (!this._commandOrchestrator) {
             return [];
         }
         
-        return this.commandOrchestrator.getActiveWorkflows();
+        return this._commandOrchestrator.getActiveWorkflows();
     }
     
     /**
@@ -250,7 +250,14 @@ ${prompt}`;
             errorRecoveryStats: this.errorRecovery.getStatistics(),
             contextFilesTracked: this.contextManager['recentFiles'].length,
             scriptsAvailable: this.scriptRunner['config'].scripts.length,
-            activeWorkflows: this.commandOrchestrator ? this.commandOrchestrator.getActiveWorkflows().length : 0
+            activeWorkflows: this._commandOrchestrator ? this._commandOrchestrator.getActiveWorkflows().length : 0
         };
+    }
+    
+    /**
+     * Get the command orchestrator instance
+     */
+    get commandOrchestrator(): CommandOrchestrator | null {
+        return this._commandOrchestrator;
     }
 }

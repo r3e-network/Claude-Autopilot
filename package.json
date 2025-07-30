@@ -72,6 +72,12 @@
         "icon": "$(list-tree)"
       },
       {
+        "command": "autoclaude.executeCommand",
+        "title": "🎯 Execute Automation Command",
+        "category": "AutoClaude",
+        "icon": "$(terminal)"
+      },
+      {
         "command": "autoclaude.updateContext",
         "title": "🔄 Update Project Context",
         "category": "AutoClaude",
@@ -126,6 +132,10 @@
         },
         {
           "command": "autoclaude.workflowWizard",
+          "when": "true"
+        },
+        {
+          "command": "autoclaude.executeCommand",
           "when": "true"
         },
         {
