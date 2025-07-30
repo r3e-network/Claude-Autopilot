@@ -21,6 +21,16 @@ export interface ConfigSchema {
         staggerDelay: number;
         contextThreshold: number;
         autoRestart: boolean;
+        autoGenerate: boolean;
+        builtInAgents: {
+            enabled: boolean;
+            types: string[];
+        };
+        contextGeneration: {
+            enabled: boolean;
+            minComplexity: number;
+            maxGeneratedAgents: number;
+        };
     };
     ui: {
         theme: 'dark' | 'light';
@@ -52,10 +62,20 @@ const defaultConfig: ConfigSchema = {
     parallelAgents: {
         enabled: true,
         maxAgents: 50,
-        defaultAgents: 3,
+        defaultAgents: 5,
         staggerDelay: 10,
         contextThreshold: 20,
-        autoRestart: true
+        autoRestart: true,
+        autoGenerate: true,
+        builtInAgents: {
+            enabled: true,
+            types: ['code-analyzer', 'documentation-writer', 'test-generator', 'refactor-specialist', 'security-auditor']
+        },
+        contextGeneration: {
+            enabled: true,
+            minComplexity: 3,
+            maxGeneratedAgents: 10
+        }
     },
     ui: {
         theme: 'dark',
@@ -114,7 +134,23 @@ export class Config {
                             defaultAgents: { type: 'number', minimum: 1, maximum: 50 },
                             staggerDelay: { type: 'number', minimum: 1, maximum: 60 },
                             contextThreshold: { type: 'number', minimum: 10, maximum: 50 },
-                            autoRestart: { type: 'boolean' }
+                            autoRestart: { type: 'boolean' },
+                            autoGenerate: { type: 'boolean' },
+                            builtInAgents: {
+                                type: 'object',
+                                properties: {
+                                    enabled: { type: 'boolean' },
+                                    types: { type: 'array', items: { type: 'string' } }
+                                }
+                            },
+                            contextGeneration: {
+                                type: 'object',
+                                properties: {
+                                    enabled: { type: 'boolean' },
+                                    minComplexity: { type: 'number', minimum: 1, maximum: 10 },
+                                    maxGeneratedAgents: { type: 'number', minimum: 1, maximum: 20 }
+                                }
+                            }
                         }
                     },
                     ui: {

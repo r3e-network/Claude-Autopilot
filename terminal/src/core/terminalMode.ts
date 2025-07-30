@@ -26,7 +26,8 @@ export class TerminalMode extends EventEmitter {
     
     // Auto-completion state
     private availableCommands: string[] = [
-        'status', 'agents', 'queue', 'config', 'start', 'stop', 'clear', 'test', 'log', 'help'
+        'status', 'agents', 'queue', 'config', 'start', 'stop', 'clear', 'test', 'log', 
+        'enable-agents', 'disable-agents', 'generate-agents', 'list-agents', 'help'
     ];
     private commandDescriptions: Record<string, string> = {
         'status': 'Show system status and processing state',
@@ -38,6 +39,10 @@ export class TerminalMode extends EventEmitter {
         'clear': 'Clear message queue',
         'test': 'Test terminal functionality',
         'log': 'Show real-time Claude output (press Enter to stop)',
+        'enable-agents': 'Enable parallel agents system',
+        'disable-agents': 'Disable parallel agents system',
+        'generate-agents': 'Generate context-specific agents for current task',
+        'list-agents': 'List all active and available agents',
         'help': 'Display available commands'
     };
     
@@ -49,6 +54,38 @@ export class TerminalMode extends EventEmitter {
     // Logging state
     private isLogging: boolean = false;
     private logOutputListener: ((output: string) => void) | null = null;
+    
+    // Built-in agent definitions
+    private builtInAgentTypes: Record<string, { description: string; specialization: string; promptTemplate: string }> = {
+        'code-analyzer': {
+            description: 'Analyzes code structure, patterns, and quality',
+            specialization: 'Code analysis, architecture review, performance optimization',
+            promptTemplate: 'You are a specialized code analyzer. Focus on code structure, patterns, performance, and quality. Provide detailed technical analysis and recommendations.'
+        },
+        'documentation-writer': {
+            description: 'Creates comprehensive documentation and comments',
+            specialization: 'Technical writing, API docs, code comments, README files',
+            promptTemplate: 'You are a specialized documentation writer. Create clear, comprehensive documentation, comments, and explanations. Focus on clarity and completeness.'
+        },
+        'test-generator': {
+            description: 'Generates comprehensive test suites and test cases',
+            specialization: 'Unit tests, integration tests, test automation, edge cases',
+            promptTemplate: 'You are a specialized test generator. Create comprehensive test suites with edge cases, mocks, and proper test structure. Follow testing best practices.'
+        },
+        'refactor-specialist': {
+            description: 'Optimizes and refactors code for better maintainability',
+            specialization: 'Code refactoring, design patterns, clean code principles',
+            promptTemplate: 'You are a specialized refactoring expert. Improve code structure, apply design patterns, and enhance maintainability while preserving functionality.'
+        },
+        'security-auditor': {
+            description: 'Identifies security vulnerabilities and suggests fixes',
+            specialization: 'Security analysis, vulnerability assessment, secure coding',
+            promptTemplate: 'You are a specialized security auditor. Identify security vulnerabilities, analyze attack vectors, and provide secure coding recommendations.'
+        }
+    };
+    
+    // Dynamic agent generation state
+    private generatedAgents: Array<{ id: string; type: string; context: string; active: boolean }> = [];
 
     constructor(config: Config, logger: Logger) {
         super();
@@ -66,6 +103,17 @@ export class TerminalMode extends EventEmitter {
             try {
                 await this.agentManager.initialize();
                 this.logger.info(`Parallel agents initialized with ${this.config.get('parallelAgents', 'defaultAgents')} agents`);
+                
+                // Auto-start built-in agents if enabled
+                if (this.config.get('parallelAgents').builtInAgents.enabled) {
+                    await this.startBuiltInAgents();
+                }
+                
+                // Start default number of agents
+                const defaultAgents = this.config.get('parallelAgents', 'defaultAgents');
+                await (this.agentManager as any).startAgents(defaultAgents);
+                this.logger.info(`Started ${defaultAgents} parallel agents`);
+                
             } catch (error) {
                 this.logger.warn('Parallel agents unavailable, continuing in single-agent mode');
                 this.config.set('parallelAgents', 'enabled', false);
@@ -412,6 +460,22 @@ export class TerminalMode extends EventEmitter {
                 await this.toggleLogging();
                 break;
             
+            case 'enable-agents':
+                await this.enableParallelAgents();
+                break;
+            
+            case 'disable-agents':
+                await this.disableParallelAgents();
+                break;
+            
+            case 'generate-agents':
+                await this.generateContextAgents(args.join(' '));
+                break;
+            
+            case 'list-agents':
+                await this.listAllAgents();
+                break;
+            
             default:
                 console.log(chalk.red(`❌ Unknown command: /${cmd}`));
                 console.log(chalk.gray('Type /help for available commands'));
@@ -602,6 +666,225 @@ export class TerminalMode extends EventEmitter {
         this.rl.removeListener('line', originalLineHandler as (...args: any[]) => void);
         this.rl.on('line', logModeLineHandler);
     }
+    
+    private async enableParallelAgents(): Promise<void> {
+        if (this.config.get('parallelAgents', 'enabled')) {
+            console.log(chalk.yellow('⚠️  Parallel agents are already enabled'));
+            return;
+        }
+        
+        this.config.set('parallelAgents', 'enabled', true);
+        console.log(chalk.green('✅ Parallel agents enabled'));
+        
+        // Initialize agent manager if not already done
+        try {
+            if (!(this.agentManager as any).isRunning) {
+                await this.agentManager.initialize();
+                console.log(chalk.cyan('🤖 Agent manager initialized'));
+            }
+            
+            // Start built-in agents if enabled
+            if (this.config.get('parallelAgents').builtInAgents.enabled) {
+                await this.startBuiltInAgents();
+            }
+            
+        } catch (error) {
+            console.log(chalk.red(`❌ Error initializing agents: ${error}`));
+        }
+    }
+    
+    private async disableParallelAgents(): Promise<void> {
+        if (!this.config.get('parallelAgents', 'enabled')) {
+            console.log(chalk.yellow('⚠️  Parallel agents are already disabled'));
+            return;
+        }
+        
+        this.config.set('parallelAgents', 'enabled', false);
+        console.log(chalk.red('🔴 Parallel agents disabled'));
+        
+        // Stop all agents
+        try {
+            await (this.agentManager as any).stopAllAgents();
+            this.generatedAgents = [];
+            console.log(chalk.gray('All agents stopped'));
+        } catch (error) {
+            console.log(chalk.red(`❌ Error stopping agents: ${error}`));
+        }
+    }
+    
+    private async startBuiltInAgents(): Promise<void> {
+        const enabledTypes = this.config.get('parallelAgents').builtInAgents.types;
+        console.log(chalk.cyan(`🚀 Starting ${enabledTypes.length} built-in agents...`));
+        
+        for (const agentType of enabledTypes) {
+            if (this.builtInAgentTypes[agentType]) {
+                const agent = this.builtInAgentTypes[agentType];
+                console.log(chalk.blue(`  ▶ ${agentType}: ${agent.description}`));
+                
+                // Add to generated agents list for tracking
+                this.generatedAgents.push({
+                    id: `builtin-${agentType}`,
+                    type: agentType,
+                    context: agent.specialization,
+                    active: true
+                });
+            }
+        }
+        
+        console.log(chalk.green('✅ Built-in agents started'));
+    }
+    
+    private async generateContextAgents(context: string): Promise<void> {
+        if (!this.config.get('parallelAgents', 'enabled')) {
+            console.log(chalk.red('❌ Parallel agents are disabled. Use /enable-agents first'));
+            return;
+        }
+        
+        if (!this.config.get('parallelAgents').contextGeneration.enabled) {
+            console.log(chalk.yellow('⚠️  Context-based agent generation is disabled'));
+            return;
+        }
+        
+        if (!context.trim()) {
+            console.log(chalk.yellow('💡 Usage: /generate-agents <task description>'));
+            console.log(chalk.gray('Example: /generate-agents build a React component with TypeScript'));
+            return;
+        }
+        
+        console.log(chalk.cyan('🔍 Analyzing context for agent generation...'));
+        
+        try {
+            const generatedTypes = await this.analyzeContextAndGenerateAgents(context);
+            
+            if (generatedTypes.length === 0) {
+                console.log(chalk.yellow('⚠️  No additional agents needed for this context'));
+                return;
+            }
+            
+            console.log(chalk.green(`✨ Generated ${generatedTypes.length} context-specific agents:`));
+            
+            generatedTypes.forEach((agent, index) => {
+                console.log(chalk.blue(`  ${index + 1}. ${agent.type}: ${agent.description}`));
+                this.generatedAgents.push({
+                    id: `generated-${Date.now()}-${index}`,
+                    type: agent.type,
+                    context: agent.context,
+                    active: true
+                });
+            });
+            
+        } catch (error) {
+            console.log(chalk.red(`❌ Error generating agents: ${error}`));
+        }
+    }
+    
+    private async analyzeContextAndGenerateAgents(context: string): Promise<Array<{ type: string; description: string; context: string }>> {
+        // Analyze context to determine what types of agents would be helpful
+        const contextLower = context.toLowerCase();
+        const generatedAgents: Array<{ type: string; description: string; context: string }> = [];
+        
+        // Development-related context
+        if (contextLower.includes('react') || contextLower.includes('component')) {
+            generatedAgents.push({
+                type: 'react-specialist',
+                description: 'React component development and best practices',
+                context: 'React development, hooks, state management, performance'
+            });
+        }
+        
+        if (contextLower.includes('typescript') || contextLower.includes('ts')) {
+            generatedAgents.push({
+                type: 'typescript-expert',
+                description: 'TypeScript type system and advanced patterns',
+                context: 'TypeScript types, generics, advanced patterns, type safety'
+            });
+        }
+        
+        if (contextLower.includes('api') || contextLower.includes('backend') || contextLower.includes('server')) {
+            generatedAgents.push({
+                type: 'api-architect',
+                description: 'API design and backend architecture',
+                context: 'REST APIs, GraphQL, microservices, backend patterns'
+            });
+        }
+        
+        if (contextLower.includes('database') || contextLower.includes('sql') || contextLower.includes('db')) {
+            generatedAgents.push({
+                type: 'database-optimizer',
+                description: 'Database design and query optimization',
+                context: 'Database schema, SQL optimization, indexing, performance'
+            });
+        }
+        
+        if (contextLower.includes('deploy') || contextLower.includes('docker') || contextLower.includes('cloud')) {
+            generatedAgents.push({
+                type: 'devops-engineer',
+                description: 'Deployment and infrastructure automation',
+                context: 'Docker, CI/CD, cloud deployment, infrastructure as code'
+            });
+        }
+        
+        if (contextLower.includes('performance') || contextLower.includes('optimization')) {
+            generatedAgents.push({
+                type: 'performance-optimizer',
+                description: 'Application performance analysis and optimization',
+                context: 'Performance profiling, optimization strategies, bottleneck analysis'
+            });
+        }
+        
+        // Limit the number of generated agents
+        const maxAgents = this.config.get('parallelAgents').contextGeneration.maxGeneratedAgents;
+        return generatedAgents.slice(0, maxAgents);
+    }
+    
+    private async listAllAgents(): Promise<void> {
+        console.log(chalk.cyan('\\n🤖 Agent Status Report'));
+        
+        // Show system status
+        const agentsEnabled = this.config.get('parallelAgents', 'enabled');
+        console.log(`├─ System Status: ${agentsEnabled ? chalk.green('Enabled') : chalk.red('Disabled')}`);
+        console.log(`├─ Max Agents: ${chalk.yellow(this.config.get('parallelAgents', 'maxAgents'))}`);
+        console.log(`└─ Active Agents: ${chalk.yellow(this.generatedAgents.filter(a => a.active).length)}\\n`);
+        
+        if (!agentsEnabled) {
+            console.log(chalk.gray('Use /enable-agents to start the parallel agents system\\n'));
+            return;
+        }
+        
+        // Show built-in agents
+        const builtInEnabled = this.config.get('parallelAgents').builtInAgents.enabled;
+        console.log(chalk.cyan('📋 Built-in Agents:'));
+        
+        if (builtInEnabled) {
+            const enabledTypes = this.config.get('parallelAgents').builtInAgents.types;
+            enabledTypes.forEach((type: string) => {
+                const agent = this.builtInAgentTypes[type];
+                if (agent) {
+                    const isActive = this.generatedAgents.some(a => a.type === type && a.active);
+                    const status = isActive ? chalk.green('●') : chalk.gray('○');
+                    console.log(`  ${status} ${chalk.blue(type)}: ${chalk.gray(agent.description)}`);
+                }
+            });
+        } else {
+            console.log(chalk.gray('  Built-in agents are disabled'));
+        }
+        
+        // Show generated agents
+        const contextAgents = this.generatedAgents.filter(a => !a.id.startsWith('builtin-'));
+        if (contextAgents.length > 0) {
+            console.log(chalk.cyan('\\n✨ Context-Generated Agents:'));
+            contextAgents.forEach(agent => {
+                const status = agent.active ? chalk.green('●') : chalk.gray('○');
+                console.log(`  ${status} ${chalk.blue(agent.type)}: ${chalk.gray(agent.context)}`);
+            });
+        }
+        
+        // Show configuration
+        console.log(chalk.cyan('\\n⚙️  Configuration:'));
+        console.log(`├─ Auto-generation: ${this.config.get('parallelAgents').contextGeneration.enabled ? chalk.green('On') : chalk.red('Off')}`);
+        console.log(`├─ Min complexity: ${chalk.yellow(this.config.get('parallelAgents').contextGeneration.minComplexity)}`);
+        console.log(`└─ Max generated: ${chalk.yellow(this.config.get('parallelAgents').contextGeneration.maxGeneratedAgents)}\\n`);
+    }
 
     private showHelp(): void {
         console.log(chalk.cyan('\\n📖 Available Commands'));
@@ -614,6 +897,10 @@ export class TerminalMode extends EventEmitter {
         console.log(chalk.gray('├─ /clear     - Clear queue'));
         console.log(chalk.gray('├─ /test      - Test terminal functionality'));
         console.log(chalk.gray('├─ /log       - Show real-time Claude output (press Enter to stop)'));
+        console.log(chalk.gray('├─ /enable-agents    - Enable parallel agents system'));
+        console.log(chalk.gray('├─ /disable-agents   - Disable parallel agents system'));
+        console.log(chalk.gray('├─ /generate-agents  - Generate context-specific agents'));
+        console.log(chalk.gray('├─ /list-agents      - List all active and available agents'));
         console.log(chalk.gray('└─ /help      - Show this help\\n'));
     }
 
@@ -664,19 +951,32 @@ export class TerminalMode extends EventEmitter {
     }
 
     private async shouldUseSubagents(text: string): Promise<boolean> {
-        // Simple heuristics to determine if task needs subagents
+        if (!this.config.get('parallelAgents', 'enabled')) {
+            return false;
+        }
+        
+        // Enhanced heuristics to determine if task needs subagents
         const complexTaskIndicators = [
             'implement', 'create', 'build', 'develop', 'design',
             'refactor', 'optimize', 'test', 'deploy', 'analyze',
-            'multiple', 'complex', 'system', 'architecture'
+            'multiple', 'complex', 'system', 'architecture',
+            'full-stack', 'database', 'api', 'frontend', 'backend'
         ];
 
         const lowerText = text.toLowerCase();
         const complexity = complexTaskIndicators.filter(indicator => 
             lowerText.includes(indicator)
         ).length;
-
-        return complexity >= 2 || text.length > 200;
+        
+        const minComplexity = this.config.get('parallelAgents').contextGeneration.minComplexity;
+        const isComplex = complexity >= minComplexity || text.length > 200;
+        
+        // Auto-generate agents if enabled and task is complex
+        if (isComplex && this.config.get('parallelAgents').autoGenerate) {
+            await this.generateContextAgents(text);
+        }
+        
+        return isComplex;
     }
 
     private async processWithClaude(text: string): Promise<void> {
