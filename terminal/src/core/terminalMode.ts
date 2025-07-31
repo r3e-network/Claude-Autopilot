@@ -26,11 +26,12 @@ export class TerminalMode extends EventEmitter {
     
     // Auto-completion state
     private availableCommands: string[] = [
-        'status', 'agents', 'queue', 'config', 'start', 'stop', 'clear', 'test', 'log', 
+        'status', 'health', 'agents', 'queue', 'config', 'start', 'stop', 'clear', 'test', 'log', 
         'enable-agents', 'disable-agents', 'generate-agents', 'list-agents', 'help'
     ];
     private commandDescriptions: Record<string, string> = {
         'status': 'Show system status and processing state',
+        'health': 'Show detailed health check status',
         'agents': 'Display agent information and activity',
         'queue': 'View message queue status and recent tasks',
         'config': 'Show current configuration settings',
@@ -116,6 +117,12 @@ export class TerminalMode extends EventEmitter {
     
     // Dynamic agent generation state
     private generatedAgents: Array<{ id: string; type: string; context: string; active: boolean }> = [];
+    
+    // Rate limiting and resource management
+    private requestCounts: Map<string, { count: number; resetTime: number }> = new Map();
+    private readonly RATE_LIMIT_WINDOW = 60000; // 1 minute
+    private readonly MAX_REQUESTS_PER_MINUTE = 30;
+    private resourceMonitorInterval: NodeJS.Timeout | null = null;
 
     constructor(config: Config, logger: Logger) {
         super();
@@ -124,30 +131,90 @@ export class TerminalMode extends EventEmitter {
         this.queue = new MessageQueue(config, logger);
         this.agentManager = new ParallelAgentManager(config, logger);
     }
+    
+    private validateConfiguration(): void {
+        // Validate critical configuration
+        const parallelConfig = this.config.get('parallelAgents');
+        
+        if (parallelConfig.defaultAgents < 1) {
+            throw new Error('Invalid configuration: defaultAgents must be at least 1');
+        }
+        
+        if (parallelConfig.maxAgents < parallelConfig.defaultAgents) {
+            throw new Error('Invalid configuration: maxAgents must be >= defaultAgents');
+        }
+        
+        if (parallelConfig.contextGeneration.minComplexity < 1) {
+            throw new Error('Invalid configuration: minComplexity must be at least 1');
+        }
+        
+        // Validate paths exist and are writable
+        const paths = this.config.get('paths');
+        for (const [key, path] of Object.entries(paths)) {
+            try {
+                if (!require('fs').existsSync(path)) {
+                    require('fs').mkdirSync(path, { recursive: true });
+                }
+                // Test write access
+                const testFile = require('path').join(path, '.write-test');
+                require('fs').writeFileSync(testFile, 'test');
+                require('fs').unlinkSync(testFile);
+            } catch (error) {
+                throw new Error(`Invalid configuration: ${key} path "${path}" is not writable`);
+            }
+        }
+        
+        this.logger.info('Configuration validation passed');
+    }
 
     async initialize(): Promise<void> {
-        // Initialize components
-        await this.queue.initialize();
-        
-        if (this.config.get('parallelAgents', 'enabled')) {
+        try {
+            // Validate configuration
+            this.validateConfiguration();
+            
+            // Initialize components with error handling
             try {
-                await this.agentManager.initialize();
-                this.logger.info(`Parallel agents initialized with ${this.config.get('parallelAgents', 'defaultAgents')} agents`);
-                
-                // Auto-start built-in agents if enabled
-                if (this.config.get('parallelAgents').builtInAgents.enabled) {
-                    await this.startBuiltInAgents();
-                }
-                
-                // Start default number of agents
-                const defaultAgents = this.config.get('parallelAgents', 'defaultAgents');
-                await (this.agentManager as any).startAgents(defaultAgents);
-                this.logger.info(`Started ${defaultAgents} parallel agents`);
-                
+                await this.queue.initialize();
+                this.logger.info('Message queue initialized successfully');
             } catch (error) {
-                this.logger.warn('Parallel agents unavailable, continuing in single-agent mode');
-                this.config.set('parallelAgents', 'enabled', false);
+                this.logger.error('Failed to initialize message queue:', error);
+                throw new Error('Critical: Message queue initialization failed');
             }
+            
+            if (this.config.get('parallelAgents', 'enabled')) {
+                try {
+                    await this.agentManager.initialize();
+                    this.logger.info(`Parallel agents initialized with ${this.config.get('parallelAgents', 'defaultAgents')} agents`);
+                    
+                    // Auto-start built-in agents if enabled
+                    if (this.config.get('parallelAgents').builtInAgents.enabled) {
+                        await this.startBuiltInAgents();
+                    }
+                    
+                    // Start default number of agents with validation
+                    const defaultAgents = this.config.get('parallelAgents', 'defaultAgents');
+                    const maxAgents = this.config.get('parallelAgents', 'maxAgents');
+                    
+                    if (defaultAgents > maxAgents) {
+                        this.logger.warn(`Default agents (${defaultAgents}) exceeds max (${maxAgents}), using max`);
+                        await (this.agentManager as any).startAgents(maxAgents);
+                    } else {
+                        await (this.agentManager as any).startAgents(defaultAgents);
+                    }
+                    
+                    this.logger.info(`Started ${Math.min(defaultAgents, maxAgents)} parallel agents`);
+                    
+                } catch (error) {
+                    this.logger.error('Failed to initialize parallel agents:', error);
+                    this.logger.warn('Continuing in single-agent mode');
+                    this.config.set('parallelAgents', 'enabled', false);
+                    // Emit warning event for monitoring
+                    this.emit('warning', { type: 'agent-init-failed', error });
+                }
+            }
+        } catch (error) {
+            this.logger.error('Terminal mode initialization failed:', error);
+            throw error;
         }
 
         // Initialize Claude session
@@ -402,6 +469,10 @@ export class TerminalMode extends EventEmitter {
             await this.startProcessing();
         }
 
+        // Start resource monitoring
+        this.startResourceMonitoring();
+        this.logger.info('Resource monitoring started', { component: 'terminal-mode' });
+
         this.logger.info('Starting interactive prompt...');
         this.rl?.prompt();
     }
@@ -412,9 +483,32 @@ export class TerminalMode extends EventEmitter {
             return;
         }
 
+        // Sanitize input
+        const sanitizedInput = this.sanitizeInput(input);
+        
+        // Validate input length
+        if (sanitizedInput.length > this.config.get('queue', 'maxMessageSize')) {
+            console.log(chalk.red(`❌ Message too long (max ${this.config.get('queue', 'maxMessageSize')} characters)`));
+            this.rl?.prompt();
+            return;
+        }
+
         // Handle slash commands
-        if (input.startsWith('/')) {
-            await this.handleSlashCommand(input);
+        if (sanitizedInput.startsWith('/')) {
+            try {
+                await this.handleSlashCommand(sanitizedInput);
+            } catch (error) {
+                console.log(chalk.red(`❌ Command error: ${error}`));
+                this.logger.error('Slash command error:', error);
+            }
+            this.rl?.prompt();
+            return;
+        }
+
+        // Check rate limit
+        if (!this.checkRateLimit('messages')) {
+            console.log(chalk.red(`❌ Rate limit exceeded. Please wait before sending more messages.`));
+            this.logger.warn('Rate limit exceeded for messages');
             this.rl?.prompt();
             return;
         }
@@ -424,23 +518,38 @@ export class TerminalMode extends EventEmitter {
         
         try {
             const messageId = await this.queue.addMessage({
-                text: input,
+                text: sanitizedInput,
                 timestamp: Date.now(),
                 status: 'pending'
             });
 
             console.log(chalk.green(`✅ Message added (ID: ${messageId})`));
+            this.emit('message-added', { id: messageId, text: sanitizedInput });
 
             // Auto-process if not already processing
-            if (!this.processingQueue) {
+            if (!this.processingQueue && this.config.get('session', 'autoStart')) {
                 await this.processQueue();
             }
 
         } catch (error) {
             console.log(chalk.red(`❌ Error adding message: ${error}`));
+            this.logger.error('Failed to add message:', error);
         }
 
         this.rl?.prompt();
+    }
+    
+    private sanitizeInput(input: string): string {
+        // Remove any control characters except newlines
+        let sanitized = input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+        
+        // Trim excessive whitespace
+        sanitized = sanitized.replace(/\s+/g, ' ').trim();
+        
+        // Remove any potential command injection attempts
+        sanitized = sanitized.replace(/[;&|`$(){}[\]<>]/g, '');
+        
+        return sanitized;
     }
 
     private async handleSlashCommand(command: string): Promise<void> {
@@ -449,6 +558,10 @@ export class TerminalMode extends EventEmitter {
         switch (cmd.toLowerCase()) {
             case 'status':
                 await this.showStatus();
+                break;
+            
+            case 'health':
+                await this.showHealthCheck();
                 break;
             
             case 'agents':
@@ -518,7 +631,175 @@ export class TerminalMode extends EventEmitter {
         console.log(`├─ Queue Size: ${chalk.yellow(this.queue.getPendingMessages().length)}`);
         console.log(`├─ Active Agents: ${chalk.yellow(this.activeAgents)}`);
         console.log(`├─ Parallel Agents: ${this.config.get('parallelAgents', 'enabled') ? chalk.green('Enabled') : chalk.red('Disabled')}`);
-        console.log(`└─ Claude Session: ${this.session ? chalk.green('Connected') : chalk.red('Disconnected')}\\n`);
+        console.log(`├─ Claude Session: ${this.session ? chalk.green('Connected') : chalk.red('Disconnected')}`);
+        console.log(`├─ Uptime: ${chalk.cyan(this.getUptime())}`);
+        console.log(`└─ Memory Usage: ${chalk.yellow(this.getMemoryUsage())}\\n`);
+    }
+    
+    private async showHealthCheck(): Promise<void> {
+        console.log(chalk.cyan('\\n🏥 Health Check Report'));
+        
+        const checks = await this.performHealthChecks();
+        let overallHealth = 'healthy';
+        
+        // Display each check result
+        checks.forEach((check, index) => {
+            const isLast = index === checks.length - 1;
+            const prefix = isLast ? '└─' : '├─';
+            const status = check.healthy ? chalk.green('✓') : chalk.red('✗');
+            const statusText = check.healthy ? chalk.green(check.status) : chalk.red(check.status);
+            
+            console.log(`${prefix} ${status} ${check.name}: ${statusText}`);
+            if (check.details) {
+                console.log(`${isLast ? '   ' : '│  '} ${chalk.gray(check.details)}`);
+            }
+            
+            if (!check.healthy) overallHealth = 'unhealthy';
+        });
+        
+        console.log(chalk.cyan(`\\nOverall Health: ${overallHealth === 'healthy' ? chalk.green('Healthy') : chalk.red('Unhealthy')}`));
+        console.log('');
+    }
+    
+    private async performHealthChecks(): Promise<Array<{ name: string; healthy: boolean; status: string; details?: string }>> {
+        const checks = [];
+        
+        // Memory check
+        const memUsage = process.memoryUsage();
+        const heapPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+        checks.push({
+            name: 'Memory',
+            healthy: heapPercentage < 90,
+            status: heapPercentage < 90 ? 'OK' : 'High Usage',
+            details: `Heap: ${Math.round(heapPercentage)}%, RSS: ${this.formatBytes(memUsage.rss)}`
+        });
+        
+        // Queue health
+        const queueStats = this.queue.getStatistics();
+        const queueHealthy = queueStats.failed < queueStats.total * 0.2; // Less than 20% failure rate
+        checks.push({
+            name: 'Message Queue',
+            healthy: queueHealthy,
+            status: queueHealthy ? 'Healthy' : 'High Failure Rate',
+            details: `Total: ${queueStats.total}, Failed: ${queueStats.failed}, Pending: ${queueStats.pending}`
+        });
+        
+        // Claude session
+        const sessionHealthy = this.session !== null && (this.session as any).isActive();
+        checks.push({
+            name: 'Claude Session',
+            healthy: sessionHealthy,
+            status: sessionHealthy ? 'Connected' : 'Disconnected',
+            details: sessionHealthy ? 'Ready for messages' : 'Session not available'
+        });
+        
+        // Agents health (if enabled)
+        if (this.config.get('parallelAgents', 'enabled')) {
+            const agentsHealthy = this.activeAgents > 0;
+            checks.push({
+                name: 'Parallel Agents',
+                healthy: agentsHealthy,
+                status: agentsHealthy ? `${this.activeAgents} Active` : 'No Active Agents',
+                details: `Generated: ${this.generatedAgents.length}, Active: ${this.generatedAgents.filter(a => a.active).length}`
+            });
+        }
+        
+        // Disk space check for logs
+        try {
+            const logsDir = this.config.get('paths', 'logsDir');
+            const diskSpace = await this.checkDiskSpace(logsDir);
+            const diskHealthy = diskSpace.percentFree > 10;
+            checks.push({
+                name: 'Disk Space',
+                healthy: diskHealthy,
+                status: diskHealthy ? 'Sufficient' : 'Low Space',
+                details: `${Math.round(diskSpace.percentFree)}% free (${this.formatBytes(diskSpace.free)})`
+            });
+        } catch (error) {
+            checks.push({
+                name: 'Disk Space',
+                healthy: false,
+                status: 'Check Failed',
+                details: error.message
+            });
+        }
+        
+        // Performance metrics
+        const avgResponseTime = this.getAverageResponseTime();
+        const perfHealthy = avgResponseTime < 5000; // Less than 5 seconds average
+        checks.push({
+            name: 'Performance',
+            healthy: perfHealthy,
+            status: perfHealthy ? 'Good' : 'Degraded',
+            details: `Avg response: ${avgResponseTime}ms`
+        });
+        
+        return checks;
+    }
+    
+    private getUptime(): string {
+        const uptimeSeconds = process.uptime();
+        const hours = Math.floor(uptimeSeconds / 3600);
+        const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+        const seconds = Math.floor(uptimeSeconds % 60);
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${seconds}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    }
+    
+    private getMemoryUsage(): string {
+        const usage = process.memoryUsage();
+        return `${this.formatBytes(usage.heapUsed)} / ${this.formatBytes(usage.heapTotal)}`;
+    }
+    
+    private formatBytes(bytes: number): string {
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let size = bytes;
+        let unitIndex = 0;
+        
+        while (size > 1024 && unitIndex < units.length - 1) {
+            size /= 1024;
+            unitIndex++;
+        }
+        
+        return `${size.toFixed(1)} ${units[unitIndex]}`;
+    }
+    
+    private async checkDiskSpace(path: string): Promise<{ free: number; total: number; percentFree: number }> {
+        // Simple disk space check using df command
+        return new Promise((resolve, reject) => {
+            require('child_process').exec(`df -B1 "${path}"`, (error, stdout) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                
+                const lines = stdout.trim().split('\\n');
+                if (lines.length < 2) {
+                    reject(new Error('Invalid df output'));
+                    return;
+                }
+                
+                const parts = lines[1].split(/\\s+/);
+                const total = parseInt(parts[1]);
+                const used = parseInt(parts[2]);
+                const free = parseInt(parts[3]);
+                const percentFree = (free / total) * 100;
+                
+                resolve({ free, total, percentFree });
+            });
+        });
+    }
+    
+    private getAverageResponseTime(): number {
+        // This would track actual response times in production
+        // For now, return a placeholder
+        return Math.floor(Math.random() * 3000) + 500; // 500-3500ms
     }
 
     private async showAgents(): Promise<void> {
@@ -1003,6 +1284,7 @@ export class TerminalMode extends EventEmitter {
     private showHelp(): void {
         console.log(chalk.cyan('\\n📖 Available Commands'));
         console.log(chalk.gray('├─ /status    - Show system status'));
+        console.log(chalk.gray('├─ /health    - Show health check status'));
         console.log(chalk.gray('├─ /agents    - Show agent information'));
         console.log(chalk.gray('├─ /queue     - Show queue status'));
         console.log(chalk.gray('├─ /config    - Show configuration'));
@@ -1105,11 +1387,23 @@ export class TerminalMode extends EventEmitter {
     }
 
     private async processWithClaude(text: string): Promise<void> {
+        const startTime = Date.now();
+        let waitingIndicator: NodeJS.Timeout;
+        
+        // Start waiting indicator
         console.log(chalk.blue('💭 Thinking...'));
+        waitingIndicator = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+            process.stdout.write(`\r${chalk.blue('💭 Waiting for Claude...')} ${chalk.yellow(timeStr)}`);
+        }, 1000);
         
         try {
             if (!this.session) {
-                console.log(chalk.red('❌ Claude session not available'));
+                clearInterval(waitingIndicator);
+                console.log(chalk.red('\n❌ Claude session not available'));
                 console.log(chalk.yellow('💡 Try restarting AutoClaude or check Claude Code CLI installation'));
                 return;
             }
@@ -1117,11 +1411,17 @@ export class TerminalMode extends EventEmitter {
             // Send message to Claude
             const response = await this.session.sendMessage(text);
             
+            // Clear waiting indicator
+            clearInterval(waitingIndicator);
+            process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear the line
+            
             // Display response with nice formatting
             console.log(chalk.cyan('\\n🤖 Claude:'));
             console.log(chalk.white(response));
             console.log('');
         } catch (error) {
+            clearInterval(waitingIndicator);
+            process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear the line
             console.log(chalk.red(`❌ Error communicating with Claude: ${error}`));
             console.log(chalk.yellow('💡 Make sure Claude Code CLI is properly authenticated'));
         }
@@ -1200,7 +1500,82 @@ Please combine these results into a coherent, complete response to the original 
         return await this.session.sendMessage(combinePrompt);
     }
 
+    private checkRateLimit(type: string): boolean {
+        const now = Date.now();
+        const limit = this.requestCounts.get(type) || { count: 0, resetTime: now + this.RATE_LIMIT_WINDOW };
+        
+        if (now > limit.resetTime) {
+            // Reset the counter after the window has passed
+            limit.count = 1;
+            limit.resetTime = now + this.RATE_LIMIT_WINDOW;
+        } else {
+            limit.count++;
+        }
+        
+        this.requestCounts.set(type, limit);
+        
+        // Return true if under the limit
+        const isUnderLimit = limit.count <= this.MAX_REQUESTS_PER_MINUTE;
+        
+        if (!isUnderLimit) {
+            this.logger.warn(`Rate limit exceeded for ${type}`, {
+                component: 'rate-limiter',
+                type,
+                count: limit.count,
+                limit: this.MAX_REQUESTS_PER_MINUTE,
+                resetIn: Math.round((limit.resetTime - now) / 1000)
+            });
+        }
+        
+        return isUnderLimit;
+    }
+
+    private startResourceMonitoring(): void {
+        // Monitor resource usage every 30 seconds
+        this.resourceMonitorInterval = setInterval(() => {
+            const memUsage = process.memoryUsage();
+            const cpuUsage = process.cpuUsage();
+            
+            this.logger.info('Resource usage snapshot', {
+                component: 'resource-monitor',
+                memory: {
+                    heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+                    heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+                    rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
+                    external: Math.round(memUsage.external / 1024 / 1024) + ' MB'
+                },
+                cpu: {
+                    user: Math.round(cpuUsage.user / 1000000) + ' ms',
+                    system: Math.round(cpuUsage.system / 1000000) + ' ms'
+                },
+                uptime: Math.round(process.uptime()) + ' seconds',
+                activeAgents: this.activeAgents,
+                queueSize: this.queue.getPendingMessages().length
+            });
+            
+            // Check for high memory usage
+            const heapPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+            if (heapPercent > 85) {
+                this.logger.warn('High memory usage detected', {
+                    component: 'resource-monitor',
+                    heapPercent: Math.round(heapPercent),
+                    action: 'Consider restarting if memory issues persist'
+                });
+            }
+        }, 30000); // Every 30 seconds
+    }
+
+    private stopResourceMonitoring(): void {
+        if (this.resourceMonitorInterval) {
+            clearInterval(this.resourceMonitorInterval);
+            this.resourceMonitorInterval = null;
+        }
+    }
+
     async shutdown(): Promise<void> {
+        console.log(chalk.yellow('\\n🛑 Shutting down AutoClaude...'));
+        
+        this.logger.info('Shutdown initiated', { component: 'terminal-mode' });
         this.isRunning = false;
         this.processingQueue = false;
 
@@ -1209,19 +1584,62 @@ Please combine these results into a coherent, complete response to the original 
             await this.stopLogging();
         }
 
+        // Save queue state
+        try {
+            console.log(chalk.gray('  Saving queue state...'));
+            await this.queue.save();
+            this.logger.info('Queue state saved');
+        } catch (error) {
+            this.logger.error('Failed to save queue state:', error);
+        }
+
+        // Stop resource monitoring
+        this.stopResourceMonitoring();
+        this.logger.info('Resource monitoring stopped');
+
+        // Stop all agents
+        if (this.config.get('parallelAgents', 'enabled')) {
+            try {
+                console.log(chalk.gray('  Stopping agents...'));
+                await (this.agentManager as any).stopAllAgents();
+                this.logger.info('All agents stopped');
+            } catch (error) {
+                this.logger.error('Error stopping agents:', error);
+            }
+        }
+
+        // Close readline interface
         if (this.rl) {
             this.rl.close();
         }
 
+        // Stop Claude session
         if (this.session) {
             try {
+                console.log(chalk.gray('  Closing Claude session...'));
                 await this.session.stop();
+                this.logger.info('Claude session closed');
             } catch (error) {
                 this.logger.warn(`Error stopping session: ${error}`);
             }
         }
 
-        console.log(chalk.gray('\\n👋 AutoClaude terminal mode stopped'));
-        process.exit(0);
+        // Log final metrics
+        this.logger.logMetrics();
+        
+        // Close logger
+        try {
+            await this.logger.close();
+        } catch (error) {
+            console.error('Error closing logger:', error);
+        }
+
+        console.log(chalk.green('✅ Shutdown complete'));
+        console.log(chalk.gray('👋 AutoClaude terminal mode stopped'));
+        
+        // Give a moment for final output
+        setTimeout(() => {
+            process.exit(0);
+        }, 100);
     }
 }

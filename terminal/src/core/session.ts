@@ -92,7 +92,7 @@ export class ClaudeSession extends EventEmitter {
         }
     }
 
-    async sendMessage(message: string): Promise<string> {
+    async sendMessage(message: string, onProgress?: (elapsed: number) => void): Promise<string> {
         if (!this.isRunning || !this.pty) {
             throw new Error('Session not running');
         }
@@ -102,13 +102,28 @@ export class ClaudeSession extends EventEmitter {
             const timeout = 300000; // 5 minutes timeout
             let responseBuffer = '';
             let isCollecting = false;
+            let lastOutputTime = Date.now();
+            let inactivityChecker: NodeJS.Timeout;
+            let progressTimer: NodeJS.Timeout;
 
             const cleanup = () => {
                 this.removeListener('output', outputHandler);
                 clearTimeout(timeoutTimer);
+                if (inactivityChecker) clearInterval(inactivityChecker);
+                if (progressTimer) clearInterval(progressTimer);
             };
+            
+            // Start progress reporting if callback provided
+            if (onProgress) {
+                progressTimer = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    onProgress(elapsed);
+                }, 1000);
+            }
 
             const outputHandler = (output: string) => {
+                lastOutputTime = Date.now();
+                
                 // Start collecting after we see the message echoed
                 if (!isCollecting && output.includes(message)) {
                     isCollecting = true;
@@ -125,6 +140,17 @@ export class ClaudeSession extends EventEmitter {
                     }
                 }
             };
+            
+            // Also add an inactivity checker
+            inactivityChecker = setInterval(() => {
+                const timeSinceLastOutput = Date.now() - lastOutputTime;
+                if (isCollecting && timeSinceLastOutput > 5000 && responseBuffer.length > 0) {
+                    // No output for 5 seconds after starting collection, assume done
+                    clearInterval(inactivityChecker);
+                    cleanup();
+                    resolve(this.cleanResponse(responseBuffer));
+                }
+            }, 1000);
 
             const timeoutTimer = setTimeout(() => {
                 cleanup();
@@ -252,8 +278,21 @@ export class ClaudeSession extends EventEmitter {
             '\\nClaude>',
             'Is there anything else',
             'Let me know if',
-            'Feel free to ask'
+            'Feel free to ask',
+            'What would you like',
+            'How can I help',
+            'today?',
+            'tasks.'
         ];
+        
+        // Also check for no new output for a period (indicates completion)
+        const lastNewline = response.lastIndexOf('\\n');
+        const lastContent = response.substring(lastNewline + 1);
+        
+        // If we see a question mark or period at the end of a line, likely done
+        if (lastContent.endsWith('?') || lastContent.endsWith('.')) {
+            return true;
+        }
         
         return endings.some(ending => response.includes(ending));
     }

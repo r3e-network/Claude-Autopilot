@@ -22,7 +22,7 @@ function showBanner(): void {
             })
         )
     );
-    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.2.1\n'));
+    console.log(chalk.gray('   Terminal-based AutoClaude AI Automation Tool v3.2.4\n'));
 }
 
 // Check for updates
@@ -40,7 +40,7 @@ const program = new Command();
 program
     .name('autoclaude')
     .description('Powerful terminal-based AutoClaude AI automation tool')
-    .version('3.2.1')
+    .version('3.2.4')
     .option('-q, --quiet', 'Suppress banner and non-essential output')
     .option('-v, --verbose', 'Enable verbose logging')
     .option('-c, --config <path>', 'Use custom config file')
@@ -175,7 +175,7 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled rejection at:', promise, 'reason:', reason);
+    logger.error('Unhandled rejection:', { reason, promise });
     process.exit(1);
 });
 

@@ -24,7 +24,7 @@ describe('Config', () => {
     });
 
     test('should create config directory if it does not exist', () => {
-        const configDir = path.join(testConfigDir, '.claude-autopilot');
+        const configDir = path.join(testConfigDir, '.autoclaude');
         expect(fs.existsSync(configDir)).toBe(true);
     });
 
