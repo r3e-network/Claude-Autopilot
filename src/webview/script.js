@@ -965,6 +965,7 @@ window.addEventListener('message', event => {
             break;
         case 'setScrollLockState':
             autoScrollEnabled = message.enabled;
+            autoScrollDisabledByUser = !message.enabled; // If loaded from backend, consider it user preference
             updateScrollLockButton();
             break;
     }
@@ -1165,6 +1166,7 @@ const CLAUDE_RENDER_THROTTLE_MS = 500; // 500ms = 2 times per second max (matche
 let userScrolledUp = false;
 let scrollCheckTimeout = null;
 let autoScrollEnabled = true; // Auto-scroll is enabled by default
+let autoScrollDisabledByUser = false; // Track if disabled by manual toggle vs automatic detection
 const SCROLL_BOTTOM_THRESHOLD = 30; // pixels from bottom to consider "at bottom"
 
 /**
@@ -1197,13 +1199,8 @@ function smoothScrollToBottom(element) {
             userScrolledUp = false;
         }
     } else {
-        // User has scrolled up, temporarily disable auto-scroll
+        // User has scrolled up, respect their scroll position
         userScrolledUp = true;
-        if (autoScrollEnabled) {
-            // Temporarily disable auto-scroll when user scrolls up
-            autoScrollEnabled = false;
-            updateScrollLockButton();
-        }
     }
     
     // Set up scroll event listener to detect when user scrolls manually
@@ -1262,7 +1259,13 @@ function handleUserScroll(event) {
     // Debounce scroll detection to avoid excessive updates
     scrollCheckTimeout = setTimeout(() => {
         if (isNearBottom) {
+            // User scrolled back to bottom
             userScrolledUp = false;
+            // Only re-enable auto-scroll if it wasn't manually disabled by the user toggle
+            if (!autoScrollEnabled && !autoScrollDisabledByUser) {
+                autoScrollEnabled = true;
+                updateScrollLockButton();
+            }
         } else {
             userScrolledUp = true;
         }
@@ -1430,6 +1433,7 @@ function performClaudeRender(output) {
 
 function toggleScrollLock() {
     autoScrollEnabled = !autoScrollEnabled;
+    autoScrollDisabledByUser = !autoScrollEnabled; // Track manual toggle state
     updateScrollLockButton();
     
     // Save state to backend
