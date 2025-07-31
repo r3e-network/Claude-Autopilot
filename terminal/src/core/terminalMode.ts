@@ -1633,13 +1633,23 @@ Please combine these results into a coherent, complete response to the original 
                 queueSize: this.queue.getPendingMessages().length
             });
             
-            // Check for high memory usage
+            // Check for high memory usage (more reasonable threshold)
             const heapPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
-            if (heapPercent > 85) {
+            const heapUsedMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+            
+            if (heapPercent > 95) {
                 this.logger.warn('High memory usage detected', {
                     component: 'resource-monitor',
                     heapPercent: Math.round(heapPercent),
+                    heapUsedMB,
                     action: 'Consider restarting if memory issues persist'
+                });
+            } else if (heapUsedMB > 200) {
+                this.logger.info('Memory usage information', {
+                    component: 'resource-monitor',
+                    heapPercent: Math.round(heapPercent),
+                    heapUsedMB,
+                    status: 'Monitoring memory usage'
                 });
             }
         }, 30000); // Every 30 seconds

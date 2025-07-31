@@ -19,7 +19,11 @@ export class ClaudeSession extends EventEmitter {
     private outputBuffer: string = '';
     private currentScreen: string = '';
     private outputTimer: NodeJS.Timeout | null = null;
+    private cleanupTimer: NodeJS.Timeout | null = null;
     private readonly THROTTLE_MS = 500;
+    private readonly MAX_BUFFER_SIZE = 50000; // 50KB max buffer size
+    private readonly MAX_SCREEN_SIZE = 25000; // 25KB max screen buffer
+    private readonly CLEANUP_INTERVAL = 60000; // Clean up every minute
 
     constructor(config: Config, logger: Logger) {
         super();
@@ -70,6 +74,7 @@ export class ClaudeSession extends EventEmitter {
 
             this.isRunning = true;
             this.setupEventHandlers();
+            this.startPeriodicCleanup();
             
             this.logger.info('Claude session started');
             this.emit('started');
@@ -104,6 +109,11 @@ export class ClaudeSession extends EventEmitter {
             if (this.outputTimer) {
                 clearTimeout(this.outputTimer);
                 this.outputTimer = null;
+            }
+            
+            if (this.cleanupTimer) {
+                clearInterval(this.cleanupTimer);
+                this.cleanupTimer = null;
             }
             
             this.logger.info('Claude session stopped');
@@ -244,6 +254,13 @@ export class ClaudeSession extends EventEmitter {
     }
 
     private processOutput(): void {
+        // Enforce buffer size limits to prevent memory leaks
+        if (this.outputBuffer.length > this.MAX_BUFFER_SIZE) {
+            // Keep only the last portion of the buffer
+            this.outputBuffer = this.outputBuffer.slice(-this.MAX_BUFFER_SIZE / 2);
+            this.logger.debug('Output buffer trimmed to prevent memory leak');
+        }
+
         // Update current screen state
         if (this.hasScreenClear(this.outputBuffer)) {
             const lastClearIndex = this.getLastScreenClearIndex(this.outputBuffer);
@@ -251,6 +268,13 @@ export class ClaudeSession extends EventEmitter {
             this.outputBuffer = this.currentScreen;
         } else {
             this.currentScreen = this.outputBuffer;
+        }
+
+        // Enforce screen size limits
+        if (this.currentScreen.length > this.MAX_SCREEN_SIZE) {
+            this.currentScreen = this.currentScreen.slice(-this.MAX_SCREEN_SIZE);
+            this.outputBuffer = this.currentScreen;
+            this.logger.debug('Screen buffer trimmed to prevent memory leak');
         }
 
         // Throttle output events
@@ -391,5 +415,44 @@ export class ClaudeSession extends EventEmitter {
         }
         
         throw new Error('Python 3 not found. Please install Python 3.8 or higher.');
+    }
+
+    private startPeriodicCleanup(): void {
+        this.cleanupTimer = setInterval(() => {
+            this.performMemoryCleanup();
+        }, this.CLEANUP_INTERVAL);
+    }
+
+    private performMemoryCleanup(): void {
+        const initialBufferSize = this.outputBuffer.length;
+        const initialScreenSize = this.currentScreen.length;
+
+        // Force garbage collection of old buffers
+        if (this.outputBuffer.length > this.MAX_BUFFER_SIZE / 2) {
+            this.outputBuffer = this.outputBuffer.slice(-this.MAX_BUFFER_SIZE / 4);
+        }
+
+        if (this.currentScreen.length > this.MAX_SCREEN_SIZE / 2) {
+            this.currentScreen = this.currentScreen.slice(-this.MAX_SCREEN_SIZE / 4);
+            this.outputBuffer = this.currentScreen;
+        }
+
+        // Log cleanup if significant reduction occurred
+        const bufferReduction = initialBufferSize - this.outputBuffer.length;
+        const screenReduction = initialScreenSize - this.currentScreen.length;
+        
+        if (bufferReduction > 1000 || screenReduction > 1000) {
+            this.logger.debug('Memory cleanup performed', {
+                bufferReduced: bufferReduction,
+                screenReduced: screenReduction,
+                newBufferSize: this.outputBuffer.length,
+                newScreenSize: this.currentScreen.length
+            });
+        }
+
+        // Suggest garbage collection
+        if (global.gc) {
+            global.gc();
+        }
     }
 }
