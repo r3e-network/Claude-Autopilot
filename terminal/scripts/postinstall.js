@@ -40,6 +40,21 @@ try {
     console.log(chalk.yellow('⚠'), 'tmux not found. Install it to use parallel agents feature');
 }
 
+// Copy Python wrapper to dist directory
+try {
+    const srcWrapper = path.join(__dirname, '..', 'src', 'claude_pty_wrapper.py');
+    const distDir = path.join(__dirname, '..', 'dist');
+    const distWrapper = path.join(distDir, 'claude_pty_wrapper.py');
+    
+    if (fs.existsSync(srcWrapper) && fs.existsSync(distDir)) {
+        fs.copyFileSync(srcWrapper, distWrapper);
+        fs.chmodSync(distWrapper, 0o755);
+        console.log(chalk.green('✓'), 'Installed Python PTY wrapper');
+    }
+} catch (e) {
+    console.log(chalk.yellow('⚠'), 'Could not copy Python wrapper:', e.message);
+}
+
 // Create example config
 const exampleConfig = {
     session: {

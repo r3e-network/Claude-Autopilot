@@ -6,6 +6,8 @@ import { Logger } from '../utils/logger';
 import { MessageQueue } from '../queue/messageQueue';
 import { ParallelAgentManager } from '../agents/parallelAgentManager';
 import { ClaudeSession } from './session';
+import { SessionRecoveryManager } from './sessionRecovery';
+import { HealthStatus } from './healthMonitor';
 
 export interface TerminalModeOptions {
     skipPermissions?: boolean;
@@ -20,6 +22,7 @@ export class TerminalMode extends EventEmitter {
     private queue: MessageQueue;
     private agentManager: ParallelAgentManager;
     private session: ClaudeSession | null = null;
+    private recoveryManager: SessionRecoveryManager;
     private isRunning: boolean = false;
     private processingQueue: boolean = false;
     private activeAgents: number = 0;
@@ -130,6 +133,12 @@ export class TerminalMode extends EventEmitter {
         this.logger = logger;
         this.queue = new MessageQueue(config, logger);
         this.agentManager = new ParallelAgentManager(config, logger);
+        this.recoveryManager = new SessionRecoveryManager(config, logger, {
+            maxRetries: 3,
+            retryDelay: 5000,
+            preserveContext: true,
+            autoRecover: true
+        });
     }
     
     private validateConfiguration(): void {
@@ -221,19 +230,20 @@ export class TerminalMode extends EventEmitter {
             throw error;
         }
 
-        // Initialize Claude session
-        this.session = new ClaudeSession(this.config, this.logger);
-        this.logger.info('Starting Claude session...');
+        // Initialize Claude session with recovery manager
+        this.logger.info('Starting Claude session with health monitoring...');
         
         try {
             // Add timeout wrapper for the entire session start process
             await Promise.race([
-                this.session.start(this.config.get('session', 'skipPermissions')),
+                this.recoveryManager.initializeSession(this.config.get('session', 'skipPermissions')),
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Session start timeout')), 10000)
                 )
             ]);
-            this.logger.info('Claude session ready');
+            this.session = this.recoveryManager['session'];
+            this.logger.info('Claude session ready with auto-recovery enabled');
+            this.setupRecoveryHandlers();
         } catch (error) {
             this.logger.warn(`Claude session initialization failed: ${error}`);
             this.logger.warn('Continuing without Claude session - you can try reconnecting later');
@@ -272,6 +282,44 @@ export class TerminalMode extends EventEmitter {
         
         // Setup key handlers for interactive completion
         this.setupKeyHandlers();
+    }
+    
+    private setupRecoveryHandlers(): void {
+        this.recoveryManager.on('sessionStuck', (details) => {
+            console.log(chalk.yellow('⚠️  Session appears stuck, attempting recovery...'));
+            this.logger.warn('Session stuck detected', details);
+        });
+        
+        this.recoveryManager.on('sessionUnhealthy', (details) => {
+            console.log(chalk.yellow('⚠️  Session unhealthy, attempting recovery...'));
+            this.logger.warn('Session unhealthy', details);
+        });
+        
+        this.recoveryManager.on('recoveryStarted', ({ reason, attempt }) => {
+            console.log(chalk.cyan(`🔄 Recovery attempt ${attempt}: ${reason}`));
+        });
+        
+        this.recoveryManager.on('recoverySucceeded', ({ attempt, contextRestored }) => {
+            console.log(chalk.green(`✅ Session recovered successfully (attempt ${attempt})${contextRestored ? ' with context' : ''}`));
+            this.session = this.recoveryManager['session'];
+        });
+        
+        this.recoveryManager.on('recoveryFailed', ({ error, attempt, willRetry }) => {
+            console.log(chalk.red(`❌ Recovery attempt ${attempt} failed${willRetry ? ', retrying...' : ''}`));
+            if (!willRetry) {
+                this.session = null;
+            }
+        });
+        
+        this.recoveryManager.on('recoveryAbandoned', ({ reason, lastError }) => {
+            console.log(chalk.red(`❌ Recovery abandoned: ${reason}`));
+            console.log(chalk.yellow('💡 Try restarting AutoClaude or check Claude Code CLI'));
+            this.session = null;
+        });
+        
+        this.recoveryManager.on('contextRestoring', (contextBuffer) => {
+            console.log(chalk.blue(`📋 Restoring ${contextBuffer.length} context items...`));
+        });
     }
     
     private setupKeyHandlers(): void {
@@ -661,6 +709,16 @@ export class TerminalMode extends EventEmitter {
             if (!check.healthy) overallHealth = 'unhealthy';
         });
         
+        // Add recovery status
+        const recoveryState = this.recoveryManager.getRecoveryState();
+        if (recoveryState.isRecovering) {
+            console.log(chalk.yellow(`\\n🔄 Recovery in progress (attempt ${recoveryState.retryCount})...`));
+        } else if (recoveryState.lastRecoveryTime) {
+            const timeSinceRecovery = Date.now() - recoveryState.lastRecoveryTime;
+            const minutes = Math.floor(timeSinceRecovery / 60000);
+            console.log(chalk.green(`\\n✅ Last recovery: ${minutes} minutes ago`));
+        }
+        
         console.log(chalk.cyan(`\\nOverall Health: ${overallHealth === 'healthy' ? chalk.green('Healthy') : chalk.red('Unhealthy')}`));
         console.log('');
     }
@@ -690,11 +748,24 @@ export class TerminalMode extends EventEmitter {
         
         // Claude session
         const sessionHealthy = this.session !== null && (this.session as any).isActive();
+        const healthStatus = this.recoveryManager.getHealthStatus();
+        const recoveryState = this.recoveryManager.getRecoveryState();
+        
+        let sessionDetails = 'Session not available';
+        if (sessionHealthy && healthStatus) {
+            sessionDetails = `Uptime: ${Math.round(healthStatus.sessionUptime / 1000)}s, Success rate: ${healthStatus.totalMessages > 0 ? Math.round((1 - healthStatus.failedMessages / healthStatus.totalMessages) * 100) : 100}%`;
+            if (healthStatus.consecutiveTimeouts > 0) {
+                sessionDetails += `, Timeouts: ${healthStatus.consecutiveTimeouts}`;
+            }
+        } else if (recoveryState.isRecovering) {
+            sessionDetails = `Recovery in progress (attempt ${recoveryState.retryCount})`;
+        }
+        
         checks.push({
             name: 'Claude Session',
-            healthy: sessionHealthy,
+            healthy: sessionHealthy && (!healthStatus || healthStatus.isHealthy),
             status: sessionHealthy ? 'Connected' : 'Disconnected',
-            details: sessionHealthy ? 'Ready for messages' : 'Session not available'
+            details: sessionDetails
         });
         
         // Agents health (if enabled)
@@ -1415,8 +1486,10 @@ export class TerminalMode extends EventEmitter {
                 return;
             }
 
-            // Send message to Claude
-            const response = await this.session.sendMessage(text);
+            // Send message to Claude with recovery support
+            const response = await this.recoveryManager.sendMessage(text, (elapsed) => {
+                // Progress callback is already handled by the waiting indicator
+            });
             
             // Clear waiting indicator
             clearInterval(waitingIndicator);
@@ -1620,14 +1693,14 @@ Please combine these results into a coherent, complete response to the original 
             this.rl.close();
         }
 
-        // Stop Claude session
-        if (this.session) {
+        // Stop Claude session and recovery manager
+        if (this.recoveryManager) {
             try {
-                console.log(chalk.gray('  Closing Claude session...'));
-                await this.session.stop();
-                this.logger.info('Claude session closed');
+                console.log(chalk.gray('  Stopping recovery manager and Claude session...'));
+                await this.recoveryManager.stop();
+                this.logger.info('Recovery manager and Claude session stopped');
             } catch (error) {
-                this.logger.warn(`Error stopping session: ${error}`);
+                this.logger.warn(`Error stopping recovery manager: ${error}`);
             }
         }
 

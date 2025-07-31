@@ -13,6 +13,11 @@ import { handleUsageLimit, isCurrentUsageLimit } from '../../services/usage';
 import { startHealthCheck, stopHealthCheck } from '../../services/health';
 import { startSleepPrevention, stopSleepPrevention } from '../../services/sleep';
 import { runDependencyCheck, showDependencyStatus } from '../../services/dependency-check';
+import { SessionRecoveryManager } from '../../sessionRecovery';
+import { showRemoteWarning, checkRemoteCompatibility } from '../../utils/remoteDetection';
+
+// Global recovery manager instance
+let recoveryManager: SessionRecoveryManager | null = null;
 
 export async function startClaudeSession(skipPermissions: boolean = true): Promise<void> {
     debugLog('=== STARTING CLAUDE SESSION ===');
@@ -21,6 +26,15 @@ export async function startClaudeSession(skipPermissions: boolean = true): Promi
         if (claudeProcess) {
             vscode.window.showInformationMessage('Claude session is already running');
             debugLog('Claude session already running - aborting');
+            return;
+        }
+
+        // Check for remote environment compatibility
+        debugLog('🌐 Checking remote environment compatibility...');
+        try {
+            await showRemoteWarning();
+        } catch (error) {
+            debugLog('❌ Remote environment check cancelled');
             return;
         }
 

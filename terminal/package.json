@@ -1,6 +1,6 @@
 {
   "name": "@r3e/autoclaude",
-  "version": "3.2.5",
+  "version": "3.2.9",
   "description": "Powerful terminal-based AutoClaude AI automation tool with parallel agents and intelligent task management",
   "main": "src/index.ts",
   "bin": {
@@ -21,6 +21,7 @@
     "dist/",
     "bin/",
     "scripts/",
+    "src/claude_pty_wrapper.py",
     "README.md",
     "CHANGELOG.md"
   ],

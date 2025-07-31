@@ -5,6 +5,85 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.10] - 2025-07-31
+
+### 🌐 SSH Remote Detection & Guidance
+
+Added intelligent detection and guidance for SSH remote development environments.
+
+### ✨ Added
+- **Remote Environment Detection** - Automatically detects SSH, WSL, containers, and Codespaces
+- **Smart Warnings** - Shows appropriate guidance when extension won't work properly
+- **New Command**: `Claude: Check Remote Environment` - Diagnose remote compatibility
+- **Detailed Instructions** - Context-aware solutions for each remote environment type
+
+### 🔧 Improvements
+- **Better User Experience** - Clear explanations instead of cryptic errors
+- **Multiple Solutions** - Offers terminal tool, local setup, and other alternatives
+- **Proactive Detection** - Warns users before attempting to start Claude session
+
+### 📚 Documentation
+- Added comprehensive SSH remote troubleshooting guide
+- Created detailed solutions document with all available options
+- Enhanced error messages with actionable guidance
+
+### 🐛 Bug Prevention
+- Prevents confusing failures in remote environments
+- Guides users to working solutions immediately
+- Reduces support requests for remote issues
+
+## [3.2.9] - 2025-07-31
+
+### 🚀 Parallel Agents & Auto-Recovery System
+
+This release enables parallel agents by default and adds comprehensive robustness features for both VS Code extension and terminal tool.
+
+### ✨ Major Features
+- **Parallel Agents Enabled by Default**: Both VS Code extension and terminal now run with parallel agents active
+- **Auto-Recovery System**: Automatic session recovery when Claude becomes unresponsive
+- **Health Monitoring**: Continuous health checks detect stuck sessions
+- **Context Preservation**: Maintains conversation context during recovery
+
+### 🤖 Parallel Agent Enhancements
+- **Auto-Start**: Agents now start automatically when workspace opens
+- **Built-in Agents**: 5 specialized agents enabled by default:
+  - Code Analyzer
+  - Documentation Writer
+  - Test Generator
+  - Refactor Specialist
+  - Security Auditor
+- **Context-Aware Generation**: Automatically generates agents based on task complexity
+- **Language-Specific Agents**: Support for Rust, .NET, Java, Go, C/C++ specialists
+- **Reduced Complexity Threshold**: Lowered from 3 to 2 for VS Code to trigger agents more often
+
+### 🛡️ Robustness Features
+- **Health Monitor**: Checks session health every 30 seconds
+- **Session Recovery Manager**: Automatic retry with exponential backoff
+- **Context Buffer**: Preserves last 10 messages for recovery
+- **Progress Indicators**: Real-time recovery status in UI
+- **Graceful Degradation**: Clear guidance when recovery fails
+
+### 🔧 Configuration Updates
+- `autoclaude.subAgents.enabled`: Now defaults to `true`
+- `autoclaude.parallelAgents.enabled`: Now defaults to `true`
+- `autoclaude.parallelAgents.autoStart`: Now defaults to `true`
+- `autoclaude.parallelAgents.autoGenerate`: Now defaults to `true`
+- `autoclaude.parallelAgents.builtInAgents.enabled`: Now defaults to `true`
+- `autoclaude.parallelAgents.contextGeneration.enabled`: Now defaults to `true`
+- `autoclaude.parallelAgents.contextGeneration.minComplexity`: Reduced to `2`
+
+### 📊 Terminal Tool Updates
+- Version synchronized with VS Code extension (3.2.9)
+- Same robustness features as VS Code extension
+- Enhanced `/health` command with recovery metrics
+- Improved error messages and user guidance
+
+### 🐛 Bug Fixes
+- Fixed stuck session detection
+- Improved timeout handling
+- Better error recovery mechanisms
+- Enhanced message success tracking
+
 ## [3.2.6] - 2025-07-31
 
 ### 🚀 Performance & Security Improvements

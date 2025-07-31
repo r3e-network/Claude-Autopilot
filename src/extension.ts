@@ -475,6 +475,39 @@ export function activate(context: vscode.ExtensionContext) {
         await statsManager.showStatisticsWebview(context);
     });
 
+    const checkRemoteStatusCommand = vscode.commands.registerCommand('autoclaude.checkRemoteStatus', async () => {
+        const { checkRemoteCompatibility, isRemoteEnvironment, getRemoteType } = await import('./utils/remoteDetection');
+        
+        const compatibility = await checkRemoteCompatibility();
+        const isRemote = isRemoteEnvironment();
+        const remoteType = getRemoteType();
+        
+        let message = isRemote 
+            ? `🌐 Remote Environment: ${remoteType || 'Unknown'}\n\n`
+            : `💻 Local Environment\n\n`;
+            
+        if (compatibility.compatible) {
+            message += `✅ AutoClaude should work correctly in this environment.`;
+        } else {
+            message += `⚠️ ${compatibility.reason}\n\n`;
+            message += `💡 Suggested solutions:\n`;
+            compatibility.suggestions?.forEach((suggestion, i) => {
+                message += `${i + 1}. ${suggestion}\n`;
+            });
+        }
+        
+        const choice = await vscode.window.showInformationMessage(
+            message,
+            ...(compatibility.compatible ? [] : ['Show Full Guide']),
+            'OK'
+        );
+        
+        if (choice === 'Show Full Guide') {
+            const { showRemoteWarning } = await import('./utils/remoteDetection');
+            await showRemoteWarning();
+        }
+    });
+
     context.subscriptions.push(
         startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
         quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
@@ -482,7 +515,7 @@ export function activate(context: vscode.ExtensionContext) {
         startParallelAgentsCommand, stopParallelAgentsCommand, showAgentMonitorCommand,
         attachToAgentsCommand, clearAllAgentContextCommand, toggleAutoOrchestrationCommand,
         exportQueueCommand, importQueueCommand, exportSettingsCommand,
-        useTemplateCommand, manageTemplatesCommand, showStatisticsCommand,
+        useTemplateCommand, manageTemplatesCommand, showStatisticsCommand, checkRemoteStatusCommand,
         configWatcher
     );
     

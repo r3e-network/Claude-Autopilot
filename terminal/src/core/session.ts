@@ -4,6 +4,8 @@ import { Config } from './config';
 import { Logger } from '../utils/logger';
 import os from 'os';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 export interface SessionOptions {
     skipPermissions?: boolean;
@@ -31,19 +33,39 @@ export class ClaudeSession extends EventEmitter {
         }
 
         try {
-            const args = skipPermissions ? ['--dangerously-skip-permissions'] : [];
+            // Find Python executable
+            const pythonCmd = await this.findPython();
+            
+            // Get the wrapper script path
+            const wrapperPath = path.join(__dirname, '..', 'claude_pty_wrapper.py');
+            
+            // Check if wrapper exists
+            const fs = require('fs');
+            if (!fs.existsSync(wrapperPath)) {
+                throw new Error(`PTY wrapper not found at ${wrapperPath}`);
+            }
+            
+            const args = [wrapperPath];
+            if (skipPermissions) {
+                args.push('--skip-permissions');
+            }
             
             // Get terminal dimensions
             const cols = process.stdout.columns || 80;
             const rows = process.stdout.rows || 24;
 
-            // Spawn Claude PTY
-            this.pty = spawn('claude', args, {
+            this.logger.info(`Starting Claude via Python wrapper: ${pythonCmd} ${args.join(' ')}`);
+
+            // Spawn Python wrapper instead of Claude directly
+            this.pty = spawn(pythonCmd, args, {
                 name: 'xterm-256color',
                 cols,
                 rows,
                 cwd: process.cwd(),
-                env: process.env as { [key: string]: string },
+                env: { 
+                    ...process.env as { [key: string]: string },
+                    PYTHONUNBUFFERED: '1'
+                },
             });
 
             this.isRunning = true;
@@ -124,10 +146,23 @@ export class ClaudeSession extends EventEmitter {
             const outputHandler = (output: string) => {
                 lastOutputTime = Date.now();
                 
-                // Start collecting after we see the message echoed
-                if (!isCollecting && output.includes(message)) {
-                    isCollecting = true;
-                    return;
+                // Log raw output for debugging
+                this.logger.debug(`Raw Claude output: ${JSON.stringify(output)}`);
+                
+                // Start collecting after we see the message echoed OR after first output
+                if (!isCollecting) {
+                    if (output.includes(message) || responseBuffer.length === 0) {
+                        isCollecting = true;
+                        // If the output contains the message, skip it
+                        if (output.includes(message)) {
+                            const messageIndex = output.indexOf(message);
+                            const afterMessage = output.substring(messageIndex + message.length);
+                            if (afterMessage.trim()) {
+                                responseBuffer += afterMessage;
+                            }
+                            return;
+                        }
+                    }
                 }
 
                 if (isCollecting) {
@@ -175,6 +210,13 @@ export class ClaudeSession extends EventEmitter {
         if (this.pty) {
             this.pty.write('\\x1b'); // ESC
             this.logger.debug('Sent escape key');
+        }
+    }
+
+    sendRawInput(input: string): void {
+        if (this.pty) {
+            this.pty.write(input);
+            this.logger.debug(`Sent raw input: ${JSON.stringify(input)}`);
         }
     }
 
@@ -276,21 +318,36 @@ export class ClaudeSession extends EventEmitter {
         const endings = [
             '\\n>',
             '\\nClaude>',
+            '\\n$ ',  // Shell prompt
+            '\\nclaude> ',  // Claude Code CLI prompt
+            'Human: ',  // Claude Code CLI human prompt
             'Is there anything else',
             'Let me know if',
             'Feel free to ask',
             'What would you like',
             'How can I help',
             'today?',
-            'tasks.'
+            'tasks.',
+            '✓',  // Claude Code often ends with checkmarks
+            '✅',  // Success indicator
+            '❌',  // Error indicator
+            'All tests passed',
+            'successfully',
+            'completed'
         ];
+        
+        // Check if response ends with any of these patterns
+        const trimmedResponse = response.trim();
+        if (endings.some(ending => trimmedResponse.endsWith(ending))) {
+            return true;
+        }
         
         // Also check for no new output for a period (indicates completion)
         const lastNewline = response.lastIndexOf('\\n');
         const lastContent = response.substring(lastNewline + 1);
         
         // If we see a question mark or period at the end of a line, likely done
-        if (lastContent.endsWith('?') || lastContent.endsWith('.')) {
+        if (lastContent.endsWith('?') || lastContent.endsWith('.') || lastContent.endsWith('!')) {
             return true;
         }
         
@@ -315,5 +372,24 @@ export class ClaudeSession extends EventEmitter {
 
     getCurrentScreen(): string {
         return this.currentScreen;
+    }
+
+    private async findPython(): Promise<string> {
+        const execAsync = promisify(exec);
+        const candidates = ['python3', 'python', 'python3.8', 'python3.9', 'python3.10', 'python3.11'];
+        
+        for (const cmd of candidates) {
+            try {
+                const { stdout } = await execAsync(`${cmd} --version`);
+                if (stdout.includes('Python 3.')) {
+                    this.logger.debug(`Found Python: ${cmd} - ${stdout.trim()}`);
+                    return cmd;
+                }
+            } catch (e) {
+                // Try next candidate
+            }
+        }
+        
+        throw new Error('Python 3 not found. Please install Python 3.8 or higher.');
     }
 }

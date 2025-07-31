@@ -2,7 +2,7 @@
   "name": "autoclaude",
   "displayName": "AutoClaude",
   "description": "Intelligent AI-powered development assistant with automated workflows, smart task completion, and user-friendly Claude integration",
-  "version": "3.2.6",
+  "version": "3.2.10",
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.74.0",
@@ -167,6 +167,12 @@
         "title": "📊 Show Queue Statistics",
         "category": "Claude",
         "icon": "$(graph)"
+      },
+      {
+        "command": "autoclaude.checkRemoteStatus",
+        "title": "🌐 Check Remote Environment",
+        "category": "Claude",
+        "icon": "$(remote)"
       }
     ],
     "menus": {
@@ -399,7 +405,7 @@
         },
         "autoclaude.subAgents.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable the intelligent sub-agent system for script checks. When enabled, scripts become Claude-powered sub-agents that can analyze, fix, and improve code intelligently."
         },
         "autoclaude.subAgents.showCapabilities": {
@@ -409,7 +415,7 @@
         },
         "autoclaude.parallelAgents.enabled": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable parallel agent orchestration for large-scale automated improvements"
         },
         "autoclaude.parallelAgents.maxAgents": {
@@ -459,13 +465,69 @@
         },
         "autoclaude.parallelAgents.autoStart": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Automatically start parallel agents when workspace opens"
         },
         "autoclaude.parallelAgents.autoDetectWork": {
           "type": "boolean",
           "default": true,
           "description": "Automatically detect and distribute work to agents"
+        },
+        "autoclaude.parallelAgents.autoGenerate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically generate context-specific agents based on task complexity"
+        },
+        "autoclaude.parallelAgents.builtInAgents.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable built-in specialized agents (code analyzer, test generator, etc.)"
+        },
+        "autoclaude.parallelAgents.builtInAgents.types": {
+          "type": "array",
+          "default": [
+            "code-analyzer",
+            "documentation-writer",
+            "test-generator",
+            "refactor-specialist",
+            "security-auditor"
+          ],
+          "description": "Types of built-in agents to enable",
+          "items": {
+            "type": "string",
+            "enum": [
+              "code-analyzer",
+              "documentation-writer",
+              "test-generator",
+              "refactor-specialist",
+              "security-auditor",
+              "rust-specialist",
+              "dotnet-expert",
+              "java-architect",
+              "golang-engineer",
+              "c-systems-programmer",
+              "cpp-performance-expert"
+            ]
+          }
+        },
+        "autoclaude.parallelAgents.contextGeneration.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic generation of context-specific agents"
+        },
+        "autoclaude.parallelAgents.contextGeneration.minComplexity": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Minimum task complexity score to trigger agent generation"
+        },
+        "autoclaude.parallelAgents.contextGeneration.maxGeneratedAgents": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum number of context-specific agents to generate"
         },
         "autoclaude.parallelAgents.autoScale": {
           "type": "boolean",

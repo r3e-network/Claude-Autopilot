@@ -5,6 +5,83 @@ All notable changes to AutoClaude will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.9] - 2025-07-31
+
+### Enhanced Robustness & Auto-Recovery System
+- **Comprehensive health monitoring** with periodic health checks
+- **Automatic session recovery** when Claude becomes unresponsive
+- **Session context preservation** during recovery attempts
+- **Real-time health status** in /health command
+
+### Added
+- `HealthMonitor` class for detecting stuck or unhealthy sessions
+- `SessionRecoveryManager` for automatic recovery with retry logic
+- Health check integration showing session uptime and success rates
+- Recovery status indicators in terminal UI
+- Context buffer preservation across session restarts
+- Configurable recovery options (max retries, delays, auto-recovery)
+
+### Improved
+- Better error detection and reporting throughout the system
+- Enhanced `/health` command with recovery status information
+- More resilient message handling with automatic retries
+- Progress indicators for recovery attempts
+- User-friendly recovery messages and guidance
+
+### Technical Details
+- Health checks run every 30 seconds to detect unresponsive sessions
+- Automatic recovery attempts up to 3 times with exponential backoff
+- Session context preserved in rolling buffer (last 10 interactions)
+- Recovery events emitted for monitoring and logging
+- Graceful degradation when recovery fails
+
+## [3.2.8] - 2025-07-31
+
+### Major Fix: Python PTY Wrapper Implementation
+- **Ported VS Code extension's Python PTY wrapper** to terminal tool
+- Now uses the same proven approach as the VS Code extension
+- Handles Claude Code CLI's rich terminal UI properly
+- Fixes all connection timeout issues
+
+### Added
+- Python PTY wrapper script that properly handles terminal emulation
+- Automatic Python detection (supports Python 3.8+)
+- Better handling of Claude's interactive terminal interface
+- Debug logging from PTY wrapper for troubleshooting
+
+### Technical Details
+- Terminal now spawns Python wrapper instead of Claude directly
+- Wrapper creates proper pseudo-terminal (PTY) for Claude
+- Handles ANSI escape codes and rich UI elements correctly
+- Same implementation as VS Code extension for consistency
+
+## [3.2.7] - 2025-07-31
+
+### Fixed
+- Fixed Claude Code CLI connection timeout issues
+- Improved response detection for Claude Code CLI output format
+- Added better debugging with raw output logging
+- Enhanced response completion detection with more Claude Code patterns
+- Fixed message echo detection to start collecting responses immediately
+
+### Improved
+- Added support for Claude Code specific prompts and response patterns
+- Better handling of various Claude response endings (checkmarks, success indicators)
+- More robust timeout handling with proper cleanup
+
+## [3.2.6] - 2025-07-31
+
+### Aligned with VS Code Extension
+- Version sync with VS Code extension v3.2.6
+- All the performance improvements from the VS Code extension apply to shared components
+- Improved dependency management and security updates
+- Better Node.js 18+ compatibility
+
+### Inherited Improvements
+- Enhanced build system optimizations
+- Zero security vulnerabilities in shared dependencies
+- Production-ready optimizations
+
 ## [3.2.5] - 2025-07-31
 
 ### Fixed
