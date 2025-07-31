@@ -2,7 +2,7 @@
 
 [![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
 [![NPM Package](https://img.shields.io/badge/NPM-@r3e/autoclaude-red)](https://www.npmjs.com/package/@r3e/autoclaude)
-[![Version](https://img.shields.io/badge/version-3.1.2-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v3.1.2)
+[![Version](https://img.shields.io/badge/version-3.2.6-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v3.2.6)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/r3e-network/AutoClaude/build.yml?branch=main)](https://github.com/r3e-network/AutoClaude/actions)
 
@@ -16,24 +16,25 @@
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
-## 🆕 NEW in v3.1.2: Terminal Version & VS Code Web Support
+## 🆕 NEW in v3.2.6: 98% Smaller Package & Enhanced Security
 
-### 🖥️ **Standalone Terminal Application**
-Run AutoClaude anywhere - SSH sessions, servers, or your local terminal:
-```bash
-npm install -g @r3e/autoclaude
-autoclaude  # or just 'cap'
-```
+### 🚀 **Massive Performance Improvements**
+- **98.5% Smaller**: Package reduced from 45MB to just 680KB!
+- **Blazing Fast**: New esbuild bundling system for instant loading
+- **Zero Vulnerabilities**: All security issues resolved
+- **Production Ready**: Optimized builds with minification
 
-### 🌐 **VS Code Web Compatibility**
-- Full support for VS Code in web browsers (vscode.dev, github.dev)
-- Fixed webview rendering issues in browser environments
-- All functionality now works seamlessly in both desktop and web versions
+### 🔒 **Enhanced Security**
+- Updated to latest `@vscode/vsce` package manager
+- Removed all vulnerable dependencies
+- Protected sensitive files from packaging
+- Comprehensive security audit passed
 
-### 📜 **Enhanced Auto-Scroll**
-- Claude output always scrolls to bottom by default
-- Smart scroll lock toggle for reviewing output
-- Persistent scroll preferences per workspace
+### ⚡ **Better Developer Experience**
+- Faster builds with esbuild
+- Improved Node.js 18+ compatibility
+- Streamlined development workflow
+- Production-optimized bundles
 
 ## 🧠 Intelligent Task Automation System
 

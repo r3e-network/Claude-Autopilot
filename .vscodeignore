@@ -65,6 +65,74 @@ demo.md
 # Environment files
 .env*
 
+# SSL and security files
+*.key
+*.pem
+*.crt
+*.cer
+*.pfx
+*.p12
+configs/production/ssl/**
+
 # Backup files
 *.bak
 *.backup
+
+# Jest configuration
+jest.config.js
+jest.config.json
+jest.config.ts
+
+# CI/CD
+.travis.yml
+.circleci/**
+.gitlab-ci.yml
+appveyor.yml
+
+# Documentation images (if not needed)
+docs/**
+images/**/*.psd
+images/**/*.ai
+images/**/*.sketch
+
+# Scripts folder
+scripts/**
+.autopilot/**
+
+# Examples
+examples/**
+example/**
+
+# Benchmarks
+benchmark/**
+benchmarks/**
+
+# Any markdown files except README
+*.md
+!README.md
+
+# Python cache
+__pycache__/**
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Webpack/bundler config
+webpack.config.js
+rollup.config.js
+.babelrc
+.browserlistrc
+
+# Large directories not needed for extension
+terminal/**
+claude_code_agent_farm/**
+configs/**
+*.tgz
+*.tar.gz
+docker-*
+deploy-*.sh
+multivm-*
+force-transaction-*
+fix-transaction-*
+test-multivm-*

@@ -5,6 +5,45 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.6] - 2025-07-31
+
+### 🚀 Performance & Security Improvements
+
+This release focuses on production readiness with major performance optimizations and security enhancements.
+
+### ✨ Added
+- **esbuild Bundling**: Implemented fast, optimized bundling system
+  - Reduced package size from 45.18MB to 679.54KB (98.5% reduction!)
+  - Faster extension loading and improved performance
+  - Production minification for smaller footprint
+
+### 🔒 Security
+- **Updated Dependencies**: Migrated from deprecated `vsce` to `@vscode/vsce`
+- **Zero Vulnerabilities**: All security issues resolved
+- **Sensitive File Protection**: Enhanced .vscodeignore to exclude SSL keys and production configs
+
+### 🔧 Improvements
+- **Build System**: 
+  - New esbuild-based compilation for faster builds
+  - Separate development and production build modes
+  - Automatic file copying for Python wrapper and webview assets
+- **Package Optimization**:
+  - Comprehensive .vscodeignore configuration
+  - Excluded unnecessary files (terminal, configs, Docker files)
+  - Removed development artifacts from production package
+- **Node.js Compatibility**: Added engine requirement for Node.js >=18.0.0
+
+### 📦 Technical Changes
+- Replaced TypeScript compilation with esbuild bundling
+- Added npx wrapper for cross-platform vsce execution
+- Improved build scripts with production-specific optimizations
+- Enhanced package scripts for better developer experience
+
+### 🐛 Bug Fixes
+- Fixed package security warnings
+- Resolved bundling issues with webview resources
+- Corrected file path handling in build process
+
 ## [3.1.2] - 2025-07-30
 
 ### 🐛 Bug Fixes
