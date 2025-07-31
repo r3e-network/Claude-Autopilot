@@ -139,23 +139,33 @@ export async function checkPtyWrapperFile(): Promise<DependencyCheckResult> {
     try {
         // Check multiple possible locations for the wrapper file
         const possiblePaths = [
-            path.join(__dirname, '..', '..', 'claude/session/claude_pty_wrapper.py'), // Development location
+            path.join(__dirname, '..', 'claude', 'session', 'claude_pty_wrapper.py'), // Bundled location
+            path.join(__dirname, '..', '..', 'claude', 'session', 'claude_pty_wrapper.py'), // Development location
+            path.join(__dirname, 'claude', 'session', 'claude_pty_wrapper.py'), // Alternative bundled location
         ];
         
+        console.log('Checking PTY wrapper paths from __dirname:', __dirname);
+        
         for (const wrapperPath of possiblePaths) {
+            console.log('Checking PTY wrapper path:', wrapperPath);
             try {
                 if (fs.existsSync(wrapperPath)) {
+                    console.log('Found PTY wrapper at:', wrapperPath);
                     const stats = fs.statSync(wrapperPath);
                     if (stats.isFile()) {
                         // Test if file is readable
                         fs.accessSync(wrapperPath, fs.constants.R_OK);
+                        console.log('PTY wrapper is readable:', wrapperPath);
                         return {
                             available: true,
                             path: wrapperPath
                         };
                     }
+                } else {
+                    console.log('PTY wrapper not found at:', wrapperPath);
                 }
             } catch (error) {
+                console.log('Error checking PTY wrapper path:', wrapperPath, error);
                 // Try next path
                 continue;
             }
