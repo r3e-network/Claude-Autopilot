@@ -48,6 +48,10 @@ def main():
     
     log_debug("PTY wrapper started successfully")
     
+    # Buffer to detect permission prompts
+    output_buffer = b""
+    permission_prompt_detected = False
+    
     try:
         while claude_process.poll() is None:
             # Use select to handle both reading from master and stdin
@@ -58,6 +62,27 @@ def main():
                     # Read from Claude and write to stdout
                     data = os.read(master, 4096)
                     if data:
+                        # Add to buffer for permission prompt detection
+                        output_buffer += data
+                        
+                        # Check for permission prompt and auto-respond if skip_permissions is enabled
+                        if skip_permissions and not permission_prompt_detected:
+                            buffer_str = output_buffer.decode('utf-8', errors='ignore')
+                            if ("Bypass Permissions mode" in buffer_str and 
+                                "1. No, exit" in buffer_str and 
+                                "2. Yes, I accept" in buffer_str):
+                                permission_prompt_detected = True
+                                log_debug("Permission prompt detected, auto-accepting...")
+                                # Send "2" + Enter to accept
+                                os.write(master, b"2\n")
+                                # Clear the buffer to avoid re-detection
+                                output_buffer = b""
+                                continue
+                        
+                        # Keep buffer manageable (last 2KB only)
+                        if len(output_buffer) > 2048:
+                            output_buffer = output_buffer[-1024:]
+                        
                         sys.stdout.buffer.write(data)
                         sys.stdout.buffer.flush()
                 except OSError as e:
