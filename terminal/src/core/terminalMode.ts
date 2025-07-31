@@ -136,6 +136,10 @@ export class TerminalMode extends EventEmitter {
         // Validate critical configuration
         const parallelConfig = this.config.get('parallelAgents');
         
+        if (!parallelConfig) {
+            throw new Error('Invalid configuration: parallelAgents config missing');
+        }
+        
         if (parallelConfig.defaultAgents < 1) {
             throw new Error('Invalid configuration: defaultAgents must be at least 1');
         }
@@ -144,7 +148,7 @@ export class TerminalMode extends EventEmitter {
             throw new Error('Invalid configuration: maxAgents must be >= defaultAgents');
         }
         
-        if (parallelConfig.contextGeneration.minComplexity < 1) {
+        if (parallelConfig.contextGeneration && parallelConfig.contextGeneration.minComplexity < 1) {
             throw new Error('Invalid configuration: minComplexity must be at least 1');
         }
         
@@ -1228,7 +1232,8 @@ export class TerminalMode extends EventEmitter {
         }
         
         // Limit the number of generated agents
-        const maxAgents = this.config.get('parallelAgents').contextGeneration.maxGeneratedAgents;
+        const contextGen = this.config.get('parallelAgents').contextGeneration || { maxGeneratedAgents: 10 };
+        const maxAgents = contextGen.maxGeneratedAgents;
         return generatedAgents.slice(0, maxAgents);
     }
     
@@ -1276,9 +1281,10 @@ export class TerminalMode extends EventEmitter {
         
         // Show configuration
         console.log(chalk.cyan('\\n⚙️  Configuration:'));
-        console.log(`├─ Auto-generation: ${this.config.get('parallelAgents').contextGeneration.enabled ? chalk.green('On') : chalk.red('Off')}`);
-        console.log(`├─ Min complexity: ${chalk.yellow(this.config.get('parallelAgents').contextGeneration.minComplexity)}`);
-        console.log(`└─ Max generated: ${chalk.yellow(this.config.get('parallelAgents').contextGeneration.maxGeneratedAgents)}\\n`);
+        const contextGen = this.config.get('parallelAgents').contextGeneration || { enabled: false, minComplexity: 3, maxGeneratedAgents: 10 };
+        console.log(`├─ Auto-generation: ${contextGen.enabled ? chalk.green('On') : chalk.red('Off')}`);
+        console.log(`├─ Min complexity: ${chalk.yellow(contextGen.minComplexity)}`);
+        console.log(`└─ Max generated: ${chalk.yellow(contextGen.maxGeneratedAgents)}\\n`);
     }
 
     private showHelp(): void {
@@ -1375,7 +1381,8 @@ export class TerminalMode extends EventEmitter {
             lowerText.includes(indicator)
         ).length;
         
-        const minComplexity = this.config.get('parallelAgents').contextGeneration.minComplexity;
+        const contextGen = this.config.get('parallelAgents').contextGeneration || { minComplexity: 3 };
+        const minComplexity = contextGen.minComplexity;
         const isComplex = complexity >= minComplexity || text.length > 200;
         
         // Auto-generate agents if enabled and task is complex
