@@ -8,6 +8,7 @@ import { ParallelAgentManager } from '../agents/parallelAgentManager';
 import { ClaudeSession } from './session';
 import { SessionRecoveryManager } from './sessionRecovery';
 import { HealthStatus } from './healthMonitor';
+import { toError, toLogMetadata } from '../utils/typeGuards';
 
 export interface TerminalModeOptions {
     skipPermissions?: boolean;
@@ -26,6 +27,8 @@ export class TerminalMode extends EventEmitter {
     private isRunning: boolean = false;
     private processingQueue: boolean = false;
     private activeAgents: number = 0;
+    private activeTasks: Set<string> = new Set();
+    private taskProcessingStartTime: number = 0;
     
     // Auto-completion state
     private availableCommands: string[] = [
@@ -190,7 +193,7 @@ export class TerminalMode extends EventEmitter {
                 await this.queue.initialize();
                 this.logger.info('Message queue initialized successfully');
             } catch (error) {
-                this.logger.error('Failed to initialize message queue:', error);
+                this.logger.error('Failed to initialize message queue:', toLogMetadata({ error: toError(error) }));
                 throw new Error('Critical: Message queue initialization failed');
             }
             
@@ -218,7 +221,7 @@ export class TerminalMode extends EventEmitter {
                     this.logger.info(`Started ${Math.min(defaultAgents, maxAgents)} parallel agents`);
                     
                 } catch (error) {
-                    this.logger.error('Failed to initialize parallel agents:', error);
+                    this.logger.error('Failed to initialize parallel agents:', toLogMetadata({ error: toError(error) }));
                     this.logger.warn('Continuing in single-agent mode');
                     this.config.set('parallelAgents', 'enabled', false);
                     // Emit warning event for monitoring
@@ -226,7 +229,7 @@ export class TerminalMode extends EventEmitter {
                 }
             }
         } catch (error) {
-            this.logger.error('Terminal mode initialization failed:', error);
+            this.logger.error('Terminal mode initialization failed:', toLogMetadata({ error: toError(error) }));
             throw error;
         }
 
@@ -245,7 +248,7 @@ export class TerminalMode extends EventEmitter {
             this.logger.info('Claude session ready with auto-recovery enabled');
             this.setupRecoveryHandlers();
         } catch (error) {
-            this.logger.warn(`Claude session initialization failed: ${error}`);
+            this.logger.warn(`Claude session initialization failed: ${toError(error).message}`);
             this.logger.warn('Continuing without Claude session - you can try reconnecting later');
             this.session = null;
         }
@@ -551,7 +554,7 @@ export class TerminalMode extends EventEmitter {
                 await this.handleSlashCommand(sanitizedInput);
             } catch (error) {
                 console.log(chalk.red(`❌ Command error: ${error}`));
-                this.logger.error('Slash command error:', error);
+                this.logger.error('Slash command error:', toLogMetadata({ error: toError(error) }));
             }
             this.rl?.prompt();
             return;
@@ -585,7 +588,7 @@ export class TerminalMode extends EventEmitter {
 
         } catch (error) {
             console.log(chalk.red(`❌ Error adding message: ${error}`));
-            this.logger.error('Failed to add message:', error);
+            this.logger.error('Failed to add message:', toLogMetadata({ error: toError(error) }));
         }
 
         this.rl?.prompt();
@@ -795,7 +798,7 @@ export class TerminalMode extends EventEmitter {
                 name: 'Disk Space',
                 healthy: false,
                 status: 'Check Failed',
-                details: error.message
+                details: toError(error).message
             });
         }
         
@@ -848,7 +851,7 @@ export class TerminalMode extends EventEmitter {
     private async checkDiskSpace(path: string): Promise<{ free: number; total: number; percentFree: number }> {
         // Simple disk space check using df command
         return new Promise((resolve, reject) => {
-            require('child_process').exec(`df -B1 "${path}"`, (error, stdout) => {
+            require('child_process').exec(`df -B1 "${path}"`, (error: any, stdout: any) => {
                 if (error) {
                     reject(error);
                     return;
@@ -1390,6 +1393,11 @@ export class TerminalMode extends EventEmitter {
                 for (const message of messages) {
                     if (!this.processingQueue) break;
 
+                    // Track active task
+                    const taskId = message.id || `task-${Date.now()}`;
+                    this.activeTasks.add(taskId);
+                    this.taskProcessingStartTime = Date.now();
+
                     // Mark as processing
                     await this.queue.updateMessageStatus(message.id!, 'processing');
                     console.log(chalk.blue(`🔄 Processing: ${message.text.substring(0, 50)}...`));
@@ -1398,21 +1406,41 @@ export class TerminalMode extends EventEmitter {
                         // Check if this is a complex task that needs subagents
                         const needsSubagents = await this.shouldUseSubagents(message.text);
                         
+                        let success = false;
                         if (needsSubagents && this.config.get('parallelAgents', 'enabled')) {
                             console.log(chalk.cyan('🤖 Invoking subagents for complex task...'));
                             await this.processWithSubagents(message.text);
+                            success = true;
                         } else {
                             // Process with main Claude session
-                            await this.processWithClaude(message.text);
+                            success = await this.processWithClaude(message.text);
                         }
 
-                        // Mark message as completed
-                        await this.queue.updateMessageStatus(message.id!, 'completed');
-                        console.log(chalk.green('✅ Task completed successfully'));
+                        if (success) {
+                            // Mark message as completed only if processing was successful
+                            await this.queue.updateMessageStatus(message.id!, 'completed');
+                            console.log(chalk.green('✅ Task completed successfully'));
+                        } else {
+                            // Mark as error if session was not available
+                            await this.queue.updateMessageStatus(message.id!, 'error', undefined, 'Claude session not available');
+                            console.log(chalk.yellow('⚠️  Task could not be processed - Claude session unavailable'));
+                        }
+                        
+                        // Remove from active tasks
+                        this.activeTasks.delete(taskId);
+                        if (this.activeTasks.size === 0) {
+                            this.taskProcessingStartTime = 0;
+                        }
 
                     } catch (error) {
-                        console.log(chalk.red(`❌ Error processing message: ${error}`));
-                        await this.queue.updateMessageStatus(message.id!, 'error', undefined, error.toString());
+                        console.log(chalk.red(`❌ Error processing message: ${toError(error).message}`));
+                        await this.queue.updateMessageStatus(message.id!, 'error', undefined, toError(error).toString());
+                        
+                        // Remove from active tasks
+                        this.activeTasks.delete(taskId);
+                        if (this.activeTasks.size === 0) {
+                            this.taskProcessingStartTime = 0;
+                        }
                     }
                 }
 
@@ -1464,7 +1492,7 @@ export class TerminalMode extends EventEmitter {
         return isComplex;
     }
 
-    private async processWithClaude(text: string): Promise<void> {
+    private async processWithClaude(text: string): Promise<boolean> {
         const startTime = Date.now();
         let waitingIndicator: NodeJS.Timeout;
         
@@ -1483,7 +1511,7 @@ export class TerminalMode extends EventEmitter {
                 clearInterval(waitingIndicator);
                 console.log(chalk.red('\n❌ Claude session not available'));
                 console.log(chalk.yellow('💡 Try restarting AutoClaude or check Claude Code CLI installation'));
-                return;
+                return false;
             }
 
             // Send message to Claude with recovery support
@@ -1499,11 +1527,14 @@ export class TerminalMode extends EventEmitter {
             console.log(chalk.cyan('\\n🤖 Claude:'));
             console.log(chalk.white(response));
             console.log('');
+            
+            return true; // Success
         } catch (error) {
             clearInterval(waitingIndicator);
             process.stdout.write('\r' + ' '.repeat(50) + '\r'); // Clear the line
             console.log(chalk.red(`❌ Error communicating with Claude: ${error}`));
             console.log(chalk.yellow('💡 Make sure Claude Code CLI is properly authenticated'));
+            return false; // Failed
         }
     }
 
@@ -1611,27 +1642,30 @@ Please combine these results into a coherent, complete response to the original 
     }
 
     private startResourceMonitoring(): void {
-        // Monitor resource usage every 30 seconds
+        // Monitor resource usage every 5 minutes (reduced from 30 seconds)
         this.resourceMonitorInterval = setInterval(() => {
             const memUsage = process.memoryUsage();
             const cpuUsage = process.cpuUsage();
             
-            this.logger.info('Resource usage snapshot', {
-                component: 'resource-monitor',
-                memory: {
-                    heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
-                    heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
-                    rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
-                    external: Math.round(memUsage.external / 1024 / 1024) + ' MB'
-                },
-                cpu: {
-                    user: Math.round(cpuUsage.user / 1000000) + ' ms',
-                    system: Math.round(cpuUsage.system / 1000000) + ' ms'
-                },
-                uptime: Math.round(process.uptime()) + ' seconds',
-                activeAgents: this.activeAgents,
-                queueSize: this.queue.getPendingMessages().length
-            });
+            // Only log detailed info if in debug mode
+            if (this.logger.getLevel() === 'debug') {
+                this.logger.debug('Resource usage snapshot', {
+                    component: 'resource-monitor',
+                    memory: {
+                        heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+                        heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+                        rss: Math.round(memUsage.rss / 1024 / 1024) + ' MB',
+                        external: Math.round(memUsage.external / 1024 / 1024) + ' MB'
+                    },
+                    cpu: {
+                        user: Math.round(cpuUsage.user / 1000000) + ' ms',
+                        system: Math.round(cpuUsage.system / 1000000) + ' ms'
+                    },
+                    uptime: Math.round(process.uptime()) + ' seconds',
+                    activeAgents: this.activeAgents,
+                    queueSize: this.queue.getPendingMessages().length
+                });
+            }
             
             // Check for high memory usage (more reasonable threshold)
             const heapPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
@@ -1644,15 +1678,19 @@ Please combine these results into a coherent, complete response to the original 
                     heapUsedMB,
                     action: 'Consider restarting if memory issues persist'
                 });
-            } else if (heapUsedMB > 200) {
-                this.logger.info('Memory usage information', {
-                    component: 'resource-monitor',
-                    heapPercent: Math.round(heapPercent),
-                    heapUsedMB,
-                    status: 'Monitoring memory usage'
-                });
+                
+                // Show warning to user only for critical memory usage
+                console.log(chalk.yellow(`\n⚠️  High memory usage: ${heapUsedMB}MB (${Math.round(heapPercent)}%)`));
+                console.log(chalk.gray('Consider restarting if performance degrades\n'));
+                this.rl?.prompt(); // Restore prompt
             }
-        }, 30000); // Every 30 seconds
+            
+            // Force garbage collection if available and memory is high
+            if (heapPercent > 85 && global.gc) {
+                global.gc();
+                this.logger.debug('Forced garbage collection due to high memory usage');
+            }
+        }, 300000); // Every 5 minutes (300 seconds)
     }
 
     private stopResourceMonitoring(): void {
@@ -1665,7 +1703,29 @@ Please combine these results into a coherent, complete response to the original 
     async shutdown(): Promise<void> {
         console.log(chalk.yellow('\\n🛑 Shutting down AutoClaude...'));
         
-        this.logger.info('Shutdown initiated', { component: 'terminal-mode' });
+        // Check if there are active tasks
+        if (this.activeTasks.size > 0 || (this.session && this.session.isActivelyProcessing())) {
+            console.log(chalk.yellow(`⚠️  Warning: ${this.activeTasks.size} tasks are still active`));
+            console.log(chalk.yellow('Waiting for tasks to complete...'));
+            
+            // Give tasks a chance to complete (max 30 seconds)
+            const shutdownTimeout = setTimeout(() => {
+                console.log(chalk.red('⚠️  Force shutting down with active tasks'));
+            }, 30000);
+            
+            // Wait for active tasks
+            while (this.activeTasks.size > 0 && (Date.now() - this.taskProcessingStartTime) < 30000) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            clearTimeout(shutdownTimeout);
+        }
+        
+        this.logger.info('Shutdown initiated', { 
+            component: 'terminal-mode',
+            activeTasks: this.activeTasks.size,
+            sessionActive: this.session?.isActivelyProcessing() || false
+        });
         this.isRunning = false;
         this.processingQueue = false;
 
@@ -1680,7 +1740,7 @@ Please combine these results into a coherent, complete response to the original 
             await this.queue.save();
             this.logger.info('Queue state saved');
         } catch (error) {
-            this.logger.error('Failed to save queue state:', error);
+            this.logger.error('Failed to save queue state:', toLogMetadata({ error: toError(error) }));
         }
 
         // Stop resource monitoring
@@ -1694,7 +1754,7 @@ Please combine these results into a coherent, complete response to the original 
                 await (this.agentManager as any).stopAllAgents();
                 this.logger.info('All agents stopped');
             } catch (error) {
-                this.logger.error('Error stopping agents:', error);
+                this.logger.error('Error stopping agents:', toLogMetadata({ error: toError(error) }));
             }
         }
 

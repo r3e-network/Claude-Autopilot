@@ -4,7 +4,7 @@ import { Config } from '../core/config';
 import { Logger } from '../utils/logger';
 import { MessageQueue } from '../queue/messageQueue';
 import { v4 as uuidv4 } from 'uuid';
-import os from 'os';
+import { toLogMetadata, toError } from '../utils/typeGuards';
 
 export interface Agent {
     id: string;
@@ -100,7 +100,7 @@ export class ParallelAgentManager extends EventEmitter {
         try {
             await this.execCommand('tmux kill-session -t claude_agents');
         } catch (error) {
-            this.logger.error('Error killing tmux session:', error);
+            this.logger.error('Error killing tmux session:', toLogMetadata({ error: toError(error) }));
         }
 
         // Clear agent data
@@ -149,7 +149,7 @@ export class ParallelAgentManager extends EventEmitter {
                 await queue.updateMessageStatus(message.id!, 'completed', 'Work completed');
                 
             } catch (error) {
-                this.logger.error(`Error processing message in agent ${agent.id}:`, error);
+                this.logger.error(`Error processing message in agent ${agent.id}:`, toLogMetadata({ error: toError(error), agentId: agent.id }));
                 agent.status = 'error';
                 await queue.updateMessageStatus(message.id!, 'error', undefined, String(error));
             }
@@ -254,7 +254,7 @@ export class ParallelAgentManager extends EventEmitter {
                 }
                 
             } catch (error) {
-                this.logger.error(`Health check failed for agent ${agent.name}:`, error);
+                this.logger.error(`Health check failed for agent ${agent.name}:`, toLogMetadata({ error: toError(error), agentName: agent.name }));
                 agent.status = 'error';
             }
         }

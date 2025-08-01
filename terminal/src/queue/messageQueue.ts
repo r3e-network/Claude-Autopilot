@@ -5,6 +5,7 @@ import path from 'path';
 import { Config } from '../core/config';
 import { Logger } from '../utils/logger';
 
+import { toLogMetadata, toError } from '../utils/typeGuards';
 export interface Message {
     id?: string;
     text: string;
@@ -37,7 +38,7 @@ export class MessageQueue extends EventEmitter {
             this.startAutoSave();
             this.logger.info(`Message queue initialized with ${this.messages.size} messages`);
         } catch (error) {
-            this.logger.error('Failed to initialize queue:', error);
+            this.logger.error('Failed to initialize queue:', toLogMetadata({ error: toError(error) }));
         }
     }
 
@@ -218,7 +219,7 @@ export class MessageQueue extends EventEmitter {
             
         } catch (error) {
             if ((error as any).code !== 'ENOENT') {
-                this.logger.error('Failed to load queue:', error);
+                this.logger.error('Failed to load queue:', toLogMetadata({ error: toError(error) }));
             }
         }
     }
@@ -233,7 +234,7 @@ export class MessageQueue extends EventEmitter {
             
             this.logger.debug('Queue saved to disk');
         } catch (error) {
-            this.logger.error('Failed to save queue:', error);
+            this.logger.error('Failed to save queue:', toLogMetadata({ error: toError(error) }));
         }
     }
 

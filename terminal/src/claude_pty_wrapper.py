@@ -6,6 +6,10 @@ import select
 import subprocess
 import fcntl
 import json
+import signal
+import threading
+import queue
+import time
 
 def log_debug(message):
     """Log debug messages to stderr as JSON"""
@@ -15,6 +19,10 @@ def log_debug(message):
 def main():
     # Parse command line arguments
     skip_permissions = '--skip-permissions' in sys.argv
+    
+    # Set up signal handlers
+    signal.signal(signal.SIGTERM, lambda sig, frame: sys.exit(0))
+    signal.signal(signal.SIGPIPE, signal.SIG_IGN)  # Ignore broken pipe
     
     # Spawn Claude with a proper PTY
     master, slave = pty.openpty()
@@ -52,6 +60,30 @@ def main():
     output_buffer = b""
     permission_prompt_detected = False
     
+    # Output queue to prevent blocking
+    output_queue = queue.Queue(maxsize=1000)
+    
+    # Start output writer thread
+    def output_writer():
+        while True:
+            try:
+                data = output_queue.get(timeout=0.1)
+                if data is None:  # Shutdown signal
+                    break
+                sys.stdout.buffer.write(data)
+                sys.stdout.buffer.flush()
+            except queue.Empty:
+                continue
+            except Exception as e:
+                log_debug(f"Output writer error: {e}")
+                break
+    
+    writer_thread = threading.Thread(target=output_writer, daemon=True)
+    writer_thread.start()
+    
+    # Track last activity time
+    last_activity = time.time()
+    
     try:
         while claude_process.poll() is None:
             # Use select to handle both reading from master and stdin
@@ -83,8 +115,18 @@ def main():
                         if len(output_buffer) > 2048:
                             output_buffer = output_buffer[-1024:]
                         
-                        sys.stdout.buffer.write(data)
-                        sys.stdout.buffer.flush()
+                        # Queue output instead of direct write to prevent blocking
+                        try:
+                            output_queue.put(data, block=False)
+                            last_activity = time.time()
+                        except queue.Full:
+                            log_debug("Output queue full, dropping data")
+                            # Clear some space in queue
+                            try:
+                                output_queue.get_nowait()
+                                output_queue.put(data, block=False)
+                            except:
+                                pass
                 except OSError as e:
                     if e.errno == 5:  # EIO, process likely ended
                         break
@@ -98,7 +140,18 @@ def main():
                     # Read from stdin and write to Claude
                     data = sys.stdin.buffer.read(4096)
                     if data:
-                        os.write(master, data)
+                        # Write in chunks to prevent blocking
+                        written = 0
+                        while written < len(data):
+                            try:
+                                n = os.write(master, data[written:])
+                                written += n
+                                last_activity = time.time()
+                            except OSError as e:
+                                if e.errno == 11:  # EAGAIN - try again
+                                    time.sleep(0.01)
+                                else:
+                                    raise
                 except OSError as e:
                     if e.errno == 11:  # EAGAIN
                         pass
@@ -112,6 +165,10 @@ def main():
         log_debug(f"Unexpected error: {e}")
         claude_process.terminate()
     finally:
+        # Signal writer thread to stop
+        output_queue.put(None)
+        writer_thread.join(timeout=1)
+        
         os.close(master)
         claude_process.wait()
         log_debug(f"Claude process exited with code: {claude_process.returncode}")

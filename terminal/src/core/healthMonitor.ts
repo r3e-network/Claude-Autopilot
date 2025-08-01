@@ -1,3 +1,4 @@
+import { toLogMetadata, toError } from '../utils/typeGuards';
 import { EventEmitter } from 'eventemitter3';
 import { Logger } from '../utils/logger';
 import { ClaudeSession } from './session';
@@ -132,7 +133,7 @@ export class HealthMonitor extends EventEmitter {
                 }
             }
         } catch (error) {
-            this.logger.error('Health check error:', error);
+            this.logger.error('Health check error:', toLogMetadata({ error: toError(error) }));
             this.emit('healthCheckError', error);
         } finally {
             this.pendingHealthCheck = false;

@@ -6,7 +6,7 @@ import os from 'os';
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
-interface LogMetadata {
+export interface LogMetadata {
     component?: string;
     action?: string;
     userId?: string;
@@ -137,6 +137,10 @@ export class Logger {
         this.winston.level = level;
     }
 
+    getLevel(): LogLevel {
+        return this.level;
+    }
+
     error(message: string, metadata?: LogMetadata): void {
         this.winston.error(message, this.sanitizeMetadata(metadata));
     }
@@ -205,10 +209,10 @@ export class Logger {
         this.error(context || 'An error occurred', {
             ...metadata,
             error: {
+                ...error,
                 name: error.name,
                 message: error.message,
-                stack: error.stack,
-                ...error
+                stack: error.stack
             }
         });
     }

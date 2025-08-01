@@ -11,6 +11,7 @@ import { UIManager } from '../ui/uiManager';
 import { ScriptRunner } from './scriptRunner';
 import fs from 'fs/promises';
 import path from 'path';
+import { toLogMetadata, toError } from '../utils/typeGuards';
 
 export interface CLIOptions {
     message?: string;
@@ -75,7 +76,7 @@ export class AutoClaudeCLI extends EventEmitter {
             await this.ui.run();
             
         } catch (error) {
-            this.logger.error('Failed to start CLI:', error);
+            this.logger.error('Failed to start CLI:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -104,7 +105,7 @@ export class AutoClaudeCLI extends EventEmitter {
             process.exit(0);
             
         } catch (error) {
-            this.logger.error('Failed to run single message:', error);
+            this.logger.error('Failed to run single message:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -141,7 +142,7 @@ export class AutoClaudeCLI extends EventEmitter {
             }
             
         } catch (error) {
-            this.logger.error('Failed to run batch:', error);
+            this.logger.error('Failed to run batch:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -173,7 +174,7 @@ export class AutoClaudeCLI extends EventEmitter {
             }
             
         } catch (error) {
-            this.logger.error('Failed to manage agents:', error);
+            this.logger.error('Failed to manage agents:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -208,7 +209,7 @@ export class AutoClaudeCLI extends EventEmitter {
             }
             
         } catch (error) {
-            this.logger.error('Failed to manage queue:', error);
+            this.logger.error('Failed to manage queue:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -246,7 +247,7 @@ export class AutoClaudeCLI extends EventEmitter {
             }
             
         } catch (error) {
-            this.logger.error('Failed to manage config:', error);
+            this.logger.error('Failed to manage config:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -269,7 +270,7 @@ export class AutoClaudeCLI extends EventEmitter {
             }
             
         } catch (error) {
-            this.logger.error('Failed to run checks:', error);
+            this.logger.error('Failed to run checks:', toLogMetadata({ error: toError(error) }));
             process.exit(1);
         }
     }
@@ -353,7 +354,7 @@ export class AutoClaudeCLI extends EventEmitter {
                     await this.queue.updateMessageStatus(message.id!, 'completed');
                 }
             } catch (error) {
-                this.logger.error('Error processing message:', error);
+                this.logger.error('Error processing message:', toLogMetadata({ error: toError(error) }));
                 await this.queue.updateMessageStatus(message.id!, 'error');
             }
         }
@@ -373,7 +374,7 @@ export class AutoClaudeCLI extends EventEmitter {
                 const output = await this.session!.sendMessage(message.text);
                 console.log(chalk.green('Output:'), output);
             } catch (error) {
-                this.logger.error('Error processing message:', error);
+                this.logger.error('Error processing message:', toLogMetadata({ error: toError(error) }));
             }
         }
     }

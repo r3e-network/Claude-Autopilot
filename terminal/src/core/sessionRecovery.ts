@@ -4,6 +4,7 @@ import { Logger } from '../utils/logger';
 import { Config } from './config';
 import { EventEmitter } from 'eventemitter3';
 
+import { toLogMetadata, toError } from '../utils/typeGuards';
 export interface RecoveryOptions {
     maxRetries: number;
     retryDelay: number;
@@ -16,6 +17,8 @@ export interface RecoveryState {
     lastError?: string;
     isRecovering: boolean;
     lastRecoveryTime?: number;
+    pendingMessage?: { text: string; timestamp: number };
+    wasProcessingWhenFailed?: boolean;
 }
 
 export class SessionRecoveryManager extends EventEmitter {
@@ -70,7 +73,7 @@ export class SessionRecoveryManager extends EventEmitter {
             
             return this.session;
         } catch (error) {
-            this.logger.error('Failed to initialize session:', error);
+            this.logger.error('Failed to initialize session:', toLogMetadata({ error: toError(error) }));
             throw error;
         }
     }
@@ -90,6 +93,11 @@ export class SessionRecoveryManager extends EventEmitter {
 
         this.session.on('exit', ({ exitCode, signal }) => {
             this.logger.warn(`Session exited unexpectedly (code: ${exitCode}, signal: ${signal})`);
+            
+            // Check if session was processing when it failed
+            const sessionInfo = this.session?.getSessionInfo();
+            this.recoveryState.wasProcessingWhenFailed = sessionInfo?.isProcessing || false;
+            
             if (this.options.autoRecover && !this.recoveryState.isRecovering) {
                 this.handleSessionCrash();
             }
@@ -125,7 +133,16 @@ export class SessionRecoveryManager extends EventEmitter {
     private async handleSessionCrash(): Promise<void> {
         if (this.recoveryState.isRecovering) return;
         
-        this.logger.warn('Handling session crash...');
+        this.logger.warn('Handling session crash...', {
+            wasProcessing: this.recoveryState.wasProcessingWhenFailed,
+            hasPendingMessage: !!this.recoveryState.pendingMessage
+        });
+        
+        // If session was processing, save the context for retry
+        if (this.recoveryState.wasProcessingWhenFailed && this.recoveryState.pendingMessage) {
+            this.logger.info('Session crashed while processing message, will retry after recovery');
+        }
+        
         await this.initiateRecovery('Session crashed unexpectedly');
     }
 
@@ -153,7 +170,7 @@ export class SessionRecoveryManager extends EventEmitter {
                 try {
                     await this.session.stop();
                 } catch (error) {
-                    this.logger.warn('Error stopping session during recovery:', error);
+                    this.logger.warn('Error stopping session during recovery:', toLogMetadata({ error: toError(error) }));
                 }
             }
 
@@ -176,6 +193,13 @@ export class SessionRecoveryManager extends EventEmitter {
                 this.emit('contextRestoring', this.contextBuffer);
                 // The actual context restoration would be handled by the terminal UI
             }
+            
+            // If there was a pending message when session failed, notify about retry
+            if (this.recoveryState.pendingMessage && 
+                (Date.now() - this.recoveryState.pendingMessage.timestamp) < 300000) { // Within 5 minutes
+                this.logger.info('Pending message found, will retry after recovery');
+                this.emit('pendingMessageRetry', this.recoveryState.pendingMessage);
+            }
 
             this.recoveryState.lastRecoveryTime = Date.now();
             this.emit('recoverySucceeded', {
@@ -184,7 +208,7 @@ export class SessionRecoveryManager extends EventEmitter {
             });
 
         } catch (error) {
-            this.logger.error('Recovery failed:', error);
+            this.logger.error('Recovery failed:', toLogMetadata({ error: toError(error) }));
             this.emit('recoveryFailed', {
                 error,
                 attempt: this.recoveryState.retryCount,
@@ -211,8 +235,23 @@ export class SessionRecoveryManager extends EventEmitter {
 
     async sendMessage(message: string, onProgress?: (elapsed: number) => void): Promise<string> {
         if (!this.session || !this.session.isActive()) {
+            // If we have auto-recover on and not already recovering, try recovery first
+            if (this.options.autoRecover && !this.recoveryState.isRecovering) {
+                this.logger.info('Session not active, attempting recovery before sending message');
+                this.recoveryState.pendingMessage = { text: message, timestamp: Date.now() };
+                await this.initiateRecovery('Session not active');
+                
+                // After recovery, try again if session is now active
+                if (this.session && this.session.isActive()) {
+                    this.recoveryState.pendingMessage = undefined;
+                    return this.sendMessage(message, onProgress);
+                }
+            }
             throw new Error('Session not active');
         }
+
+        // Save message in case we need to retry after crash
+        this.recoveryState.pendingMessage = { text: message, timestamp: Date.now() };
 
         if (this.healthMonitor) {
             this.healthMonitor.recordMessageSent();
@@ -225,6 +264,9 @@ export class SessionRecoveryManager extends EventEmitter {
                 this.healthMonitor.recordMessageSuccess();
             }
             
+            // Clear pending message on success
+            this.recoveryState.pendingMessage = undefined;
+            
             return response;
         } catch (error) {
             if (this.healthMonitor) {
@@ -233,16 +275,20 @@ export class SessionRecoveryManager extends EventEmitter {
             
             // Check if we should attempt recovery
             if (this.options.autoRecover && error instanceof Error && 
-                (error.message.includes('timeout') || error.message.includes('Session not active'))) {
+                (error.message.includes('timeout') || error.message.includes('Session not active') || 
+                 error.message.includes('Session not running'))) {
                 this.logger.warn('Message failed, attempting recovery...');
                 await this.initiateRecovery(`Message failed: ${error.message}`);
                 
                 // Retry the message after recovery
                 if (this.session && this.session.isActive()) {
+                    this.recoveryState.pendingMessage = undefined;
                     return this.session.sendMessage(message, onProgress);
                 }
             }
             
+            // Clear pending message on permanent failure
+            this.recoveryState.pendingMessage = undefined;
             throw error;
         }
     }

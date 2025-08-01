@@ -1,6 +1,6 @@
 {
   "name": "@r3e/autoclaude",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Powerful terminal-based AutoClaude AI automation tool with parallel agents and intelligent task management",
   "main": "src/index.ts",
   "bin": {
@@ -40,6 +40,7 @@
   "author": "AutoClaude Team",
   "license": "MIT",
   "dependencies": {
+    "ajv": "^8.17.1",
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.11.0",
     "boxen": "^5.1.2",
@@ -66,6 +67,7 @@
     "@types/inquirer": "^8.2.10",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.10.5",
+    "@types/update-notifier": "^6.0.8",
     "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",

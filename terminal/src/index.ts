@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
+import { toLogMetadata, toError } from './utils/typeGuards';
 import chalk from 'chalk';
 import figlet from 'figlet';
 import { AutoClaudeCLI } from './core/cli';
@@ -30,7 +31,7 @@ async function checkUpdates(): Promise<void> {
     try {
         await checkForUpdates();
     } catch (error) {
-        logger.debug('Update check failed:', error);
+        logger.debug('Update check failed:', toLogMetadata({ error: toError(error) }));
     }
 }
 

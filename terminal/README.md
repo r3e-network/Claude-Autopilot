@@ -13,6 +13,14 @@ A powerful terminal-based Claude AI automation tool with parallel agents, intell
 - 🔧 **Configurable**: Extensive configuration options
 - 📊 **Real-time Monitoring**: Live agent status and performance metrics
 
+### New in v3.4.0 🎉
+- 🔒 **Enterprise Security**: Command injection prevention, path traversal protection
+- 🛡️ **Professional Error Handling**: Comprehensive error hierarchy with recovery
+- 📈 **Performance Monitoring**: Real-time CPU/memory tracking with leak detection
+- ✅ **Configuration Validation**: JSON Schema validation with AJV
+- 🏭 **Production Ready**: TypeScript strict mode, comprehensive logging
+- 📚 **Enhanced Documentation**: Complete user guide and troubleshooting
+
 ## Installation
 
 ### Global Installation (Recommended)
@@ -122,20 +130,36 @@ Configuration file: `~/.autoclaude/config.json`
 {
   "session": {
     "skipPermissions": true,
-    "autoStart": false
+    "autoStart": false,
+    "timeout": 300000,
+    "keepAliveInterval": 30000
   },
   "queue": {
-    "maxSize": 1000,
-    "retentionHours": 24
+    "maxSize": 5000,
+    "maxMessageSize": 100000,
+    "retentionHours": 24,
+    "persistInterval": 60000
   },
   "parallelAgents": {
     "enabled": true,
     "maxAgents": 50,
-    "defaultAgents": 5
+    "defaultAgents": 5,
+    "autoRestart": true
   },
   "ui": {
     "theme": "dark",
     "autoScroll": true
+  },
+  "performance": {
+    "monitoring": true,
+    "monitoringInterval": 30000,
+    "maxMemoryMB": 1024,
+    "maxCpuPercent": 80
+  },
+  "logging": {
+    "level": "info",
+    "maxFiles": 10,
+    "maxSize": "50m"
   }
 }
 ```
@@ -303,6 +327,13 @@ npm test
 ## License
 
 MIT License - see LICENSE file for details
+
+## Documentation
+
+- 📖 **[Comprehensive User Guide](docs/USER_GUIDE.md)** - Complete guide with examples
+- 📋 **[Production Checklist](PRODUCTION_CHECKLIST.md)** - Deployment guide
+- 📊 **[Production Readiness Report](PRODUCTION_READINESS_REPORT.md)** - Security assessment
+- 📝 **[Changelog](CHANGELOG.md)** - Release notes and version history
 
 ## Support
 
