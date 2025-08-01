@@ -73,7 +73,7 @@ export class TaskPersistenceManager {
     private autoSaveInterval: NodeJS.Timeout | null = null;
 
     private constructor(private workspaceRoot: string) {
-        this.storageDir = path.join(workspaceRoot, '.autopilot', 'tasks');
+        this.storageDir = path.join(workspaceRoot, '.autoclaude', 'tasks');
         this.tasksFile = path.join(this.storageDir, 'tasks.json');
         this.sessionsFile = path.join(this.storageDir, 'sessions.json');
         this.ensureStorageDir();

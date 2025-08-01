@@ -121,7 +121,7 @@ export class AutoWorkDetector {
         
         // Save detected problems for distribution
         if (problems.length > 0) {
-            const problemsFile = path.join(this.workspacePath, '.autopilot', 'detected_problems.txt');
+            const problemsFile = path.join(this.workspacePath, '.autoclaude', 'detected_problems.txt');
             await fsAsync.mkdir(path.dirname(problemsFile), { recursive: true });
             await fsAsync.writeFile(problemsFile, problems.join('\n'));
         }
@@ -213,7 +213,7 @@ export class AutoWorkDetector {
                     }
                     
                     // Load and distribute work
-                    const problemsFile = path.join(this.workspacePath, '.autopilot', 'detected_problems.txt');
+                    const problemsFile = path.join(this.workspacePath, '.autoclaude', 'detected_problems.txt');
                     await this.workDistributor.loadWorkFromFile(problemsFile);
                     
                     // Distribute work to agents

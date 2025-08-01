@@ -84,7 +84,7 @@ export async function showProjectContext(): Promise<void> {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspaceRoot) return;
     
-    const contextFile = vscode.Uri.file(`${workspaceRoot}/.autopilot/CLAUDE_CONTEXT.md`);
+    const contextFile = vscode.Uri.file(`${workspaceRoot}/.autoclaude/CLAUDE_CONTEXT.md`);
     
     try {
         const doc = await vscode.workspace.openTextDocument(contextFile);

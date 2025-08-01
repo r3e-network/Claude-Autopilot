@@ -571,7 +571,7 @@ export class TaskDecomposer {
         // Add workflow context to main task
         this.taskManager.addTaskContext(mainTask.id, {
             outputs: [`Workflow created with ${subtasks.length} subtasks`],
-            files: ['.autopilot/CLAUDE_CONTEXT.md']
+            files: ['.autoclaude/CLAUDE_CONTEXT.md']
         });
 
         return {

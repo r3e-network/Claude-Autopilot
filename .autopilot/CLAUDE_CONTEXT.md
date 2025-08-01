@@ -1,6 +1,6 @@
 # AutoClaude Project Context
 
-Generated at: 2025-08-01T09:19:39.684Z
+Generated at: 2025-08-01T13:44:39.957Z
 
 ---
 
@@ -9,23 +9,23 @@ Generated at: 2025-08-01T09:19:39.684Z
 ## Workspace
 - **Root**: /home/neo/git/Claude-Autopilot
 - **Type**: single
-- **Last Updated**: 2025-08-01T09:19:21.790Z
+- **Last Updated**: 2025-08-01T13:44:24.132Z
 
 ## Statistics
-- **Total Files**: 623
-- **Estimated Lines**: 73527
-- **Average File Size**: 50644 bytes
+- **Total Files**: 636
+- **Estimated Lines**: 73671
+- **Average File Size**: 57859 bytes
 
 ## Languages
-- **html**: 913968 files
-- **typescript**: 534429 files
-- **markdown**: 371731 files
-- **json**: 263096 files
-- **shellscript**: 185185 files
-- **javascript**: 75566 files
-- **yaml**: 27696 files
-- **css**: 23080 files
-- **python**: 18464 files
+- **html**: 1142460 files
+- **typescript**: 676371 files
+- **markdown**: 478786 files
+- **json**: 328874 files
+- **shellscript**: 234759 files
+- **javascript**: 95184 files
+- **yaml**: 34620 files
+- **css**: 28850 files
+- **python**: 23080 files
 
 ## Project Structure
 - **Main Languages**: Not detected
@@ -50,14 +50,14 @@ axios, cors, ethers, express
 ## Largest Files
 - autoclaude-3.1.1.vsix (1747KB)
 - autoclaude-3.1.0.vsix (1715KB)
+- claude-autopilot-v3.4.0-bundle.zip (1693KB)
 - autoclaude-3.0.1.vsix (1681KB)
 - autoclaude-3.0.0.vsix (1672KB)
 - autoclaude-3.1.2.tgz (1643KB)
+- autoclaude-3.4.0.vsix (1593KB)
+- release-v3.4.0/autoclaude-3.4.0.vsix (1593KB)
 - autoclaude-2.4.0.vsix (1588KB)
 - autoclaude-3.3.1.vsix (681KB)
-- autoclaude-3.2.11.vsix (681KB)
-- autoclaude-3.3.0.vsix (681KB)
-- autoclaude-3.2.10.vsix (681KB)
 
 
 ---
@@ -91,70 +91,29 @@ No unfinished tasks
 
 ### Git Status
 ```
- M terminal/CHANGELOG.md
- M terminal/package-lock.json
- M terminal/package.json
- M terminal/src/agents/parallelAgentManager.ts
- M terminal/src/claude_pty_wrapper.py
- M terminal/src/core/cli.ts
- M terminal/src/core/healthMonitor.ts
- M terminal/src/core/session.ts
- M terminal/src/core/sessionRecovery.ts
- M terminal/src/core/terminalMode.ts
- M terminal/src/index.ts
- M terminal/src/queue/messageQueue.ts
- M terminal/src/utils/logger.ts
- M terminal/tsconfig.json
-?? .autoclaude/config.json
-?? .autoclaude/scripts/README.md
-?? .autoclaude/scripts/build-check.sh
-?? .autoclaude/scripts/code-understanding-check.sh
-?? .autoclaude/scripts/context-check.sh
-?? .autoclaude/scripts/dependency-check.sh
-?? .autoclaude/scripts/format-check.sh
-?? .autoclaude/scripts/github-actions.sh
-?? .autoclaude/scripts/integration-testing-check.sh
-?? .autoclaude/scripts/performance-check.sh
-?? .autoclaude/scripts/production-readiness.sh
-?? .autoclaude/scripts/security-audit-check.sh
-?? .autoclaude/scripts/test-check.sh
-?? .autopilot/CLAUDE_CONTEXT.md
-?? .autopilot/cache/
-?? .autopilot/detected_problems.txt
-?? .autopilot/tasks/
-?? .claude_agent_farm_backups/
-?? terminal/FINAL_IMPROVEMENTS_SUMMARY.md
-?? terminal/IMPROVEMENT_PLAN.md
-?? terminal/PRODUCTION_CHECKLIST.md
-?? terminal/PRODUCTION_READINESS_REPORT.md
-?? terminal/PROFESSIONAL_IMPROVEMENTS_SUMMARY.md
-?? terminal/SESSION_FIX_SUMMARY.md
-?? terminal/docs/
-?? terminal/fix-type-errors.sh
-?? terminal/scripts/production-readiness-check.sh
-?? terminal/src/core/configValidator.ts
-?? terminal/src/errors/
-?? terminal/src/utils/__tests__/
-?? terminal/src/utils/performanceMonitor.ts
-?? terminal/src/utils/secureExec.ts
-?? terminal/src/utils/typeGuards.ts
-?? terminal/test-session-recovery.js
-?? terminal/test-terminal.js
+ M .autopilot/CLAUDE_CONTEXT.md
+ M .autopilot/cache/project-index.json
+ M src/context/contextProvider.ts
+ M src/context/index.ts
+ M src/context/projectIndexer.ts
+?? claude-autopilot-v3.4.0-bundle.zip
+?? release-v3.4.0/
+?? terminal/r3e-autoclaude-3.4.0.tgz
 
 ```
 
 ### Recent Commits
 ```
+a38670d release: VS Code extension v3.4.0 - align with terminal security release
+e250a87 docs: Add final release verification with timestamp
+def0444 docs: Final release readiness confirmation for v3.4.0
+6fccbbe chore: Add release validation script
+1b290f7 docs: Add release completion checklist for v3.4.0
+e2b219d docs: Add release summary for v3.4.0
+ba8d047 docs: Add GitHub release instructions for v3.4.0
+7244ba4 release: v3.4.0 - Major Security & Reliability Release
 aaaff0d fix: v3.3.1 - Fix PTY wrapper detection in VS Code extension
 6d63ab3 release: v3.3.0 - Major Feature Release with Enhanced UX and Performance
-354e710 fix: v3.2.13 - Auto-accept bypass permissions mode in terminal tool
-96a5c20 fix: v3.2.12 - Resolve high memory usage and improve resource management
-3b86752 feat: v3.2.11 - Enhanced scroll behavior and terminal tool improvements
-e7c2516 feat: Enable parallel agents by default and add auto-recovery system (v3.2.9)
-4c73a0a release: v3.2.6 - Massive performance improvements and enhanced security
-c4eb466 fix: configuration error with missing contextGeneration
-c6df4a1 release: v3.2.4 - Fix timeout issues and add progress indicators
-2bd87cc feat: comprehensive multi-language support for parallel agents
 
 ```
 

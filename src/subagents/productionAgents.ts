@@ -74,7 +74,7 @@ export class TestFixerAgent extends BaseProductionAgent {
             const fixPlan = this.generateFixPlan(analysis);
             
             // Save fix plan for Claude
-            const planPath = path.join(this.workspaceRoot, '.autopilot', 'test-fix-plan.md');
+            const planPath = path.join(this.workspaceRoot, '.autoclaude', 'test-fix-plan.md');
             fs.writeFileSync(planPath, fixPlan);
 
             return {
@@ -198,7 +198,7 @@ describe('ComponentName', () => {
 \`\`\`
 `;
 
-        const planPath = path.join(this.workspaceRoot, '.autopilot', 'test-creation-plan.md');
+        const planPath = path.join(this.workspaceRoot, '.autoclaude', 'test-creation-plan.md');
         fs.writeFileSync(planPath, plan);
 
         return {
@@ -241,7 +241,7 @@ export class DocGeneratorAgent extends BaseProductionAgent {
 
         return {
             success: true,
-            message: 'Documentation templates generated in .autopilot/docs/'
+            message: 'Documentation templates generated in .autoclaude/docs/'
         };
     }
 
@@ -309,7 +309,7 @@ ${Object.entries(projectInfo.scripts).map(([key, value]) =>
 MIT
 `;
 
-        const docsDir = path.join(this.workspaceRoot, '.autopilot', 'docs');
+        const docsDir = path.join(this.workspaceRoot, '.autoclaude', 'docs');
         if (!fs.existsSync(docsDir)) {
             fs.mkdirSync(docsDir, { recursive: true });
         }
@@ -357,7 +357,7 @@ All errors follow this format:
 \`\`\`
 `;
 
-        const docsDir = path.join(this.workspaceRoot, '.autopilot', 'docs');
+        const docsDir = path.join(this.workspaceRoot, '.autoclaude', 'docs');
         fs.writeFileSync(path.join(docsDir, 'API.md'), apiDoc);
     }
 
@@ -404,7 +404,7 @@ ${projectInfo.name} is built using a modular architecture...
 - Database indexing optimized
 `;
 
-        const docsDir = path.join(this.workspaceRoot, '.autopilot', 'docs');
+        const docsDir = path.join(this.workspaceRoot, '.autoclaude', 'docs');
         fs.writeFileSync(path.join(docsDir, 'ARCHITECTURE.md'), archDoc);
     }
 }
@@ -607,7 +607,7 @@ export class CodeCleanerAgent extends BaseProductionAgent {
         // Generate cleanup plan
         const plan = this.generateCleanupPlan(issues);
         
-        const planPath = path.join(this.workspaceRoot, '.autopilot', 'cleanup-plan.md');
+        const planPath = path.join(this.workspaceRoot, '.autoclaude', 'cleanup-plan.md');
         fs.writeFileSync(planPath, plan);
 
         // Try to auto-fix some issues

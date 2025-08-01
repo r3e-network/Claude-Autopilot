@@ -11,7 +11,7 @@ describe('WorkDistributor', () => {
     beforeEach(async () => {
         // Create temporary test workspace
         testWorkspace = path.join(os.tmpdir(), `test-workspace-${Date.now()}`);
-        await fs.promises.mkdir(path.join(testWorkspace, '.autopilot'), { recursive: true });
+        await fs.promises.mkdir(path.join(testWorkspace, '.autoclaude'), { recursive: true });
         
         testWorkFile = path.join(testWorkspace, 'problems.txt');
         

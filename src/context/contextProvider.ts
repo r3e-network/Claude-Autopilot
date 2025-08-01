@@ -34,7 +34,7 @@ export class ContextProvider {
     private constructor(private workspaceRoot: string) {
         this.projectIndexer = ProjectIndexer.getInstance(workspaceRoot);
         this.taskManager = TaskPersistenceManager.getInstance(workspaceRoot);
-        this.contextFile = path.join(workspaceRoot, '.autopilot', 'CLAUDE_CONTEXT.md');
+        this.contextFile = path.join(workspaceRoot, '.autoclaude', 'CLAUDE_CONTEXT.md');
         this.ensureContextDir();
     }
 

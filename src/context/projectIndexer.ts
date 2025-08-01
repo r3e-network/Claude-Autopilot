@@ -67,7 +67,7 @@ export class ProjectIndexer {
     private readonly indexFile: string;
 
     private constructor(private workspaceRoot: string) {
-        this.cacheDir = path.join(workspaceRoot, '.autopilot', 'cache');
+        this.cacheDir = path.join(workspaceRoot, '.autoclaude', 'cache');
         this.indexFile = path.join(this.cacheDir, 'project-index.json');
         this.ensureCacheDir();
     }
@@ -262,7 +262,7 @@ export class ProjectIndexer {
             'dist',
             'build',
             'out',
-            '.autopilot/cache',
+            '.autoclaude/cache',
             '*.log',
             '.DS_Store',
             'thumbs.db',

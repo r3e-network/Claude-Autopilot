@@ -33,8 +33,8 @@ export class WorkDistributor {
     private chunkSize: number;
 
     constructor(workspacePath: string, chunkSize: number = 50) {
-        this.workFile = path.join(workspacePath, '.autopilot', 'work_items.json');
-        this.stateFile = path.join(workspacePath, '.autopilot', 'work_state.json');
+        this.workFile = path.join(workspacePath, '.autoclaude', 'work_items.json');
+        this.stateFile = path.join(workspacePath, '.autoclaude', 'work_state.json');
         this.chunkSize = chunkSize;
     }
 

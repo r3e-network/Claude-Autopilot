@@ -135,7 +135,7 @@ export class AutoOrchestrationCoordinator {
         debugLog('Starting automatic work distribution');
         
         // Load detected problems
-        const problemsFile = path.join(this.workspacePath, '.autopilot', 'detected_problems.txt');
+        const problemsFile = path.join(this.workspacePath, '.autoclaude', 'detected_problems.txt');
         await this.workDistributor.loadWorkFromFile(problemsFile);
         
         // Initial distribution

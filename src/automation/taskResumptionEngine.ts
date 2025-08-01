@@ -44,7 +44,7 @@ export class TaskResumptionEngine {
         private taskDecomposer: TaskDecomposer,
         private workspaceRoot: string
     ) {
-        this.stateFile = path.join(workspaceRoot, '.autopilot', 'resumption-state.json');
+        this.stateFile = path.join(workspaceRoot, '.autoclaude', 'resumption-state.json');
         this.loadResumptionStates();
     }
 
