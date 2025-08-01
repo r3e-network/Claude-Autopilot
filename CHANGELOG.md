@@ -5,6 +5,29 @@ All notable changes to the AutoClaude extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2025-08-01
+
+### 🎉 Major Security & Reliability Release
+
+This release aligns with the terminal v3.4.0 major security and reliability improvements.
+
+### ✨ Added
+- **Enhanced Security Integration** - Better integration with secure terminal features
+- **Professional Error Handling** - Improved error reporting and recovery
+- **Performance Monitoring Support** - Enhanced monitoring capabilities
+- **Production Ready Features** - Aligned with terminal production readiness
+
+### 🔧 Improvements
+- Updated to work seamlessly with terminal v3.4.0 security features
+- Enhanced error handling and user feedback
+- Better integration with new configuration validation
+- Improved session management coordination
+
+### 🐛 Bug Fixes  
+- Fixed compatibility issues with enhanced terminal security
+- Resolved session coordination edge cases
+- Improved error message clarity
+
 ## [3.2.10] - 2025-07-31
 
 ### 🌐 SSH Remote Detection & Guidance
