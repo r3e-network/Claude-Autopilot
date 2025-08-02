@@ -1,6 +1,6 @@
 # AutoClaude Project Context
 
-Generated at: 2025-08-01T13:44:39.957Z
+Generated at: 2025-08-02T07:29:45.514Z
 
 ---
 
@@ -9,23 +9,23 @@ Generated at: 2025-08-01T13:44:39.957Z
 ## Workspace
 - **Root**: /home/neo/git/Claude-Autopilot
 - **Type**: single
-- **Last Updated**: 2025-08-01T13:44:24.132Z
+- **Last Updated**: 2025-08-02T07:29:41.564Z
 
 ## Statistics
 - **Total Files**: 636
 - **Estimated Lines**: 73671
-- **Average File Size**: 57859 bytes
+- **Average File Size**: 62255 bytes
 
 ## Languages
-- **html**: 1142460 files
-- **typescript**: 676371 files
-- **markdown**: 478786 files
-- **json**: 328874 files
-- **shellscript**: 234759 files
-- **javascript**: 95184 files
-- **yaml**: 34620 files
-- **css**: 28850 files
-- **python**: 23080 files
+- **html**: 2031480 files
+- **typescript**: 1228641 files
+- **markdown**: 896356 files
+- **json**: 584804 files
+- **shellscript**: 427829 files
+- **javascript**: 171514 files
+- **yaml**: 61560 files
+- **css**: 51300 files
+- **python**: 41040 files
 
 ## Project Structure
 - **Main Languages**: Not detected
@@ -48,14 +48,14 @@ axios, cors, ethers, express
 
 
 ## Largest Files
+- claude-autopilot-v3.4.0-bundle.zip (2603KB)
+- release-v3.4.0/autoclaude-3.4.0.vsix (2502KB)
+- autoclaude-3.4.0.vsix (2502KB)
 - autoclaude-3.1.1.vsix (1747KB)
 - autoclaude-3.1.0.vsix (1715KB)
-- claude-autopilot-v3.4.0-bundle.zip (1693KB)
 - autoclaude-3.0.1.vsix (1681KB)
 - autoclaude-3.0.0.vsix (1672KB)
 - autoclaude-3.1.2.tgz (1643KB)
-- autoclaude-3.4.0.vsix (1593KB)
-- release-v3.4.0/autoclaude-3.4.0.vsix (1593KB)
 - autoclaude-2.4.0.vsix (1588KB)
 - autoclaude-3.3.1.vsix (681KB)
 
@@ -93,17 +93,14 @@ No unfinished tasks
 ```
  M .autopilot/CLAUDE_CONTEXT.md
  M .autopilot/cache/project-index.json
- M src/context/contextProvider.ts
- M src/context/index.ts
- M src/context/projectIndexer.ts
-?? claude-autopilot-v3.4.0-bundle.zip
-?? release-v3.4.0/
-?? terminal/r3e-autoclaude-3.4.0.tgz
+ M claude-autopilot-v3.4.0-bundle.zip
+ M release-v3.4.0/README.txt
 
 ```
 
 ### Recent Commits
 ```
+ae7b37f fix: Replace all .autopilot folder references with .autoclaude
 a38670d release: VS Code extension v3.4.0 - align with terminal security release
 e250a87 docs: Add final release verification with timestamp
 def0444 docs: Final release readiness confirmation for v3.4.0
@@ -113,7 +110,6 @@ e2b219d docs: Add release summary for v3.4.0
 ba8d047 docs: Add GitHub release instructions for v3.4.0
 7244ba4 release: v3.4.0 - Major Security & Reliability Release
 aaaff0d fix: v3.3.1 - Fix PTY wrapper detection in VS Code extension
-6d63ab3 release: v3.3.0 - Major Feature Release with Enhanced UX and Performance
 
 ```
 

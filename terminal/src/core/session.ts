@@ -228,32 +228,22 @@ export class ClaudeSession extends EventEmitter {
                 
                 // Log raw output for debugging
                 this.logger.debug(`Raw Claude output: ${JSON.stringify(output)}`);
+                this.logger.debug(`Response buffer length: ${responseBuffer.length}, isCollecting: ${isCollecting}`);
                 
-                // Start collecting immediately if we haven't started yet
-                if (!isCollecting) {
-                    // Check if this looks like a Claude response or if enough time has passed
-                    const timeSinceStart = Date.now() - startTime;
-                    const looksLikeResponse = output.trim().length > 0 && 
-                                            !output.includes('Human:') && 
-                                            !output.includes('>') &&
-                                            timeSinceStart > 100; // Give 100ms for echo
-                    
-                    if (looksLikeResponse || output.includes(message)) {
-                        isCollecting = true;
-                        // If the output contains the message, skip it
-                        if (output.includes(message)) {
-                            const messageIndex = output.indexOf(message);
-                            const afterMessage = output.substring(messageIndex + message.length);
-                            if (afterMessage.trim()) {
-                                responseBuffer += afterMessage;
-                            }
-                            return;
-                        }
-                    }
+                // Start collecting after a short delay to skip initial echo
+                const timeSinceStart = Date.now() - startTime;
+                if (!isCollecting && timeSinceStart > 500) {
+                    isCollecting = true;
                 }
-
-                if (isCollecting || responseBuffer.length === 0) {
-                    // Always collect output if we haven't collected anything yet
+                
+                if (isCollecting) {
+                    // Skip if this is just echoing our message back
+                    if (output.includes(message) && timeSinceStart < 2000) {
+                        this.logger.debug('Skipping message echo');
+                        return;
+                    }
+                    
+                    // Collect the output
                     responseBuffer += output;
                     
                     // Check if Claude is done responding
@@ -267,11 +257,20 @@ export class ClaudeSession extends EventEmitter {
             // Also add an inactivity checker
             inactivityChecker = setInterval(() => {
                 const timeSinceLastOutput = Date.now() - lastOutputTime;
-                if (isCollecting && timeSinceLastOutput > 5000 && responseBuffer.length > 0) {
-                    // No output for 5 seconds after starting collection, assume done
+                const timeSinceStart = Date.now() - startTime;
+                
+                // If we have a response and no output for 3 seconds, consider done
+                if (isCollecting && timeSinceLastOutput > 3000 && responseBuffer.length > 50) {
                     clearInterval(inactivityChecker);
                     cleanup();
                     resolve(this.cleanResponse(responseBuffer));
+                }
+                
+                // If we've been waiting 30 seconds with no meaningful response, give up
+                if (timeSinceStart > 30000 && responseBuffer.length < 10) {
+                    clearInterval(inactivityChecker);
+                    cleanup();
+                    resolve('No response received from Claude. The session may need to be restarted.');
                 }
             }, 1000);
 
@@ -286,13 +285,13 @@ export class ClaudeSession extends EventEmitter {
             this.on('output', outputHandler);
             
             // Send the message
-            this.pty!.write(message + '\\n');
+            this.pty!.write(message + '\n');
         });
     }
 
     sendInterrupt(): void {
         if (this.pty) {
-            this.pty.write('\\x03'); // Ctrl+C
+            this.pty.write('\x03'); // Ctrl+C
             this.logger.debug('Sent interrupt signal');
         }
     }
@@ -436,6 +435,15 @@ export class ClaudeSession extends EventEmitter {
             'Human: ',  // Claude Code CLI human prompt
             'Human:', // Without space
             '\nHuman:', // With newline
+            // Claude Code CLI specific patterns
+            '╰──────────────────────────────────────────────────────────────────────────────╯',
+            '│                                                                          │',
+            '> ',  // Input prompt
+            '[27m',  // ANSI escape sequence end
+            '?25l',  // Cursor hide
+            '?25h',  // Cursor show
+            '[?2004h',  // Bracketed paste mode
+            'Bypassing Permissions',
             'Is there anything else',
             'Let me know if',
             'Feel free to ask',

@@ -234,6 +234,9 @@ export class SessionRecoveryManager extends EventEmitter {
     }
 
     async sendMessage(message: string, onProgress?: (elapsed: number) => void): Promise<string> {
+        // Debug logging
+        this.logger.debug(`Sending message, session exists: ${!!this.session}, session active: ${this.session?.isActive()}`);
+        
         if (!this.session || !this.session.isActive()) {
             // If we have auto-recover on and not already recovering, try recovery first
             if (this.options.autoRecover && !this.recoveryState.isRecovering) {
