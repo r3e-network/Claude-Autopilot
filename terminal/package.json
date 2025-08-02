@@ -1,6 +1,6 @@
 {
   "name": "claude-autopilot",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "description": "Terminal-based Claude Code automation tool with task queuing and workflow management",
   "main": "src/index.ts",
   "bin": {

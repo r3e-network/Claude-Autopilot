@@ -585,6 +585,57 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const showSessionInfoCommand = vscode.commands.registerCommand('autoclaude.showSessionInfo', () => {
+        try {
+            // Import session state functions dynamically
+            import('./core/state').then(({ getCurrentSessionInfo, getAllActiveSessions }) => {
+                const currentSession = getCurrentSessionInfo();
+                const allSessions = getAllActiveSessions();
+                
+                const sessionInfo = [
+                    '# Claude Autopilot Session Isolation Info',
+                    '',
+                    '## Current Session',
+                    `- **Session ID**: ${currentSession.sessionId}`,
+                    `- **Workspace ID**: ${currentSession.workspaceId}`,
+                    `- **Active Process PID**: ${currentSession.activeProcessPid || 'None'}`,
+                    `- **VS Code Process PID**: ${process.pid}`,
+                    '',
+                    '## All Active Sessions',
+                    `Total sessions: ${allSessions.length}`,
+                    ''
+                ];
+                
+                allSessions.forEach((session, index) => {
+                    sessionInfo.push(`### Session ${index + 1}`);
+                    sessionInfo.push(`- **Session ID**: ${session.sessionId}`);
+                    sessionInfo.push(`- **Workspace ID**: ${session.workspaceId}`);
+                    sessionInfo.push(`- **Active Process PID**: ${session.activeProcessPid || 'None'}`);
+                    sessionInfo.push('');
+                });
+                
+                sessionInfo.push('## Session Isolation Features');
+                sessionInfo.push('- ✅ **Workspace-based isolation**: Each workspace gets its own session');
+                sessionInfo.push('- ✅ **Process-based identification**: Uses VS Code PID for uniqueness');
+                sessionInfo.push('- ✅ **State separation**: Complete separation of Claude processes');
+                sessionInfo.push('- ✅ **Automatic cleanup**: Inactive sessions are cleaned up automatically');
+                sessionInfo.push('- ✅ **Cross-window safety**: No shared state between VS Code windows');
+                
+                // Create and show document
+                vscode.workspace.openTextDocument({
+                    content: sessionInfo.join('\n'),
+                    language: 'markdown'
+                }).then(doc => {
+                    vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+                });
+            }).catch(error => {
+                vscode.window.showErrorMessage(`Failed to get session info: ${error.message}`);
+            });
+        } catch (error) {
+            vscode.window.showErrorMessage(`Session info command failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    });
+
     context.subscriptions.push(
         startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
         quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
@@ -594,7 +645,7 @@ export function activate(context: vscode.ExtensionContext) {
         exportQueueCommand, importQueueCommand, exportSettingsCommand,
         useTemplateCommand, manageTemplatesCommand, showStatisticsCommand, checkRemoteStatusCommand,
         showErrorHistoryCommand, showServiceHealthCommand, exportLogsCommand,
-        validateConfigurationCommand, resetToDefaultsCommand,
+        validateConfigurationCommand, resetToDefaultsCommand, showSessionInfoCommand,
         configWatcher
     );
     

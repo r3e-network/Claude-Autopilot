@@ -513,7 +513,7 @@ export class MergeConflictResolverAgent extends BaseProductionAgent {
             const plan = this.generateResolutionPlan(analysis);
             
             // Save plan
-            const planPath = path.join(this.workspaceRoot, '.autopilot', 'merge-conflict-plan.md');
+            const planPath = path.join(this.workspaceRoot, '.claude-autopilot', 'merge-conflict-plan.md');
             fs.writeFileSync(planPath, plan);
 
             // Try to auto-resolve simple conflicts

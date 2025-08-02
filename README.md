@@ -1,6 +1,6 @@
 # Claude Autopilot - Automated Claude Code Assistant
 
-[![Version](https://img.shields.io/badge/version-3.5.0-blue)](https://github.com/claude-code/claude-autopilot/releases/tag/v3.5.0)
+[![Version](https://img.shields.io/badge/version-3.6.0-blue)](https://github.com/claude-code/claude-autopilot/releases/tag/v3.6.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Claude Autopilot** is an automated assistant for Claude Code that provides intelligent task queuing, workflow automation, and 24/7 processing capabilities. Queue up hundreds of tasks and let Claude work autonomously while you focus on what matters most.
@@ -11,33 +11,32 @@
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
-## 🆕 NEW in v3.5.0: Enterprise-Grade Reliability & Professional UX
+## 🆕 NEW in v3.6.0: Complete Session Isolation & Multi-Window Independence
 
-### 🚀 **Major Enhancements**
-- **Enterprise Error Management**: Comprehensive error handling with categories, severity levels, and detailed tracking
-- **Advanced Fault Tolerance**: Circuit breaker pattern, retry strategies, and graceful degradation
-- **Professional Logging**: Multi-level logging system with file output and export capabilities
-- **Input Validation**: Security-focused validation with XSS prevention and path traversal protection
-- **Service Health Monitoring**: Real-time health tracking for all critical services
+### 🔒 **Complete Session Isolation**
+- **Independent VS Code Windows**: Each window runs completely separate Claude sessions
+- **Process Isolation**: Separate Claude CLI processes with different PIDs
+- **Memory Isolation**: No shared state or variables between different windows
+- **Workspace-Based Sessions**: Unique session identifiers per workspace
+- **Automatic Cleanup**: Resource management and cleanup for inactive sessions
 
-### 🛡️ **Security & Reliability**
-- Input sanitization for all user inputs
-- Path traversal protection
-- Dangerous command detection
-- Automatic configuration validation
-- Comprehensive error recovery
+### 🛡️ **Multi-Window Safety**
+- **Zero Cross-Contamination**: Changes in one window don't affect others
+- **Crash Isolation**: Issues in one window don't impact other sessions
+- **Independent Processing**: Separate message queues per window
+- **Configuration Isolation**: Workspace-specific settings and logs
 
-### 🔧 **Developer Experience**
-- 5 new diagnostic commands for troubleshooting
-- Comprehensive troubleshooting documentation
-- Enhanced error messages with actionable suggestions
-- Improved configuration management with validation
+### 🚀 **Enhanced Development Experience**
+- **Parallel Development**: Work on multiple projects simultaneously
+- **Session Monitoring**: New command to view session isolation details
+- **Improved Reliability**: Enhanced fault tolerance across sessions
+- **Seamless Multi-Window**: No configuration needed for multi-window support
 
-### 🧹 **Codebase Improvements**
-- Removed all blockchain and crypto-related code
-- Focused exclusively on Claude Code automation
-- Enhanced TypeScript type safety
-- Comprehensive unit test coverage
+### 🔧 **Technical Excellence**
+- **Backward Compatibility**: No breaking changes to existing functionality
+- **Session Registry**: Global tracking of all active sessions
+- **Resource Management**: Efficient cleanup and memory management
+- **Comprehensive Logging**: Session-specific logging and debugging
 
 ## 🧠 Intelligent Task Automation System
 

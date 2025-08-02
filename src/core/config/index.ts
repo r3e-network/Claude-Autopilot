@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { debugLog } from '../../utils/logging';
+import { ErrorManager, CommonErrors } from '../errors';
+import { InputValidator, ValidationRules } from '../validation';
 
 export interface ClaudeAutopilotConfig {
     // Development settings
@@ -201,10 +203,11 @@ export function validateConfig(config: Partial<ClaudeAutopilotConfig>): ConfigVa
 }
 
 export function getValidatedConfig(): ClaudeAutopilotConfig {
-    const workspaceConfig = vscode.workspace.getConfiguration('autoclaude');
-    
-    // Get all configuration values with defaults
-    const config: ClaudeAutopilotConfig = {
+    try {
+        const workspaceConfig = vscode.workspace.getConfiguration('autoclaude');
+        
+        // Get all configuration values with defaults
+        const config: ClaudeAutopilotConfig = {
         developmentMode: workspaceConfig.get('developmentMode', DEFAULT_CONFIG.developmentMode),
         
         queue: {
@@ -243,28 +246,56 @@ export function getValidatedConfig(): ClaudeAutopilotConfig {
     // Validate the configuration
     const errors = validateConfig(config);
     
-    if (errors.length > 0) {
-        debugLog('⚠️ Configuration validation errors found:');
-        errors.forEach(error => {
-            debugLog(`  - ${error.path}: ${error.message} (got: ${error.value}, expected: ${error.expected})`);
+        if (errors.length > 0) {
+            debugLog('⚠️ Configuration validation errors found:');
+            errors.forEach(error => {
+                debugLog(`  - ${error.path}: ${error.message} (got: ${error.value}, expected: ${error.expected})`);
+                ErrorManager.logError(CommonErrors.INVALID_CONFIGURATION(
+                    error.path,
+                    error.value,
+                    error.expected
+                ));
+            });
+            
+            // Show warning to user about invalid configuration
+            const errorCount = errors.length;
+            vscode.window.showWarningMessage(
+                `Claude Autopilot has ${errorCount} configuration error${errorCount > 1 ? 's' : ''}. Using default values for invalid settings.`,
+                'View Details',
+                'Open Settings',
+                'Reset to Defaults'
+            ).then(selection => {
+                if (selection === 'View Details') {
+                    showConfigValidationDetails(errors);
+                } else if (selection === 'Open Settings') {
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'autoclaude');
+                } else if (selection === 'Reset to Defaults') {
+                    resetConfigToDefaults();
+                }
+            });
+            
+            // Use defaults for invalid values
+            return getDefaultsForInvalidConfig(config, errors);
+        }
+        
+        return config;
+    } catch (error) {
+        ErrorManager.logError(error instanceof Error ? error : new Error(String(error)), {
+            context: 'config_loading'
         });
         
-        // Show warning to user about invalid configuration
-        const errorMessages = errors.map(e => `${e.path}: ${e.message}`).join('\n');
-        vscode.window.showWarningMessage(
-            `Claude Autopilot configuration has invalid values:\n${errorMessages}\n\nUsing default values for invalid settings.`,
-            'Open Settings'
-        ).then(selection => {
-            if (selection === 'Open Settings') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'autoclaude');
+        debugLog('❌ Critical error loading configuration, using defaults');
+        vscode.window.showErrorMessage(
+            'Failed to load Claude Autopilot configuration. Using default settings.',
+            'Reset Configuration'
+        ).then(choice => {
+            if (choice === 'Reset Configuration') {
+                resetConfigToDefaults();
             }
         });
         
-        // Use defaults for invalid values
-        return getDefaultsForInvalidConfig(config, errors);
+        return DEFAULT_CONFIG;
     }
-    
-    return config;
 }
 
 function getDefaultsForInvalidConfig(config: ClaudeAutopilotConfig, errors: ConfigValidationError[]): ClaudeAutopilotConfig {
@@ -334,6 +365,33 @@ export function showConfigValidationStatus(): void {
             }
         });
     }
+}
+
+export function showConfigValidationDetails(errors: ConfigValidationError[]): void {
+    const details = [
+        'Claude Autopilot Configuration Validation Errors',
+        '='.repeat(50),
+        '',
+        ...errors.map(error => [
+            `Setting: ${error.path}`,
+            `Current Value: ${JSON.stringify(error.value)}`,
+            `Expected: ${error.expected}`,
+            `Issue: ${error.message}`,
+            ''
+        ]).flat(),
+        'To fix these issues:',
+        '1. Open VS Code Settings (Ctrl+,)',
+        '2. Search for "autoclaude"',
+        '3. Update the invalid settings',
+        '4. Or click "Reset to Defaults" to use recommended values'
+    ].join('\n');
+
+    vscode.workspace.openTextDocument({
+        content: details,
+        language: 'plaintext'
+    }).then(doc => {
+        vscode.window.showTextDocument(doc);
+    });
 }
 
 // Configuration change listener

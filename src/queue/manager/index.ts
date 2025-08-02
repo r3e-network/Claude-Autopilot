@@ -7,14 +7,32 @@ import { processNextMessage } from '../../claude/communication';
 import { enforceMessageSizeLimits, enforceQueueSizeLimit, performQueueMaintenance } from '../memory';
 import { savePendingQueue } from '../processor/history';
 import { generateMessageId } from '../../utils/id-generator';
+import { ErrorManager, CommonErrors } from '../../core/errors';
+import { InputValidator } from '../../core/validation';
 
 export function removeMessageFromQueue(messageId: string): void {
-    const index = messageQueue.findIndex(msg => msg.id === messageId);
-    if (index >= 0) {
-        messageQueue.splice(index, 1);
-        updateWebviewContent();
-        savePendingQueue(); // Save queue changes
-        vscode.window.showInformationMessage('Message removed from queue');
+    try {
+        if (!messageId || typeof messageId !== 'string') {
+            throw CommonErrors.INVALID_CONFIGURATION('messageId', messageId, 'non-empty string');
+        }
+
+        const index = messageQueue.findIndex(msg => msg.id === messageId);
+        if (index >= 0) {
+            const removedMessage = messageQueue[index];
+            messageQueue.splice(index, 1);
+            updateWebviewContent();
+            savePendingQueue();
+            
+            debugLog(`✅ Message removed from queue: ${removedMessage.text.substring(0, 50)}...`);
+            vscode.window.showInformationMessage(`Message removed: ${removedMessage.text.substring(0, 30)}...`);
+        } else {
+            throw new Error(`Message with ID ${messageId} not found in queue`);
+        }
+    } catch (error) {
+        ErrorManager.logError(error instanceof Error ? error : new Error(String(error)), {
+            context: 'removeMessageFromQueue',
+            messageId
+        });
     }
 }
 
@@ -39,22 +57,50 @@ export function duplicateMessageInQueue(messageId: string): void {
 }
 
 export function editMessageInQueue(messageId: string, newText: string): void {
-    debugLog(`EditMessageInQueue called with messageId: ${messageId}, newText: ${newText}`);
-    const message = messageQueue.find(msg => msg.id === messageId);
-    debugLog(`Found message: ${message ? message.text : 'not found'}`);
-    
-    if (message) {
-        const oldText = message.text;
-        message.text = newText;
-        message.timestamp = new Date().toISOString(); // Update timestamp when edited
+    try {
+        debugLog(`EditMessageInQueue called with messageId: ${messageId}, newText length: ${newText?.length || 0}`);
         
-        debugLog(`Message edited from "${oldText}" to "${newText}"`);
-        updateWebviewContent();
-        savePendingQueue(); // Save queue changes
-        vscode.window.showInformationMessage(`Message edited: ${oldText.substring(0, 30)}... → ${newText.substring(0, 30)}...`);
-    } else {
-        debugLog(`ERROR: Message with ID ${messageId} not found in queue`);
-        vscode.window.showErrorMessage(`Message with ID ${messageId} not found`);
+        // Validate inputs
+        if (!messageId || typeof messageId !== 'string') {
+            throw CommonErrors.INVALID_CONFIGURATION('messageId', messageId, 'non-empty string');
+        }
+
+        const validation = InputValidator.validateMessage(newText);
+        if (!validation.isValid) {
+            throw new Error(`Invalid message text: ${validation.errors.join(', ')}`);
+        }
+
+        const message = messageQueue.find(msg => msg.id === messageId);
+        debugLog(`Found message: ${message ? 'yes' : 'not found'}`);
+        
+        if (message) {
+            const oldText = message.text;
+            message.text = validation.sanitizedValue || newText;
+            message.timestamp = new Date().toISOString();
+            
+            debugLog(`✅ Message edited successfully`);
+            updateWebviewContent();
+            savePendingQueue();
+            
+            vscode.window.showInformationMessage(
+                `Message edited: ${oldText.substring(0, 30)}... → ${message.text.substring(0, 30)}...`
+            );
+
+            // Show validation warnings if any
+            if (validation.warnings.length > 0) {
+                vscode.window.showWarningMessage(
+                    `Message updated with warnings: ${validation.warnings.join(', ')}`
+                );
+            }
+        } else {
+            throw new Error(`Message with ID ${messageId} not found in queue`);
+        }
+    } catch (error) {
+        ErrorManager.logError(error instanceof Error ? error : new Error(String(error)), {
+            context: 'editMessageInQueue',
+            messageId,
+            newTextLength: newText?.length
+        });
     }
 }
 

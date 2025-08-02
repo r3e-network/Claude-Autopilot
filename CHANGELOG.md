@@ -5,6 +5,36 @@ All notable changes to the Claude Autopilot extension will be documented in this
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2025-08-03
+
+### 🔒 Complete Session Isolation & Multi-Window Independence
+
+#### ✨ Added
+- **Complete Session Isolation** - Each VS Code window now runs completely independent Claude sessions
+- **Workspace-Based Sessions** - Unique session identifiers per workspace and VS Code window
+- **Process Isolation** - Separate Claude processes with different PIDs for each window
+- **State Separation** - No shared memory or variables between different VS Code instances
+- **Session Monitoring** - New `Claude: Show Session Isolation Info` command
+- **Automatic Cleanup** - Resource management and cleanup for inactive sessions
+
+#### 🛡️ Isolation Guarantees
+- **Process Independence** - Each window spawns its own Claude CLI process
+- **Memory Isolation** - Complete separation of message queues, timers, and state
+- **Configuration Isolation** - Workspace-specific settings and logs
+- **Network Isolation** - Independent Claude CLI connections per session
+
+#### 🔧 Technical Improvements
+- **Session Registry** - Global map tracking all active sessions
+- **Unique Identifiers** - Session IDs: `session_[workspace]_[PID]_[timestamp]_[random]`
+- **Backward Compatibility** - No breaking changes to existing functionality
+- **Resource Management** - Automatic cleanup every 5 minutes + immediate cleanup on close
+
+#### 🏆 Benefits
+- **Multi-Window Development** - Work on multiple projects simultaneously without interference
+- **Crash Isolation** - Issues in one window don't affect others
+- **Independent Processing** - Separate Claude queues and processing per window
+- **Enhanced Reliability** - Improved fault tolerance across sessions
+
 ## [3.5.0] - 2025-08-02
 
 ### 🚀 Enterprise-Grade Reliability & Professional UX

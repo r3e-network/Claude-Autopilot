@@ -1,6 +1,6 @@
 # AutoClaude Project Context
 
-Generated at: 2025-08-02T07:29:45.514Z
+Generated at: 2025-08-02T14:34:45.598Z
 
 ---
 
@@ -9,23 +9,23 @@ Generated at: 2025-08-02T07:29:45.514Z
 ## Workspace
 - **Root**: /home/neo/git/Claude-Autopilot
 - **Type**: single
-- **Last Updated**: 2025-08-02T07:29:41.564Z
+- **Last Updated**: 2025-08-02T14:34:44.763Z
 
 ## Statistics
-- **Total Files**: 636
-- **Estimated Lines**: 73671
-- **Average File Size**: 62255 bytes
+- **Total Files**: 637
+- **Estimated Lines**: 73691
+- **Average File Size**: 62337 bytes
 
 ## Languages
-- **html**: 2031480 files
-- **typescript**: 1228641 files
-- **markdown**: 896356 files
-- **json**: 584804 files
-- **shellscript**: 427829 files
-- **javascript**: 171514 files
-- **yaml**: 61560 files
-- **css**: 51300 files
-- **python**: 41040 files
+- **html**: 2387088 files
+- **typescript**: 1449549 files
+- **markdown**: 1063384 files
+- **json**: 687176 files
+- **shellscript**: 505057 files
+- **javascript**: 202046 files
+- **yaml**: 72336 files
+- **css**: 60280 files
+- **python**: 48224 files
 
 ## Project Structure
 - **Main Languages**: Not detected
@@ -93,13 +93,15 @@ No unfinished tasks
 ```
  M .autopilot/CLAUDE_CONTEXT.md
  M .autopilot/cache/project-index.json
- M claude-autopilot-v3.4.0-bundle.zip
- M release-v3.4.0/README.txt
+ M terminal/package.json
+ M terminal/r3e-autoclaude-3.4.0.tgz
+?? terminal/r3e-autoclaude-3.4.1.tgz
 
 ```
 
 ### Recent Commits
 ```
+52e1ef1 fix: Improve Claude session connection and response detection
 ae7b37f fix: Replace all .autopilot folder references with .autoclaude
 a38670d release: VS Code extension v3.4.0 - align with terminal security release
 e250a87 docs: Add final release verification with timestamp
@@ -109,7 +111,6 @@ def0444 docs: Final release readiness confirmation for v3.4.0
 e2b219d docs: Add release summary for v3.4.0
 ba8d047 docs: Add GitHub release instructions for v3.4.0
 7244ba4 release: v3.4.0 - Major Security & Reliability Release
-aaaff0d fix: v3.3.1 - Fix PTY wrapper detection in VS Code extension
 
 ```
 

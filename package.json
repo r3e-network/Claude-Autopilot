@@ -2,7 +2,7 @@
   "name": "claude-autopilot",
   "displayName": "Claude Autopilot",
   "description": "Automated Claude Code assistant with smart task completion, queue management, and workflow automation for VS Code",
-  "version": "3.5.0",
+  "version": "3.6.0",
   "icon": "img/claude-autopilot.png",
   "engines": {
     "vscode": "^1.74.0",

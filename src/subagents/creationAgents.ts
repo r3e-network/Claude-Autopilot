@@ -943,7 +943,7 @@ export class RequirementAnalyzerAgent extends BaseProductionAgent {
             const specification = this.createSpecification(analysis);
             
             // Save specification
-            const specPath = path.join(this.workspaceRoot, '.autopilot', 'project-specification.md');
+            const specPath = path.join(this.workspaceRoot, '.claude-autopilot', 'project-specification.md');
             fs.writeFileSync(specPath, specification);
 
             return {

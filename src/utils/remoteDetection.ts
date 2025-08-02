@@ -35,7 +35,7 @@ export async function checkRemoteCompatibility(): Promise<{
                 compatible: false,
                 reason: 'AutoClaude runs Claude CLI locally but your workspace is on a remote SSH host.',
                 suggestions: [
-                    'Install the terminal version on your remote host: npm install -g @r3e/autoclaude',
+                    'Install the terminal version on your remote host: npm install -g claude-autopilot',
                     'Use autoclaude terminal command on the remote host',
                     'Or work with local files instead of remote SSH'
                 ]
@@ -47,7 +47,7 @@ export async function checkRemoteCompatibility(): Promise<{
                 reason: 'AutoClaude needs Claude CLI installed in your WSL environment.',
                 suggestions: [
                     'Open a WSL terminal and install Claude CLI there',
-                    'Install the terminal tool: npm install -g @r3e/autoclaude',
+                    'Install the terminal tool: npm install -g claude-autopilot',
                     'Use autoclaude terminal command in WSL'
                 ]
             };
@@ -58,7 +58,7 @@ export async function checkRemoteCompatibility(): Promise<{
                 reason: 'AutoClaude needs Claude CLI installed in your dev container.',
                 suggestions: [
                     'Add Claude CLI to your devcontainer.json',
-                    'Install in container: npm install -g @r3e/autoclaude',
+                    'Install in container: npm install -g claude-autopilot',
                     'Use the terminal version inside the container'
                 ]
             };
@@ -68,7 +68,7 @@ export async function checkRemoteCompatibility(): Promise<{
                 compatible: false,
                 reason: 'AutoClaude needs Claude CLI in your GitHub Codespace.',
                 suggestions: [
-                    'Install in terminal: npm install -g @r3e/autoclaude',
+                    'Install in terminal: npm install -g claude-autopilot',
                     'Add to your devcontainer.json for persistence',
                     'Use autoclaude terminal command'
                 ]
@@ -124,7 +124,7 @@ For remote development, we recommend using the **terminal version** of AutoClaud
 
 \`\`\`bash
 # On your remote host
-npm install -g @r3e/autoclaude
+npm install -g claude-autopilot
 autoclaude terminal
 \`\`\`
 
