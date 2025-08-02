@@ -1,9 +1,9 @@
 {
-  "name": "autoclaude",
-  "displayName": "AutoClaude",
-  "description": "Intelligent AI-powered development assistant with automated workflows, smart task completion, and user-friendly Claude integration",
-  "version": "3.4.0",
-  "icon": "icon.png",
+  "name": "claude-autopilot",
+  "displayName": "Claude Autopilot",
+  "description": "Automated Claude Code assistant with smart task completion, queue management, and workflow automation for VS Code",
+  "version": "3.5.0",
+  "icon": "img/claude-autopilot.png",
   "engines": {
     "vscode": "^1.74.0",
     "node": ">=18.0.0"
@@ -173,6 +173,36 @@
         "title": "🌐 Check Remote Environment",
         "category": "Claude",
         "icon": "$(remote)"
+      },
+      {
+        "command": "autoclaude.showErrorHistory",
+        "title": "📋 Show Error History",
+        "category": "Claude",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "autoclaude.showServiceHealth",
+        "title": "💚 Show Service Health",
+        "category": "Claude",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "autoclaude.exportLogs",
+        "title": "📄 Export Debug Logs",
+        "category": "Claude",
+        "icon": "$(export)"
+      },
+      {
+        "command": "autoclaude.validateConfiguration",
+        "title": "✅ Validate Configuration",
+        "category": "Claude",
+        "icon": "$(check)"
+      },
+      {
+        "command": "autoclaude.resetToDefaults",
+        "title": "🔄 Reset to Default Settings",
+        "category": "Claude",
+        "icon": "$(discard)"
       }
     ],
     "menus": {
@@ -401,7 +431,7 @@
         "autoclaude.scriptRunner.autoCreateFolder": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically create .autopilot folder when starting"
+          "description": "Automatically create .autoclaude folder when starting"
         },
         "autoclaude.subAgents.enabled": {
           "type": "boolean",
@@ -621,58 +651,26 @@
     "productivity",
     "development",
     "anthropic",
-    "machine-learning",
-    "batch-processing",
     "workflow",
-    "user-friendly",
-    "intelligent-assistant",
+    "assistant",
     "code-quality",
-    "error-recovery",
+    "batch-processing",
     "workflow-automation",
-    "smart-completion",
-    "guided-setup",
-    "interactive-help",
-    "parallel-agents",
-    "agent-farm",
-    "multi-agent",
-    "distributed-ai",
-    "tmux",
-    "large-scale-automation",
-    "agent-orchestration",
-    "ai-coordination",
-    "tech-stack-support",
-    "code-improvement"
+    "vscode-extension"
   ],
-  "author": "Jimmy <jimmy@r3e.network> (based on original work by Ben Basha)",
-  "contributors": [
-    {
-      "name": "Ben Basha",
-      "url": "https://github.com/benbasha"
-    },
-    {
-      "name": "Jimmy",
-      "email": "jimmy@r3e.network",
-      "url": "https://github.com/r3e-network"
-    }
-  ],
+  "author": "Claude Code Community",
   "license": "MIT",
-  "publisher": "R3ENetwork",
   "repository": {
     "type": "git",
-    "url": "https://github.com/r3e-network/AutoClaude"
+    "url": "https://github.com/claude-code/claude-autopilot"
   },
-  "homepage": "https://github.com/r3e-network/AutoClaude#readme",
+  "homepage": "https://github.com/claude-code/claude-autopilot#readme",
   "bugs": {
-    "url": "https://github.com/r3e-network/AutoClaude/discussions"
+    "url": "https://github.com/claude-code/claude-autopilot/issues"
   },
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
   },
-  "dependencies": {
-    "axios": "^1.11.0",
-    "cors": "^2.8.5",
-    "ethers": "^6.15.0",
-    "express": "^5.1.0"
-  }
+  "dependencies": {}
 }

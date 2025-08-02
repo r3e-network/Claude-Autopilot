@@ -1,9 +1,39 @@
 # Changelog
 
-All notable changes to the AutoClaude extension will be documented in this file.
+All notable changes to the Claude Autopilot extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [3.5.0] - 2025-08-02
+
+### 🚀 Enterprise-Grade Reliability & Professional UX
+
+#### ✨ Added
+- **Enterprise Error Management** - Comprehensive error handling with history tracking
+- **Fault Tolerance System** - Circuit breakers, retries, and graceful degradation
+- **Input Validation & Security** - Complete validation with XSS and path traversal protection
+- **Professional Logging** - Multi-level logging with file output and export
+- **Service Health Monitoring** - Real-time health tracking and dashboard
+- **5 New Commands** - Error history, service health, log export, config validation, reset defaults
+- **Troubleshooting Guide** - Comprehensive documentation for issue resolution
+
+#### 🔧 Improvements
+- Enhanced configuration management with validation
+- Improved error messages with actionable suggestions
+- Better queue operation validation and error handling
+- Professional TypeScript architecture
+- Comprehensive unit test coverage
+
+#### 🗑️ Removed
+- All blockchain and crypto-related functionality
+- MultiVM components and references
+- R3E Network branding
+- Unnecessary dependencies (ethers, express, cors, axios)
+
+#### 💔 Breaking Changes
+- Package name changed from `autoclaude` to `claude-autopilot`
+- Removed blockchain-related APIs
 
 ## [3.4.0] - 2025-08-01
 

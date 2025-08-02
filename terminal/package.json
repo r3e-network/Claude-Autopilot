@@ -1,10 +1,10 @@
 {
-  "name": "@r3e/autoclaude",
-  "version": "3.4.0",
-  "description": "Powerful terminal-based AutoClaude AI automation tool with parallel agents and intelligent task management",
+  "name": "claude-autopilot",
+  "version": "3.5.0",
+  "description": "Terminal-based Claude Code automation tool with task queuing and workflow management",
   "main": "src/index.ts",
   "bin": {
-    "autoclaude": "./bin/autoclaude",
+    "claude-autopilot": "./bin/autoclaude",
     "cap": "./bin/autoclaude"
   },
   "scripts": {

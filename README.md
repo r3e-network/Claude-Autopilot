@@ -1,14 +1,9 @@
-# AutoClaude - Intelligent Development Automation
+# Claude Autopilot - Automated Claude Code Assistant
 
-[![VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Marketplace-brightgreen)](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
-[![NPM Package](https://img.shields.io/badge/NPM-@r3e/autoclaude-red)](https://www.npmjs.com/package/@r3e/autoclaude)
-[![Version](https://img.shields.io/badge/version-3.2.6-blue)](https://github.com/r3e-network/AutoClaude/releases/tag/v3.2.6)
+[![Version](https://img.shields.io/badge/version-3.5.0-blue)](https://github.com/claude-code/claude-autopilot/releases/tag/v3.5.0)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/r3e-network/AutoClaude/build.yml?branch=main)](https://github.com/r3e-network/AutoClaude/actions)
 
-> 🚀 **Quick Install:** `npm install -g @r3e/autoclaude` (terminal) or search "AutoClaude" in VS Code Extensions
-
-**AutoClaude** is the ultimate AI-powered development assistant that transforms high-level commands into completed work. Simply tell it to "make your project production ready" and watch as it automatically fixes tests, adds documentation, creates Docker configs, and more - all while you focus on what matters most.
+**Claude Autopilot** is an automated assistant for Claude Code that provides intelligent task queuing, workflow automation, and 24/7 processing capabilities. Queue up hundreds of tasks and let Claude work autonomously while you focus on what matters most.
 
 <div align="center">
   <img src="img/autoclaude.png" alt="AutoClaude Interface" width="600">
@@ -16,25 +11,33 @@
 
 > 💤 **"Queue up 100 tasks Friday evening, wake up Monday with everything done"**
 
-## 🆕 NEW in v3.2.6: 98% Smaller Package & Enhanced Security
+## 🆕 NEW in v3.5.0: Enterprise-Grade Reliability & Professional UX
 
-### 🚀 **Massive Performance Improvements**
-- **98.5% Smaller**: Package reduced from 45MB to just 680KB!
-- **Blazing Fast**: New esbuild bundling system for instant loading
-- **Zero Vulnerabilities**: All security issues resolved
-- **Production Ready**: Optimized builds with minification
+### 🚀 **Major Enhancements**
+- **Enterprise Error Management**: Comprehensive error handling with categories, severity levels, and detailed tracking
+- **Advanced Fault Tolerance**: Circuit breaker pattern, retry strategies, and graceful degradation
+- **Professional Logging**: Multi-level logging system with file output and export capabilities
+- **Input Validation**: Security-focused validation with XSS prevention and path traversal protection
+- **Service Health Monitoring**: Real-time health tracking for all critical services
 
-### 🔒 **Enhanced Security**
-- Updated to latest `@vscode/vsce` package manager
-- Removed all vulnerable dependencies
-- Protected sensitive files from packaging
-- Comprehensive security audit passed
+### 🛡️ **Security & Reliability**
+- Input sanitization for all user inputs
+- Path traversal protection
+- Dangerous command detection
+- Automatic configuration validation
+- Comprehensive error recovery
 
-### ⚡ **Better Developer Experience**
-- Faster builds with esbuild
-- Improved Node.js 18+ compatibility
-- Streamlined development workflow
-- Production-optimized bundles
+### 🔧 **Developer Experience**
+- 5 new diagnostic commands for troubleshooting
+- Comprehensive troubleshooting documentation
+- Enhanced error messages with actionable suggestions
+- Improved configuration management with validation
+
+### 🧹 **Codebase Improvements**
+- Removed all blockchain and crypto-related code
+- Focused exclusively on Claude Code automation
+- Enhanced TypeScript type safety
+- Comprehensive unit test coverage
 
 ## 🧠 Intelligent Task Automation System
 
@@ -134,25 +137,24 @@ AutoClaude learns your project:
 
 #### 🖥️ **Terminal Version (Standalone)**
 ```bash
-npm install -g @r3e/autoclaude
-autoclaude  # Start the terminal interface
-cap         # Short alias
+npm install -g claude-autopilot
+claude-autopilot  # Start the terminal interface
+cap               # Short alias
 ```
 
 #### 📦 **VS Code Extension**
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=r3e.autoclaude)
-2. Or install via command palette: `Extensions: Install Extensions` → Search "AutoClaude"
-3. Or install from VSIX: Download from [GitHub Releases](https://github.com/r3e-network/AutoClaude/releases)
-4. **Cursor**: AutoClaude works seamlessly in Cursor with the same installation process
-5. **VS Code Web**: Full compatibility with vscode.dev and github.dev
+1. Install via command palette: `Extensions: Install Extensions` → Search "Claude Autopilot"
+2. Or install from VSIX: Download from [GitHub Releases](https://github.com/claude-code/claude-autopilot/releases)
+3. **Cursor**: Claude Autopilot works seamlessly in Cursor with the same installation process
+4. **VS Code Web**: Full compatibility with vscode.dev and github.dev
 
 ### Basic Usage
 
-1. **Start AutoClaude**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start AutoClaude`
+1. **Start Claude Autopilot**: Open Command Palette (`Cmd/Ctrl+Shift+P`) → `Claude: Start Claude Assistant`
 2. **Add Messages**: Queue up all your tasks - add 10, 50, or 200+ messages
 3. **Start Processing**: Click "Start Processing" and walk away
 4. **Live Your Life**: Go eat dinner, play with kids, sleep, or enjoy your weekend
-5. **Return to Completed Work**: AutoClaude handles everything automatically, even through Claude usage limits
+5. **Return to Completed Work**: Claude Autopilot handles everything automatically, even through Claude usage limits
 
 ### 🔍 Script Runner - Automated Quality Checks
 
@@ -618,18 +620,11 @@ AutoClaude includes 12+ specialized sub-agents that work together to analyze and
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
-
--   Code style and conventions
--   Testing requirements
--   Pull request process
--   Issue reporting
--   Development environment setup
+Contributions are welcome! Please open issues and pull requests on our GitHub repository.
 
 ## 👥 Credits
 
--   **Original Author**: [Ben Basha](https://github.com/benbasha) - Created the foundational AutoClaude extension
--   **Current Maintainer**: [Jimmy](https://github.com/r3e-network) (jimmy@r3e.network) - Added script runner, quality checks, and message loop features
+Built for the Claude Code community to enhance development productivity and automation.
 
 ## 📄 License
 
@@ -659,22 +654,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 
--   🐛 [Bug Reports](https://github.com/r3e-network/AutoClaude/issues/new?template=bug_report.md)
--   💡 [Feature Requests](https://github.com/r3e-network/AutoClaude/issues/new?template=feature_request.md)
--   💬 [Discussions](https://github.com/r3e-network/AutoClaude/discussions)
--   📖 [Wiki Documentation](https://github.com/r3e-network/AutoClaude/wiki)
+-   🐛 [Bug Reports](https://github.com/claude-code/claude-autopilot/issues)
+-   💡 [Feature Requests](https://github.com/claude-code/claude-autopilot/issues)
+-   💬 [Discussions](https://github.com/claude-code/claude-autopilot/discussions)
 
 ### Support
 
-If you find AutoClaude helpful, consider:
+If you find Claude Autopilot helpful, consider:
 
 -   ⭐ Starring the repository
 -   🐛 Reporting bugs or suggesting features
 -   🤝 Contributing code or documentation
--   💬 Helping others in discussions
 
 ---
 
 **Made with ❤️ for the Claude Code community**
 
-_AutoClaude is not affiliated with Anthropic or Claude AI. Claude Code is a product of Anthropic._
+_Claude Autopilot is not affiliated with Anthropic. Claude Code is a product of Anthropic._

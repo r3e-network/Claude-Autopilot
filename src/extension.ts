@@ -15,7 +15,9 @@ import {
 } from './queue';
 import { recoverWaitingMessages, stopSleepPrevention, stopHealthCheck, startScheduledSession, stopScheduledSession } from './services';
 import { sendSecuritySettings, toggleXssbypassSetting } from './services/security';
-import { debugLog } from './utils';
+import { debugLog, errorLog, infoLog, setLogLevel, LogLevel } from './utils/logging';
+import { setupGlobalErrorHandler, ErrorManager } from './core/errors';
+import { resilience } from './core/resilience';
 import { ScriptRunner } from './scripts';
 import { AutomationManager } from './automation/automationManager';
 import { QuickStartManager } from './ui/quickStart';
@@ -48,13 +50,28 @@ if (isDevelopmentMode()) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    extensionContext = context;
-    setExtensionContext(context);
-    setDebugMode(false);
+    try {
+        extensionContext = context;
+        setExtensionContext(context);
+        setDebugMode(false);
 
-    // Validate configuration on startup
-    const config = getValidatedConfig();
-    debugLog('Extension activated with validated configuration');
+        // Setup global error handling
+        setupGlobalErrorHandler();
+
+        // Configure logging based on development mode
+        if (isDevelopmentMode()) {
+            setLogLevel(LogLevel.DEBUG);
+            infoLog('Extension running in development mode');
+        } else {
+            setLogLevel(LogLevel.INFO);
+        }
+
+        // Validate configuration on startup
+        const config = getValidatedConfig();
+        infoLog('Extension activated with validated configuration', { 
+            version: context.extension.packageJSON.version,
+            developmentMode: isDevelopmentMode()
+        });
 
     // Global instances for new features
     let parallelOrchestrator: ParallelAgentOrchestrator | null = null;
@@ -508,6 +525,66 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // Enhanced commands for robustness and user-friendliness
+    const showErrorHistoryCommand = vscode.commands.registerCommand('autoclaude.showErrorHistory', () => {
+        const errors = ErrorManager.getErrorHistory();
+        const content = [
+            'Claude Autopilot Error History',
+            '='.repeat(30),
+            '',
+            ...errors.map(error => [
+                `Time: ${new Date(error.timestamp).toLocaleString()}`,
+                `Code: ${error.code}`,
+                `Category: ${error.category}`,
+                `Severity: ${error.severity}`,
+                `Message: ${error.message}`,
+                `Recoverable: ${error.recoverable ? 'Yes' : 'No'}`,
+                error.context ? `Context: ${JSON.stringify(error.context, null, 2)}` : '',
+                ''
+            ]).flat().filter(line => line !== '')
+        ].join('\n');
+
+        vscode.workspace.openTextDocument({
+            content,
+            language: 'plaintext'
+        }).then(doc => {
+            vscode.window.showTextDocument(doc);
+        });
+    });
+
+    const showServiceHealthCommand = vscode.commands.registerCommand('autoclaude.showServiceHealth', () => {
+        resilience.showHealthDashboard();
+    });
+
+    const exportLogsCommand = vscode.commands.registerCommand('autoclaude.exportLogs', () => {
+        const { exportLogs } = require('./utils/logging');
+        const logs = exportLogs();
+        
+        vscode.workspace.openTextDocument({
+            content: logs,
+            language: 'plaintext'
+        }).then(doc => {
+            vscode.window.showTextDocument(doc);
+        });
+    });
+
+    const validateConfigurationCommand = vscode.commands.registerCommand('autoclaude.validateConfiguration', () => {
+        showConfigValidationStatus();
+    });
+
+    const resetToDefaultsCommand = vscode.commands.registerCommand('autoclaude.resetToDefaults', async () => {
+        const choice = await vscode.window.showWarningMessage(
+            'This will reset all Claude Autopilot settings to their default values. This cannot be undone.',
+            'Reset',
+            'Cancel'
+        );
+        
+        if (choice === 'Reset') {
+            resetConfigToDefaults();
+            vscode.window.showInformationMessage('Claude Autopilot settings have been reset to defaults.');
+        }
+    });
+
     context.subscriptions.push(
         startCommand, stopCommand, addMessageCommand, runScriptChecksCommand, runScriptLoopCommand,
         quickStartCommand, runSubAgentsCommand, autoCompleteCommand, workflowWizardCommand,
@@ -516,6 +593,8 @@ export function activate(context: vscode.ExtensionContext) {
         attachToAgentsCommand, clearAllAgentContextCommand, toggleAutoOrchestrationCommand,
         exportQueueCommand, importQueueCommand, exportSettingsCommand,
         useTemplateCommand, manageTemplatesCommand, showStatisticsCommand, checkRemoteStatusCommand,
+        showErrorHistoryCommand, showServiceHealthCommand, exportLogsCommand,
+        validateConfigurationCommand, resetToDefaultsCommand,
         configWatcher
     );
     
@@ -534,6 +613,26 @@ export function activate(context: vscode.ExtensionContext) {
                 });
             });
         }, 1000); // Small delay to ensure extension is fully loaded
+    }
+
+    infoLog('Claude Autopilot extension activated successfully');
+
+    } catch (error) {
+        errorLog('Failed to activate Claude Autopilot extension', {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+        });
+        
+        vscode.window.showErrorMessage(
+            'Claude Autopilot failed to activate. Please check the error logs and restart VS Code.',
+            'Show Logs'
+        ).then(choice => {
+            if (choice === 'Show Logs') {
+                vscode.commands.executeCommand('autoclaude.exportLogs');
+            }
+        });
+        
+        throw error;
     }
 }
 
